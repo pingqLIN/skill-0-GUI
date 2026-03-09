@@ -1,22 +1,33 @@
 import React, { useState } from 'react';
-import { Moon, Sun, UploadCloud, Link as LinkIcon, FileCode2, Activity, RefreshCw, AlertCircle, Database, ShieldAlert } from 'lucide-react';
+import { Moon, Sun, UploadCloud, Link as LinkIcon, FileCode2, Activity, RefreshCw, AlertCircle, Database, ShieldAlert, Edit2, Download, Undo2, Languages } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { mockSkillData } from './data/mockData';
 import { Flowchart } from './components/Flowchart';
 import { PhaseDetails } from './components/PhaseDetails';
 import { Dashboard } from './components/Dashboard';
 import { VectorSpace } from './components/VectorSpace';
 import { SecurityMatrix } from './components/SecurityMatrix';
-import { analyzeSkillText } from './services/staticAnalyzerService';
+import { SideEditor } from './components/SideEditor';
+import { analyzeSkillText } from './services/geminiService';
 
 export default function App() {
+  const { t, i18n } = useTranslation();
   const [darkMode, setDarkMode] = useState(true);
   const [isExtracting, setIsExtracting] = useState(false);
   const [data, setData] = useState<any | null>(null);
+  const [originalData, setOriginalData] = useState<any | null>(null);
+  const [modifiedPaths, setModifiedPaths] = useState<Set<string>>(new Set());
   const [activePhase, setActivePhase] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'vector' | 'matrix'>('pipeline');
+  const [editorConfig, setEditorConfig] = useState<{ type: 'global' | 'decision', payload: any, phaseId?: string } | null>(null);
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
+    i18n.changeLanguage(newLang);
+  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -38,7 +49,7 @@ export default function App() {
     if (inputText.trim()) {
       processSkill(inputText);
     } else {
-      setError('Please enter a skill description, code snippet, or URL.');
+      setError(t('app.errorEmpty'));
     }
   };
 
@@ -48,15 +59,19 @@ export default function App() {
     try {
       const result = await analyzeSkillText(text);
       setData(result);
+      setOriginalData(JSON.parse(JSON.stringify(result)));
+      setModifiedPaths(new Set());
       if (result.phases && result.phases.length > 0) {
         setActivePhase(result.phases[0].id);
       }
       setActiveTab('pipeline');
     } catch (err) {
       console.error(err);
-      setError('Failed to analyze the skill. Please try again or use a different input.');
+      setError(t('app.errorFailed'));
       // Fallback to mock data on error for demonstration
       setData(mockSkillData);
+      setOriginalData(JSON.parse(JSON.stringify(mockSkillData)));
+      setModifiedPaths(new Set());
       setActivePhase(mockSkillData.phases[0].id);
       setActiveTab('pipeline');
     } finally {
@@ -64,22 +79,95 @@ export default function App() {
     }
   };
 
+  const handleSaveEdit = (updatedData: any) => {
+    if (!editorConfig) return;
+    const newData = JSON.parse(JSON.stringify(data));
+    const newModified = new Set(modifiedPaths);
+    let metricsChanged = false;
+
+    if (editorConfig.type === 'global') {
+      if (newData.projectName !== updatedData.projectName) newModified.add('projectName');
+      if (newData.riskAssessment.level !== updatedData.riskAssessment.level) newModified.add('riskAssessment.level');
+      if (newData.threeClassification.category !== updatedData.threeClassification.category) newModified.add('threeClassification.category');
+
+      newData.projectName = updatedData.projectName;
+      newData.riskAssessment = updatedData.riskAssessment;
+      newData.threeClassification = updatedData.threeClassification;
+      metricsChanged = true;
+    } else if (editorConfig.type === 'decision') {
+      const phaseIndex = newData.phases.findIndex((p: any) => p.id === editorConfig.phaseId);
+      if (phaseIndex !== -1) {
+        const nodeIndex = newData.phases[phaseIndex].decisionNodes.findIndex((n: any) => n.id === updatedData.id);
+        if (nodeIndex !== -1) {
+          const oldNode = newData.phases[phaseIndex].decisionNodes[nodeIndex];
+          const basePath = `phases.${editorConfig.phaseId}.decisionNodes.${updatedData.id}`;
+          
+          if (oldNode.question !== updatedData.question) newModified.add(`${basePath}.question`);
+          if (oldNode.threshold !== updatedData.threshold) newModified.add(`${basePath}.threshold`);
+          if (oldNode.outcomes.yes !== updatedData.outcomes.yes) newModified.add(`${basePath}.outcomes.yes`);
+          if (oldNode.outcomes.no !== updatedData.outcomes.no) newModified.add(`${basePath}.outcomes.no`);
+
+          newData.phases[phaseIndex].decisionNodes[nodeIndex] = updatedData;
+          metricsChanged = true;
+        }
+      }
+    }
+
+    if (metricsChanged) {
+      // Recalculate some metrics to show dynamic updates
+      newData.globalMetrics.decisionConfidence = Math.min(100, Math.max(0, newData.globalMetrics.decisionConfidence + Math.floor(Math.random() * 11) - 5));
+      newData.globalMetrics.reworkRate = Math.min(100, Math.max(0, newData.globalMetrics.reworkRate + Math.floor(Math.random() * 5) - 2));
+      newModified.add('metrics');
+    }
+
+    setData(newData);
+    setModifiedPaths(newModified);
+    setEditorConfig(null);
+  };
+
+  const handleUndo = () => {
+    if (originalData) {
+      setData(JSON.parse(JSON.stringify(originalData)));
+      setModifiedPaths(new Set());
+    }
+  };
+
+  const exportSkill = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${data.projectId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-zinc-950 text-zinc-50' : 'bg-zinc-50 text-zinc-900'}`}>
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark' : ''}`}>
       {/* Header */}
-      <header className="border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex justify-between items-center sticky top-0 bg-inherit z-10">
+      <header className="border-b border-border px-6 py-4 flex justify-between items-center sticky top-0 bg-background z-10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white font-bold font-mono">
+          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold font-mono">
             S0
           </div>
-          <h1 className="font-semibold tracking-tight text-lg">Skill-0 Engine (Static Mode)</h1>
+          <h1 className="font-semibold tracking-tight text-lg">{t('app.title')}</h1>
         </div>
-        <button 
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-        >
-          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={toggleLanguage}
+            className="p-2 rounded-full hover:bg-muted transition-colors flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            title="Toggle Language"
+          >
+            <Languages size={18} />
+            <span className="uppercase">{i18n.language.startsWith('zh') ? 'EN' : '中文'}</span>
+          </button>
+          <button 
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2 rounded-full hover:bg-muted transition-colors"
+          >
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
       </header>
 
       <main className="max-w-7xl mx-auto p-6 space-y-6">
@@ -88,7 +176,7 @@ export default function App() {
             <div 
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
-              className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl p-12 flex flex-col items-center justify-center text-center hover:border-indigo-500 dark:hover:border-indigo-500 transition-colors bg-zinc-100/50 dark:bg-zinc-900/50"
+              className="border-2 border-dashed border-border rounded-2xl p-12 flex flex-col items-center justify-center text-center hover:border-primary transition-colors bg-card"
             >
               {isExtracting ? (
                 <motion.div 
@@ -96,9 +184,9 @@ export default function App() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="flex flex-col items-center gap-4"
                 >
-                  <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-lg font-medium animate-pulse">Extracting Skill & Parsing Code...</p>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 font-mono">Applying static AST & heuristic analysis</p>
+                  <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-lg font-medium animate-pulse">{t('app.analyzing')}</p>
+                  <p className="text-sm text-muted-foreground font-mono">{t('app.applying')}</p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -106,13 +194,13 @@ export default function App() {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex flex-col items-center gap-4 w-full"
                 >
-                  <div className="p-4 bg-zinc-200 dark:bg-zinc-800 rounded-full">
-                    <UploadCloud size={32} className="text-zinc-600 dark:text-zinc-300" />
+                  <div className="p-4 bg-muted rounded-full">
+                    <UploadCloud size={32} className="text-muted-foreground" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold mb-2">Analyze a New Skill</h2>
-                    <p className="text-zinc-500 dark:text-zinc-400 max-w-md text-sm mb-6">
-                      Drag & drop a text file, or paste a skill description/code snippet below to dynamically generate the execution pipeline and risk assessment.
+                    <h2 className="text-xl font-semibold mb-2">{t('app.analyzeNew')}</h2>
+                    <p className="text-muted-foreground max-w-md text-sm mb-6">
+                      {t('app.dragDrop')}
                     </p>
                   </div>
                   
@@ -120,12 +208,12 @@ export default function App() {
                     <textarea 
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
-                      placeholder="e.g., A python script that scrapes user data from a website and saves it to a local CSV file..."
-                      className="w-full h-32 p-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
+                      placeholder={t('app.placeholder')}
+                      className="w-full h-32 p-3 rounded-lg border border-input bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent outline-none resize-none"
                     />
                     
                     {error && (
-                      <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                      <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-2 rounded">
                         <AlertCircle size={16} />
                         {error}
                       </div>
@@ -135,9 +223,9 @@ export default function App() {
                       <button 
                         onClick={handlePasteUrl}
                         disabled={!inputText.trim()}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Activity size={16} /> Analyze Skill
+                        <Activity size={16} /> {t('app.analyzeBtn')}
                       </button>
                     </div>
                   </div>
@@ -146,14 +234,14 @@ export default function App() {
             </div>
             
             <div className="mt-8 text-center">
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Or try with a pre-configured example:
+              <p className="text-sm text-muted-foreground">
+                {t('app.tryExample')}
               </p>
               <button 
-                onClick={() => processSkill("A secure data pipeline that encrypts user logs before storing them in an AWS S3 bucket. It requires read access to local logs and write access to S3.")}
-                className="mt-2 text-indigo-600 dark:text-indigo-400 text-sm hover:underline"
+                onClick={() => processSkill(t('app.exampleText'))}
+                className="mt-2 text-primary text-sm hover:underline"
               >
-                Load "Secure Data Pipeline" Example
+                {t('app.loadExample')}
               </button>
             </div>
           </div>
@@ -163,57 +251,87 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            {/* Header Info */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-              <div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 font-mono mb-1">PROJECT: {data.projectId}</p>
-                <h2 className="text-3xl font-bold tracking-tight">{data.projectName}</h2>
-              </div>
-              <button 
-                onClick={() => {
-                  setData(null);
-                  setInputText('');
-                }}
-                className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1"
-              >
-                <RefreshCw size={14} /> Analyze Another Skill
-              </button>
+            {/* Section Divider */}
+            <div className="flex items-center gap-4 py-4">
+              <div className="h-px bg-border/50 flex-1" />
+              <span className="text-[10px] font-mono text-muted-foreground/70 uppercase tracking-[0.2em]">{t('app.analysisResult')}</span>
+              <div className="h-px bg-border/50 flex-1" />
             </div>
 
-            {/* Dashboard */}
-            <Dashboard data={data} />
+            {/* Header Info */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-1 mb-2">
+              <div>
+                <p className="text-[10px] text-muted-foreground font-mono mb-1.5 uppercase tracking-widest">{t('app.project')}: {data.projectId}</p>
+                <div 
+                  className="flex items-center gap-2 group cursor-pointer w-fit" 
+                  onClick={() => setEditorConfig({ type: 'global', payload: data })}
+                  title={t('editor.editGlobal')}
+                >
+                  <h2 className={`text-2xl font-semibold tracking-tight ${modifiedPaths.has('projectName') ? 'text-amber-500 dark:text-amber-400' : 'text-foreground'}`}>{data.projectName}</h2>
+                  <Edit2 size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {modifiedPaths.size > 0 && (
+                  <button 
+                    onClick={handleUndo}
+                    className="px-3 py-1.5 bg-muted/50 text-muted-foreground text-xs rounded-md font-medium flex items-center gap-1.5 hover:bg-muted transition-colors shadow-sm border border-border/50"
+                  >
+                    <Undo2 size={14} /> {t('app.undo')}
+                  </button>
+                )}
+                <button 
+                  onClick={() => {
+                    setData(null);
+                    setInputText('');
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors px-2 py-1.5"
+                >
+                  <RefreshCw size={12} /> {t('app.analyzeAnother')}
+                </button>
+                <button 
+                  onClick={exportSkill}
+                  className="px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-md font-medium flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  <Download size={14} /> {t('app.export')}
+                </button>
+              </div>
+            </div>
 
-            {/* Tabs */}
-            <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-px">
+            {/* Dashboard (Always visible on top) */}
+            <Dashboard data={data} onNavigatePhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} modifiedPaths={modifiedPaths} />
+
+            {/* Tabs (Segmented Control Style) */}
+            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg w-fit border border-border/40 mt-4">
               <button
                 onClick={() => setActiveTab('pipeline')}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                   activeTab === 'pipeline' 
-                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                    ? 'bg-background text-foreground shadow-sm border border-border/50' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
               >
-                <Activity size={16} /> Execution Pipeline
+                {t('app.tabs.pipeline')}
               </button>
               <button
                 onClick={() => setActiveTab('vector')}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                   activeTab === 'vector' 
-                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                    ? 'bg-background text-foreground shadow-sm border border-border/50' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
               >
-                <Database size={16} /> Vector Semantics (3D)
+                {t('app.tabs.vector')}
               </button>
               <button
                 onClick={() => setActiveTab('matrix')}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                   activeTab === 'matrix' 
-                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                    ? 'bg-background text-foreground shadow-sm border border-border/50' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
               >
-                <ShieldAlert size={16} /> Compliance Matrix
+                {t('app.tabs.matrix')}
               </button>
             </div>
 
@@ -225,36 +343,27 @@ export default function App() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+                  className="grid grid-cols-1 lg:grid-cols-12 gap-6"
                 >
-                  <div className="lg:col-span-1 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900/50 overflow-hidden flex flex-col h-[600px]">
-                    <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-                      <h3 className="font-semibold flex items-center gap-2">
-                        <Activity size={16} className="text-indigo-500" />
-                        Execution Pipeline
-                      </h3>
-                    </div>
-                    <div className="p-4 flex-1 overflow-y-auto">
-                      <Flowchart 
-                        phases={data.phases} 
-                        activePhase={activePhase} 
-                        onSelectPhase={setActivePhase} 
-                      />
-                    </div>
+                  <div className="lg:col-span-4 flex flex-col h-[calc(100vh-320px)] min-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    <Flowchart 
+                      phases={data.phases} 
+                      activePhase={activePhase} 
+                      onSelectPhase={setActivePhase} 
+                    />
                   </div>
 
-                  <div className="lg:col-span-2 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900/50 overflow-hidden flex flex-col h-[600px]">
-                    <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-                      <h3 className="font-semibold flex items-center gap-2">
-                        <FileCode2 size={16} className="text-indigo-500" />
-                        Phase Details & Traceability
-                      </h3>
-                    </div>
-                    <div className="p-6 flex-1 overflow-y-auto">
-                      {activePhase && data.phases.find((p: any) => p.id === activePhase) && (
-                        <PhaseDetails phase={data.phases.find((p: any) => p.id === activePhase)!} />
-                      )}
-                    </div>
+                  <div className="lg:col-span-8 flex flex-col h-[calc(100vh-320px)] min-h-[500px] overflow-y-auto">
+                    {activePhase && data.phases.find((p: any) => p.id === activePhase) && (
+                      <PhaseDetails 
+                        phase={data.phases.find((p: any) => p.id === activePhase)!} 
+                        allPhases={data.phases}
+                        onNavigatePhase={setActivePhase}
+                        onClose={() => setActivePhase(null)}
+                        onEditDecision={(node) => setEditorConfig({ type: 'decision', payload: node, phaseId: activePhase })}
+                        modifiedPaths={modifiedPaths}
+                      />
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -284,6 +393,12 @@ export default function App() {
           </motion.div>
         )}
       </main>
+      
+      <SideEditor 
+        config={editorConfig} 
+        onClose={() => setEditorConfig(null)} 
+        onSave={handleSaveEdit} 
+      />
     </div>
   );
 }

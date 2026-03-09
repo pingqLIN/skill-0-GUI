@@ -1,147 +1,249 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, ArrowRight, Database, CheckSquare, GitMerge, FileSearch } from 'lucide-react';
+import { X, Info, ArrowRight, ArrowLeft, Edit2, Activity, BookOpen, Link as LinkIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-export function PhaseDetails({ phase }: { phase: any }) {
+export function PhaseDetails({ phase, allPhases, onNavigatePhase, onClose, onEditDecision, modifiedPaths = new Set() }: { phase: any, allPhases: any[], onNavigatePhase: (id: string) => void, onClose: () => void, onEditDecision: (node: any) => void, modifiedPaths?: Set<string> }) {
+  const { t } = useTranslation();
+  const [showTelemetry, setShowTelemetry] = useState(false);
+  const getSourcePhase = (input: string) => allPhases.find(p => p.output.includes(input))?.id;
+  const getTargetPhases = (output: string) => allPhases.filter(p => p.input.includes(output)).map(p => p.id);
+
   return (
     <motion.div 
       key={phase.id}
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.2 }}
-      className="space-y-8"
+      className="bg-card border border-border/60 rounded-xl p-6 shadow-sm flex flex-col h-full"
     >
-      <div>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-            {phase.id}
-          </div>
-          <h2 className="text-2xl font-bold">{phase.name}</h2>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold tracking-tight flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-primary/70" />
+          {t('phaseDetails.phase')} {phase.id} — {phase.name}
+        </h2>
+        <button onClick={onClose} className="text-muted-foreground/50 hover:text-foreground transition-colors p-1">
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* Info Description */}
+      <div className="mb-8">
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-2">
+          <Info size={12} /> {t('phaseDetails.purpose')}
         </div>
-        
-        {/* I/O Flow */}
-        <div className="flex items-center gap-4 bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-x-auto">
-          <div className="flex-1 min-w-[150px]">
-            <h4 className="text-xs font-semibold text-zinc-500 uppercase mb-2 flex items-center gap-1"><Database size={12}/> Inputs</h4>
-            <div className="flex flex-wrap gap-2">
-              {phase.input.map((item: string) => (
-                <span key={item} className="px-2 py-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded text-xs font-mono text-zinc-600 dark:text-zinc-300">
-                  {item}
-                </span>
-              ))}
-            </div>
+        <p className="text-sm text-muted-foreground/90 leading-relaxed">
+          {t('phaseDetails.description')}
+        </p>
+      </div>
+
+      <div className="h-px w-full bg-border/50 mb-8" />
+
+      {/* 3-Column Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr] gap-6 mb-8">
+        {/* Inputs */}
+        <div className="flex flex-col">
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-4">{t('phaseDetails.inputs')}</h3>
+          <div className="space-y-6 my-auto">
+            {phase.input.map((item: string, idx: number) => {
+              const source = getSourcePhase(item);
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  {source ? (
+                    <button 
+                      onClick={() => onNavigatePhase(source)} 
+                      className="text-[10px] font-mono bg-muted/50 px-1.5 py-1 rounded text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors shrink-0 border border-border/50" 
+                      title={`${t('phaseDetails.generatedBy')} ${source}`}
+                    >
+                      P{source}
+                    </button>
+                  ) : (
+                    <span className="text-[10px] font-mono bg-transparent border border-border/50 px-1.5 py-1 rounded text-muted-foreground/50 shrink-0" title={t('phaseDetails.externalInput')}>
+                      EXT
+                    </span>
+                  )}
+                  
+                  <div className="flex-1 relative flex items-center justify-center min-w-[40px]">
+                    <div className="w-full h-px bg-border/40 relative overflow-hidden">
+                      <motion.div 
+                        className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+                        animate={{ x: ['-100%', '100%'] }}
+                        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                      />
+                    </div>
+                    <div className="absolute -top-2.5 bg-card px-1 text-[9px] font-mono text-muted-foreground/70 whitespace-nowrap max-w-[90px] truncate" title={item}>
+                      {item}
+                    </div>
+                    <ArrowRight size={10} className="absolute right-0 text-primary/50 translate-x-1/2 bg-card" />
+                  </div>
+                  
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/50 shrink-0" />
+                </div>
+              );
+            })}
           </div>
-          <ArrowRight className="text-zinc-400 flex-shrink-0" />
-          <div className="flex-1 min-w-[150px]">
-            <h4 className="text-xs font-semibold text-zinc-500 uppercase mb-2 flex items-center gap-1"><Database size={12}/> Outputs</h4>
-            <div className="flex flex-wrap gap-2">
-              {phase.output.map((item: string) => (
-                <span key={item} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded text-xs font-mono text-indigo-700 dark:text-indigo-300">
-                  {item}
-                </span>
-              ))}
-            </div>
+        </div>
+
+        {/* Tasks */}
+        <div className="flex flex-col">
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-4">{t('phaseDetails.tasks')}</h3>
+          <div className="bg-muted/5 border border-border/40 rounded-lg p-4 space-y-3 h-full shadow-sm">
+            {phase.tasks.map((task: string, idx: number) => (
+              <div key={idx} className="text-xs text-muted-foreground/90 flex items-start gap-2">
+                <div className="mt-1.5 w-1 h-1 rounded-full bg-primary/40 shrink-0" />
+                <span className="leading-relaxed">{task}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Outputs */}
+        <div className="flex flex-col">
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-4">{t('phaseDetails.outputs')}</h3>
+          <div className="space-y-6 my-auto">
+            {phase.output.map((item: string, idx: number) => {
+              const targets = getTargetPhases(item);
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/50 shrink-0" />
+                  
+                  <div className="flex-1 relative flex items-center justify-center min-w-[40px]">
+                    <div className="w-full h-px bg-border/40 relative overflow-hidden">
+                      <motion.div 
+                        className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+                        animate={{ x: ['-100%', '100%'] }}
+                        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                      />
+                    </div>
+                    <div className="absolute -top-2.5 bg-card px-1 text-[9px] font-mono text-muted-foreground/70 whitespace-nowrap max-w-[90px] truncate" title={item}>
+                      {item}
+                    </div>
+                    <ArrowRight size={10} className="absolute right-0 text-primary/50 translate-x-1/2 bg-card" />
+                  </div>
+                  
+                  {targets.length > 0 ? (
+                    <div className="flex flex-col gap-1 shrink-0">
+                      {targets.map(t => (
+                        <button 
+                          key={t}
+                          onClick={() => onNavigatePhase(t)} 
+                          className="text-[10px] font-mono bg-muted/50 px-1.5 py-1 rounded text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors border border-border/50"
+                          title={`${t('phaseDetails.consumedBy')} ${t}`}
+                        >
+                          P{t}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-mono bg-transparent border border-border/50 px-1.5 py-1 rounded text-muted-foreground/50 shrink-0" title={t('phaseDetails.finalOutput')}>
+                      END
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Tasks */}
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3 flex items-center gap-2">
-            <CheckSquare size={16} /> Tasks
-          </h3>
-          <ul className="space-y-2">
-            {phase.tasks.map((task: string, idx: number) => (
-              <li key={idx} className="flex items-start gap-2 text-sm">
-                <div className="mt-0.5 w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
-                  <div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                </div>
-                <span className="font-mono text-zinc-700 dark:text-zinc-300">{task}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="h-px w-full bg-border/50 mb-6" />
 
-        {/* Decision Nodes */}
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3 flex items-center gap-2">
-            <GitMerge size={16} /> Decision Nodes
-          </h3>
-          <div className="space-y-3">
-            {phase.decisionNodes.map((node: any) => (
-              <DecisionNode key={node.id} node={node} />
-            ))}
-          </div>
+      {/* Decision Section */}
+      {phase.decisionNodes && phase.decisionNodes.length > 0 && (
+        <div className="mb-8 space-y-4">
+          {phase.decisionNodes.map((node: any, idx: number) => {
+            const basePath = `phases.${phase.id}.decisionNodes.${node.id}`;
+            const isQuestionModified = modifiedPaths.has(`${basePath}.question`);
+            const isThresholdModified = modifiedPaths.has(`${basePath}.threshold`);
+            const isYesModified = modifiedPaths.has(`${basePath}.outcomes.yes`);
+
+            return (
+              <div key={idx}>
+                <h3 className={`text-[10px] font-semibold uppercase tracking-widest mb-3 ${isQuestionModified ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground/70'}`}>
+                  {t('phaseDetails.decision')}: {node.question}
+                </h3>
+                <div 
+                  className="bg-muted/10 border border-border/50 rounded-lg p-3 flex flex-wrap items-center gap-3 text-sm group cursor-pointer hover:border-primary/40 transition-colors shadow-sm"
+                  onClick={() => onEditDecision(node)}
+                  title={t('phaseDetails.clickToEdit')}
+                >
+                  <span className={`font-mono text-xs border px-2 py-1 rounded cursor-help border-b-dashed ${isThresholdModified ? 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-900/40 dark:border-amber-700/50 dark:text-amber-300' : 'bg-background border-border/50 border-b-primary/40 text-muted-foreground'}`} title={node.evidence}>
+                    {node.rules?.[0] || node.threshold}
+                  </span>
+                  <span className="text-muted-foreground/50">→</span>
+                  <span className={isYesModified ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-foreground font-medium'}>{node.outcomes.yes}</span>
+                  <Edit2 size={14} className="text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+                </div>
+              </div>
+            );
+          })}
         </div>
+      )}
+
+      {/* Telemetry & Context (Collapsible) */}
+      <div className="mt-auto pt-6 border-t border-border/50 flex flex-col gap-4">
+        <button 
+          onClick={() => setShowTelemetry(!showTelemetry)}
+          className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors border border-transparent hover:border-border/40 group"
+        >
+          <div className="flex items-center gap-2">
+            <Activity size={14} className="text-muted-foreground/70 group-hover:text-primary/70 transition-colors" />
+            <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 group-hover:text-foreground/80 transition-colors">{t('phaseDetails.contextTelemetry')}</h3>
+          </div>
+          {showTelemetry ? <ChevronUp size={14} className="text-muted-foreground/50" /> : <ChevronDown size={14} className="text-muted-foreground/50" />}
+        </button>
+
+        <AnimatePresence>
+          {showTelemetry && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-2 flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-muted/10 p-4 rounded-lg border border-border/40 shadow-sm">
+                    <h4 className="text-xs font-semibold mb-3 flex items-center gap-1.5 text-foreground/80"><Activity size={14} className="text-blue-500/70"/> {t('phaseDetails.testResults')}</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground/80">{t('phaseDetails.status')}</span>
+                        <span className="text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">{t('phaseDetails.passing')}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground/80">{t('phaseDetails.latency')}</span>
+                        <span className="font-mono text-foreground/80">124ms</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground/80">{t('phaseDetails.memory')}</span>
+                        <span className="font-mono text-foreground/80">42MB</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-muted/10 p-4 rounded-lg border border-border/40 shadow-sm">
+                    <h4 className="text-xs font-semibold mb-3 flex items-center gap-1.5 text-foreground/80"><BookOpen size={14} className="text-amber-500/70"/> {t('phaseDetails.references')}</h4>
+                    <ul className="space-y-2">
+                      <li><a href="#" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.architectureGuidelines')}</a></li>
+                      <li><a href="#" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.securityPolicies')}</a></li>
+                      <li><a href="#" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.apiDocumentation')}</a></li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
+                  <h4 className="text-xs font-semibold text-primary/80 mb-1.5">{t('phaseDetails.purposeExplanation')}</h4>
+                  <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                    {t('phaseDetails.purposeText1')} <strong className="text-foreground/80 font-medium">{phase.name.toLowerCase()}</strong>. {t('phaseDetails.purposeText2')}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
-  );
-}
-
-function DecisionNode({ node }: { node: any, key?: React.Key }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900">
-      <button 
-        onClick={() => setExpanded(!expanded)}
-        className="w-full p-3 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold">
-            {node.id}
-          </div>
-          <span className="font-medium text-sm">{node.question}</span>
-        </div>
-        {expanded ? <ChevronDown size={16} className="text-zinc-500" /> : <ChevronRight size={16} className="text-zinc-500" />}
-      </button>
-      
-      <AnimatePresence>
-        {expanded && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="p-4 space-y-4 border-t border-zinc-200 dark:border-zinc-800 text-sm">
-              <div>
-                <span className="text-xs font-semibold text-zinc-500 uppercase">Rules & Threshold</span>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {node.rules.map((rule: string, idx: number) => (
-                    <span key={idx} className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded font-mono text-xs">
-                      {rule}
-                    </span>
-                  ))}
-                  <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded font-mono text-xs border border-amber-200 dark:border-amber-800/50">
-                    Threshold: {node.threshold}
-                  </span>
-                </div>
-              </div>
-              
-              <div>
-                <span className="text-xs font-semibold text-zinc-500 uppercase">Outcomes</span>
-                <div className="mt-1 grid grid-cols-2 gap-2">
-                  <div className="p-2 border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/10 rounded text-emerald-700 dark:text-emerald-400 text-xs">
-                    <span className="font-bold mr-1">YES:</span> {node.outcomes.yes}
-                  </div>
-                  <div className="p-2 border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 rounded text-red-700 dark:text-red-400 text-xs">
-                    <span className="font-bold mr-1">NO:</span> {node.outcomes.no}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
-                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase flex items-center gap-1 mb-1">
-                  <FileSearch size={12} /> Traceability Evidence
-                </span>
-                <p className="text-zinc-700 dark:text-zinc-300 text-xs italic">"{node.evidence}"</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
   );
 }

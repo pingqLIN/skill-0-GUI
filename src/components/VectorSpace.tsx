@@ -1,8 +1,10 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import { Database } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export function VectorSpace({ data, darkMode }: { data: any, darkMode: boolean }) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>();
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -28,7 +30,7 @@ export function VectorSpace({ data, darkMode }: { data: any, darkMode: boolean }
 
     // Phase Nodes
     data.phases.forEach((phase: any, i: number) => {
-      nodes.push({ id: phase.id, name: `Phase ${phase.id}: ${phase.name}`, group: 1, val: 10 });
+      nodes.push({ id: phase.id, name: `${t('vector.phase')} ${phase.id}: ${phase.name}`, group: 1, val: 10 });
       links.push({ source: 'skill', target: phase.id, value: 2 });
 
       // Task Nodes (Simulating Vector Embeddings)
@@ -47,7 +49,7 @@ export function VectorSpace({ data, darkMode }: { data: any, darkMode: boolean }
     });
 
     return { nodes, links };
-  }, [data]);
+  }, [data, t]);
 
   useEffect(() => {
     if (graphRef.current) {
@@ -57,30 +59,55 @@ export function VectorSpace({ data, darkMode }: { data: any, darkMode: boolean }
     }
   }, [graphData]);
 
+  // Force dark mode for better visual clarity in 3D space
+  const bgColor = '#0f172a'; // slate-900
+  const linkColor = '#cbd5e1'; // slate-300 for bright, visible lines
+  
+  // High contrast bright colors for nodes
+  const groupColors = ['#38bdf8', '#34d399', '#fbbf24', '#f87171']; // sky-400, emerald-400, amber-400, red-400
+
   return (
-    <div className="w-full h-[600px] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden relative bg-zinc-50 dark:bg-zinc-950 flex flex-col">
-      <div className="absolute top-0 left-0 right-0 p-4 z-10 pointer-events-none bg-gradient-to-b from-zinc-50/80 dark:from-zinc-950/80 to-transparent">
-        <h3 className="text-zinc-900 dark:text-zinc-100 font-mono text-sm font-bold flex items-center gap-2">
-          <Database size={16} className="text-indigo-500" />
-          Semantic Vector Embeddings (3D Space)
+    <div className="w-full h-[600px] border border-border/60 rounded-xl overflow-hidden relative bg-slate-900 flex flex-col shadow-sm">
+      <div className="absolute top-0 left-0 right-0 p-5 z-10 pointer-events-none bg-slate-900/80 border-b border-slate-800">
+        <h3 className="text-slate-50 font-semibold tracking-tight text-sm flex items-center gap-2">
+          <Database size={14} className="text-sky-400" />
+          {t('vector.semanticVectorEmbeddings')}
         </h3>
-        <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-1 max-w-md">
-          Visualizing the skill's tasks, inputs, and outputs as vector embeddings in a high-dimensional semantic space. Drag to rotate, scroll to zoom.
+        <p className="text-slate-300 font-medium text-xs mt-2 max-w-md leading-relaxed">
+          {t('vector.semanticVectorDesc')}
         </p>
       </div>
       
-      <div ref={containerRef} className="flex-1 w-full h-full cursor-move">
+      <div ref={containerRef} className="flex-1 w-full h-full cursor-move mt-[80px]">
         <ForceGraph3D
           ref={graphRef}
           graphData={graphData}
-          nodeLabel="name"
-          nodeAutoColorBy="group"
-          backgroundColor={darkMode ? '#09090b' : '#fafafa'}
-          linkColor={() => darkMode ? '#3f3f46' : '#e4e4e7'}
+          nodeLabel={(node: any) => `
+            <div style="
+              background: rgba(15, 23, 42, 0.95);
+              color: #f8fafc;
+              padding: 6px 10px;
+              border-radius: 6px;
+              border: 1px solid rgba(51, 65, 85, 0.8);
+              font-family: system-ui, -apple-system, sans-serif;
+              font-size: 12px;
+              font-weight: 500;
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+              backdrop-filter: blur(4px);
+              max-width: 250px;
+              white-space: normal;
+              word-wrap: break-word;
+            ">
+              ${node.name}
+            </div>
+          `}
+          nodeColor={(node: any) => groupColors[node.group % groupColors.length]}
+          backgroundColor={bgColor}
+          linkColor={() => linkColor}
           nodeRelSize={6}
           linkWidth={1.5}
           width={dimensions.width}
-          height={dimensions.height}
+          height={dimensions.height - 80}
           enableNodeDrag={false}
         />
       </div>
