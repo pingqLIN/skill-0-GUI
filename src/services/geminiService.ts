@@ -1,14 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { AdvancedSkillAnalyzer, RiskLevel } from "./skillScanner";
 
 const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY,
-  fetch: typeof fetch !== 'undefined' ? fetch : undefined
+  apiKey: process.env.GEMINI_API_KEY
 });
 
 export async function analyzeSkillText(text: string) {
+  const scanner = new AdvancedSkillAnalyzer();
+  const scanResult = scanner.scanContent(text);
+
   const prompt = `
     Analyze the following skill description or code snippet based on the Skill-0 project framework.
-    Extract the goals, constraints, and evaluate its operability, risk, and execution phases.
+    Extract the goals, constraints, and evaluate its operability and execution phases.
     
     Skill Input:
     """
@@ -29,15 +32,6 @@ export async function analyzeSkillText(text: string) {
           properties: {
             projectId: { type: Type.STRING, description: "A generated unique ID for this skill, e.g., SKILL-0-XXXX" },
             projectName: { type: Type.STRING, description: "A concise, descriptive name for the skill" },
-            riskAssessment: {
-              type: Type.OBJECT,
-              properties: {
-                level: { type: Type.STRING, description: "Risk level: Low, Medium, or High" },
-                negativeIntent: { type: Type.INTEGER, description: "Percentage score (0-100) indicating potential negative or malicious intent" },
-                details: { type: Type.STRING, description: "Explanation of the risk assessment" }
-              },
-              required: ["level", "negativeIntent", "details"]
-            },
             threeClassification: {
               type: Type.OBJECT,
               properties: {
@@ -95,13 +89,23 @@ export async function analyzeSkillText(text: string) {
               }
             }
           },
-          required: ["projectId", "projectName", "riskAssessment", "threeClassification", "globalMetrics", "phases"]
+          required: ["projectId", "projectName", "threeClassification", "globalMetrics", "phases"]
         }
       }
     });
 
     if (response.text) {
-      return JSON.parse(response.text);
+      const parsed = JSON.parse(response.text);
+      
+      // Inject deterministic risk assessment from our scanner
+      parsed.riskAssessment = {
+        level: scanResult.riskLevel.toUpperCase(),
+        negativeIntent: scanResult.riskScore,
+        details: `Found ${scanResult.findings.length} security issues. ${scanResult.blocked ? 'BLOCKED: ' + scanResult.blockedReason : ''}`
+      };
+      parsed.securityScan = scanResult;
+      
+      return parsed;
     }
     throw new Error("No response from AI");
   } catch (error) {

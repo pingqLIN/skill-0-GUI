@@ -226,9 +226,9 @@ export function PhaseDetails({ phase, allPhases, onNavigatePhase, onClose, onEdi
                   <div className="bg-muted/10 p-4 rounded-lg border border-border/40 shadow-sm">
                     <h4 className="text-xs font-semibold mb-3 flex items-center gap-1.5 text-foreground/80"><BookOpen size={14} className="text-amber-500/70"/> {t('phaseDetails.references')}</h4>
                     <ul className="space-y-2">
-                      <li><a href="#" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.architectureGuidelines')}</a></li>
-                      <li><a href="#" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.securityPolicies')}</a></li>
-                      <li><a href="#" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.apiDocumentation')}</a></li>
+                      <li><a href="https://github.com/pingqLIN/skill-0" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.architectureGuidelines')}</a></li>
+                      <li><a href="https://github.com/pingqLIN/skill-0/blob/main/README.md" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.securityPolicies')}</a></li>
+                      <li><a href="https://github.com/pingqLIN/skill-0" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.apiDocumentation')}</a></li>
                     </ul>
                   </div>
                 </div>

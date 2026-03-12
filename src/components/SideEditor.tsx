@@ -77,10 +77,11 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
                       onChange={(e) => handleNestedChange('riskAssessment', 'level', e.target.value)}
                       className="w-full bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-sm"
                     >
-                      <option value="Low">{t('editor.low')}</option>
-                      <option value="Medium">{t('editor.medium')}</option>
-                      <option value="High">{t('editor.high')}</option>
-                      <option value="Critical">{t('editor.critical')}</option>
+                      <option value="SAFE">Safe</option>
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                      <option value="CRITICAL">Critical</option>
                     </select>
                   </div>
                   <div className="space-y-2">

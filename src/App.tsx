@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Moon, Sun, UploadCloud, Link as LinkIcon, FileCode2, Activity, RefreshCw, AlertCircle, Database, ShieldAlert, Edit2, Download, Undo2, Languages } from 'lucide-react';
+import { Moon, Sun, UploadCloud, Link as LinkIcon, FileCode2, Activity, RefreshCw, AlertCircle, Database, ShieldAlert, Edit2, Download, Undo2, Languages, Github } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { mockSkillData } from './data/mockData';
@@ -153,6 +153,16 @@ export default function App() {
           <h1 className="font-semibold tracking-tight text-lg">{t('app.title')}</h1>
         </div>
         <div className="flex items-center gap-2">
+          <a 
+            href="https://github.com/pingqLIN/skill-0" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="p-2 rounded-full hover:bg-muted transition-colors flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            title="GitHub Repository"
+          >
+            <Github size={18} />
+            <span className="hidden sm:inline">GitHub</span>
+          </a>
           <button 
             onClick={toggleLanguage}
             className="p-2 rounded-full hover:bg-muted transition-colors flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"

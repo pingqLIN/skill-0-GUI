@@ -2,9 +2,29 @@ export const mockSkillData = {
   projectId: "SKILL-0-9942",
   projectName: "Automated Data Pipeline Skill",
   riskAssessment: {
-    level: "Low",
+    level: "LOW",
     negativeIntent: 12,
     details: "No malicious patterns detected in the execution graph. Standard data transformation operations."
+  },
+  securityScan: {
+    riskLevel: "LOW",
+    riskScore: 12,
+    blocked: false,
+    findings: [
+      {
+        ruleId: "SEC001",
+        ruleName: "System Command Execution",
+        originalSeverity: "CRITICAL",
+        adjustedSeverity: "LOW",
+        contextType: "Prose",
+        lineNumber: 15,
+        lineContent: "The script uses os.system to run the command.",
+        description: "Detected potential system command execution.",
+        adjustmentReason: "Finding is within prose/documentation, not executable code. Severity reduced.",
+        standardUrl: "https://owasp.org/www-community/attacks/Command_Injection",
+        detectionStandard: "OWASP Top 10"
+      }
+    ]
   },
   threeClassification: {
     category: "Data Processing",
@@ -73,7 +93,7 @@ export const mockSkillData = {
         {
           id: "C1",
           question: "Is risk level acceptable?",
-          rules: ["negative_intent < 20%", "risk_level in ['Low', 'Medium']"],
+          rules: ["negative_intent < 20%", "risk_level in ['LOW', 'MEDIUM']"],
           threshold: "20%",
           outcomes: { yes: "Proceed to Phase D", no: "Halt Execution & Alert" },
           evidence: "Negative intent scored at 12% via heuristic scanning."

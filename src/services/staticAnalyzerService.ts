@@ -5,28 +5,28 @@ export async function analyzeSkillText(text: string) {
   const lowerText = text.toLowerCase();
   
   // Basic Heuristics for Risk Assessment
-  let riskLevel = "Low";
+  let riskLevel = "LOW";
   let negativeIntent = Math.floor(Math.random() * 15); // 0-14%
   let category = "General Automation";
   let details = "Standard operations detected. No obvious malicious patterns.";
 
   // High Risk Keywords
   if (/(delete|drop table|rm -rf|exec\(|eval\(|os\.system)/.test(lowerText)) {
-    riskLevel = "High";
+    riskLevel = "HIGH";
     negativeIntent = 75 + Math.floor(Math.random() * 20); // 75-94%
     category = "System Manipulation";
     details = "High risk: Detected destructive or arbitrary code execution keywords (e.g., delete, drop, exec).";
   } 
   // Medium Risk Keywords
   else if (/(scrape|crawl|download|fetch|api|request)/.test(lowerText)) {
-    riskLevel = "Medium";
+    riskLevel = "MEDIUM";
     negativeIntent = 20 + Math.floor(Math.random() * 30); // 20-49%
     category = "Network & Data Extraction";
     details = "Medium risk: Detected network requests or data extraction patterns. Requires rate limiting and boundary checks.";
   }
   // Security Keywords
   else if (/(encrypt|secure|hash|auth|token)/.test(lowerText)) {
-    riskLevel = "Low";
+    riskLevel = "LOW";
     negativeIntent = Math.floor(Math.random() * 5); // 0-4%
     category = "Security & Cryptography";
     details = "Low risk: Detected security-focused operations. Standard encryption/hashing applied.";
@@ -111,7 +111,7 @@ export async function analyzeSkillText(text: string) {
           {
             id: "C1",
             question: "Is risk level acceptable?",
-            rules: ["negative_intent < 50%", "risk_level in ['Low', 'Medium']"],
+            rules: ["negative_intent < 50%", "risk_level in ['LOW', 'MEDIUM']"],
             threshold: "50%",
             outcomes: { yes: "Proceed to Phase D", no: "Halt Execution & Alert" },
             evidence: `Heuristic scanning scored negative intent at ${negativeIntent}%.`

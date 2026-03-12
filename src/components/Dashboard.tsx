@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: { data: any, onNavigatePhase: (id: string) => void, modifiedPaths?: Set<string> }) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const { globalMetrics, riskAssessment, threeClassification, phases } = data;
 
   const radarData = [
@@ -41,7 +41,7 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
                 className="hidden md:flex items-center gap-6 text-xs"
               >
                 <div className="flex items-center gap-1.5">
-                  <ShieldAlert size={14} className={riskAssessment.level === 'Low' ? 'text-emerald-500' : 'text-destructive'} />
+                  <ShieldAlert size={14} className={riskAssessment.level === 'SAFE' || riskAssessment.level === 'LOW' ? 'text-emerald-500' : 'text-destructive'} />
                   <span className={`font-medium ${modifiedPaths.has('riskAssessment.level') ? 'text-amber-500 dark:text-amber-400' : ''}`}>{riskAssessment.level} {t('dashboard.risk')}</span>
                 </div>
                 <div className="w-px h-4 bg-border/60" />
@@ -118,11 +118,11 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
                   <h4 className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest mb-2">{t('dashboard.riskAssessment')}</h4>
                   <div className="flex items-center justify-between mb-3 z-10">
                     <div className="flex items-center gap-2">
-                      <ShieldAlert size={16} className={riskAssessment.level === 'Low' ? 'text-emerald-500' : 'text-destructive'} />
+                      <ShieldAlert size={16} className={riskAssessment.level === 'SAFE' || riskAssessment.level === 'LOW' ? 'text-emerald-500' : 'text-destructive'} />
                       <span className={`font-semibold text-base tracking-tight ${modifiedPaths.has('riskAssessment.level') ? 'text-amber-500 dark:text-amber-400' : ''}`}>{riskAssessment.level} {t('dashboard.risk')}</span>
                     </div>
                     <span className="text-[10px] font-mono border border-border/50 bg-background/50 px-1.5 py-0.5 rounded text-muted-foreground">
-                      {riskAssessment.negativeIntent}% {t('dashboard.intent')}
+                      {riskAssessment.negativeIntent} {t('dashboard.intent', 'Score')}
                     </span>
                   </div>
                   <button 
