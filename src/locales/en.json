@@ -21,7 +21,77 @@
       "pipeline": "Process Flow",
       "vector": "Vector Semantics",
       "matrix": "Compliance Matrix"
-    }
+    },
+    "subtitle": "Analytical workspace for parser topology, risk posture, and traceability.",
+    "workspace": "Workspace",
+    "analysisReady": "Skill-0: Skill Decomposition Parser",
+    "emptyTitle": "A ternary classification system for parsing the internal structure of Claude Skills and MCP Tools",
+    "emptyLead": "Upload a SKILL definition, paste a draft, or test a parser scenario. The workspace is designed to make flow, security posture, and execution trace feel legible at a glance.",
+    "emptyFeatureFlowTitle": "Flow-first layout",
+    "emptyFeatureFlowBody": "Follow phases, decision nodes, and hand-offs in one continuous visual lane.",
+    "emptyFeatureMatrixTitle": "Risk-weighted surfaces",
+    "emptyFeatureMatrixBody": "See compliance pressure, findings, and classification weight without leaving the main workspace.",
+    "emptyFeatureTraceTitle": "Traceable context",
+    "emptyFeatureTraceBody": "Keep parser evidence, source links, and editor adjustments visible as part of the same tool.",
+    "inputStudio": "Input Studio",
+    "inputGuide": "Paste a SKILL.md excerpt, a parser scenario, or a URL payload to generate a richer analytical workspace.",
+    "inputDrop": "Drop the primary SKILL file here. Additional JSON/YAML/TXT collaboration files will be attached as context only.",
+    "workspaceHint": "Use the sample to preview the strengthened layout and motion system.",
+    "primaryWorkspace": "Primary workspace",
+    "workspaceViews": "Workspace views",
+    "quickActions": "Quick actions",
+    "jumpToPhase": "Jump to phase",
+    "projectSummary": "Project summary",
+    "detailsPanel": "Details panel",
+    "securityScan": "Security scan",
+    "sourceLinks": "Source links",
+    "guiRepo": "GUI repository",
+    "engineRepo": "Engine repository",
+    "openGlobalEditor": "Open global editor",
+    "resetWorkspace": "Reset workspace",
+    "totalPhases": "phases",
+    "totalDecisions": "decisions",
+    "scanScore": "scan score",
+    "modifiedCount": "modified",
+    "firstFinding": "first finding",
+    "noActivePhase": "No active phase selected",
+    "selectPhaseHint": "Select a phase from the left rail to inspect its inputs, decisions, outputs, and telemetry.",
+    "actionsTray": "Action Tray",
+    "flowSequence": "Skill Flow Sequence",
+    "phaseFlowHint": "Move from A to F in order so the workspace follows the parser flow and its decision nodes.",
+    "currentFocus": "Current Focus",
+    "supportPanels": "Support Panels",
+    "supportPanelsHint": "Tuck summary metrics and radar views here, then expand only when you need them.",
+    "phaseStep": "Flow Step"
+    ,"selectFiles": "Select Files"
+    ,"selectFolder": "Select Folder"
+    ,"reviewAndAnalyze": "Review & Analyze"
+    ,"intakePreview": "Intake Preview"
+    ,"intakePreviewHint": "Choose the primary skill file before sending the bundle to the canonical parser."
+    ,"intakeFiles": "files"
+    ,"primarySkill": "primary"
+    ,"primaryCandidate": "candidate"
+    ,"contextOnly": "context"
+    ,"errorPrimarySkillMissing": "Upload at least one primary SKILL file (.md, .skill, or .txt). Auxiliary collaboration files are stored as context only."
+    ,"collaborationContext": "Collaboration Context"
+    ,"contextFiles": "context files"
+    ,"noContextFiles": "No auxiliary collaboration files attached."
+    ,"totalActions": "actions"
+    ,"totalRules": "rules"
+    ,"totalDirectives": "directives"
+    ,"executionPaths": "execution paths"
+    ,"parserVersion": "Parser"
+    ,"schemaVersion": "Schema"
+    ,"source": "Source"
+    ,"sourceDefinition": "Source Definition"
+    ,"decompositionBoard": "Canonical Decomposition"
+    ,"parserBoardHint": "This view is driven directly by the original skill-0 parser output. Auxiliary files remain traceable context and do not alter parser equivalence."
+    ,"rawJson": "Raw Parser JSON"
+    ,"canonicalPayload": "Canonical payload from auto_parse.py"
+    ,"noExecutionPaths": "No execution paths were emitted by the current parser result."
+    ,"derivedWorkflow": "Derived Workflow"
+    ,"derivedWorkflowHint": "This visual workflow is a secondary projection from the canonical parser result."
+    ,"reverseTrace": "Reverse Trace"
   },
   "dashboard": {
     "summary": "Executive Summary",
