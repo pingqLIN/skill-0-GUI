@@ -16,34 +16,12 @@ const VECTOR_SPACE_3D_PACKAGES = [
   'accessor-fn',
   'data-bind-mapper',
   'float-tooltip',
-  'd3-array',
-  'd3-binarytree',
-  'd3-color',
-  'd3-dispatch',
-  'd3-ease',
   'd3-force-3d',
-  'd3-format',
-  'd3-interpolate',
-  'd3-octree',
-  'd3-path',
-  'd3-quadtree',
-  'd3-scale',
-  'd3-scale-chromatic',
-  'd3-selection',
-  'd3-shape',
-  'd3-time',
-  'd3-time-format',
-  'd3-timer',
   'ngraph.events',
   'ngraph.forcelayout',
   'ngraph.graph',
   'ngraph.merge',
   'ngraph.random',
-  'object-assign',
-  'polished',
-  'prop-types',
-  'react-is',
-  'tinycolor2',
 ];
 
 function isNodeModulePackage(id: string, packageName: string) {
@@ -52,6 +30,7 @@ function isNodeModulePackage(id: string, packageName: string) {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const enable3D = env.VITE_ENABLE_3D !== 'false';
   const bridge = createSkill0Bridge({
     explicitRoot: env.SKILL0_PARSER_ROOT || env.SKILL0_ROOT,
     mode: env.SKILL0_MODE || 'auto',
@@ -132,6 +111,10 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if (!enable3D) {
+              return undefined;
+            }
+
             if (VECTOR_SPACE_3D_PACKAGES.some((packageName) => isNodeModulePackage(id, packageName))) {
               return 'vector-space-3d-vendor';
             }
