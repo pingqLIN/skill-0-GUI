@@ -98,6 +98,8 @@ export default defineConfig(({ mode }) => {
               const body = await readJsonBody(req);
               const text = String(body?.text || '');
               const skillName = String(body?.skillName || 'uploaded-skill');
+              const primaryPath = body?.primaryPath ? String(body.primaryPath) : null;
+              const contextFiles = Array.isArray(body?.contextFiles) ? body.contextFiles : [];
 
               if (!text.trim()) {
                 res.statusCode = 400;
@@ -108,7 +110,10 @@ export default defineConfig(({ mode }) => {
 
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(await bridge.parseSkill(text, skillName)));
+              res.end(JSON.stringify(await bridge.parseSkill(text, skillName, {
+                contextFiles,
+                primaryPath,
+              })));
             } catch (error) {
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
