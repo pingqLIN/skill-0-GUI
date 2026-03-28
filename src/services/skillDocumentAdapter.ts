@@ -1,11 +1,14 @@
 import type {
   ActionNode,
+  ConsistencyRun,
   DirectiveNode,
   ExecutionPath,
   ReviewPacket,
   ReviewState,
   RuleNode,
   SkillDocument,
+  ValidationEvidence,
+  ValidationRun,
 } from '../types/skillDocument';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -335,5 +338,134 @@ export function buildReviewPacketFromReviewData(
     reviewMode: options.reviewMode,
     reviewState: options.reviewState,
     skillDocument,
+  };
+}
+
+export function buildValidationEvidenceFromReviewData(
+  data: unknown,
+  options: { reviewMode?: string } = {},
+): ValidationEvidence | null {
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  const skillDocument = extractSkillDocumentFromReviewData(data);
+  if (!skillDocument) {
+    return null;
+  }
+
+  const meta = skillDocument.meta ?? {};
+  const actions = skillDocument.decomposition.actions ?? [];
+  const rules = skillDocument.decomposition.rules ?? [];
+  const directives = skillDocument.decomposition.directives ?? [];
+  const executionPaths = skillDocument.execution_paths ?? [];
+  const allIds = [...actions, ...rules, ...directives].map((item) => item.id);
+  const duplicateIds = allIds.filter((id, index) => allIds.indexOf(id) !== index);
+  const knownIds = new Set(allIds);
+  const missingStepReferences = executionPaths.flatMap((path) =>
+    path.steps
+      .filter((step) => !knownIds.has(step))
+      .map((step) => ({ pathId: path.id, step })),
+  );
+  const reviewMode = options.reviewMode
+    || (isRecord(data.reviewerSummary) && typeof data.reviewerSummary.mode === 'string'
+    ? data.reviewerSummary.mode
+    : 'unknown');
+
+  const validationErrors: ValidationRun['errors'] = [];
+  const consistencyIssues: ConsistencyRun['issues'] = [];
+  const evidenceWarnings: string[] = [];
+
+  if (!meta.schema_version || meta.schema_version === 'unknown') {
+    validationErrors.push({
+      code: 'missing_schema_version',
+      message: 'app.validationMissingSchemaVersion',
+      path: 'meta.schema_version',
+      severity: 'error',
+    });
+  }
+
+  if (!meta.skill_id) {
+    validationErrors.push({
+      code: 'missing_skill_id',
+      message: 'app.validationMissingSkillId',
+      path: 'meta.skill_id',
+      severity: 'warning',
+    });
+  }
+
+  if (!(meta.title || meta.name)) {
+    validationErrors.push({
+      code: 'missing_title',
+      message: 'app.validationMissingTitle',
+      path: 'meta.title',
+      severity: 'warning',
+    });
+  }
+
+  if (actions.length + rules.length + directives.length === 0) {
+    validationErrors.push({
+      code: 'empty_decomposition',
+      message: 'app.validationEmptyDecomposition',
+      path: 'decomposition',
+      severity: 'warning',
+    });
+  }
+
+  duplicateIds.forEach((duplicateId) => {
+    consistencyIssues.push({
+      message: 'app.validationDuplicateId',
+      severity: 'error',
+      targetId: duplicateId,
+      type: 'duplicate_id',
+    });
+  });
+
+  missingStepReferences.forEach(({ pathId, step }) => {
+    consistencyIssues.push({
+      message: `app.validationMissingStepReference:${pathId}:${step}`,
+      severity: 'error',
+      targetId: pathId,
+      type: 'missing_reference',
+    });
+  });
+
+  if (executionPaths.length === 0) {
+    consistencyIssues.push({
+      message: 'app.validationMissingExecutionPaths',
+      severity: 'warning',
+      type: 'orphan_path',
+    });
+  }
+
+  if (reviewMode === 'unknown') {
+    evidenceWarnings.push('app.validationImportedJsonWarning');
+  } else if (reviewMode === 'standalone') {
+    evidenceWarnings.push('app.validationStandaloneWarning');
+  }
+
+  return {
+    consistencyRun: {
+      finishedAt: new Date().toISOString(),
+      id: 'consistency-current',
+      issues: consistencyIssues,
+      startedAt: new Date().toISOString(),
+      status: consistencyIssues.some((issue) => issue.severity === 'error') ? 'failed' : 'passed',
+    },
+    evidenceWarnings,
+    provenance: {
+      parsedBy: meta.parsed_by || 'unknown',
+      parserVersion: meta.parser_version || 'unknown',
+      schemaVersion: meta.schema_version || 'unknown',
+      skillId: meta.skill_id || 'unknown',
+      source: skillDocument.original_definition?.source || meta.source || 'unknown',
+    },
+    validationRun: {
+      errors: validationErrors,
+      finishedAt: new Date().toISOString(),
+      id: 'schema-current',
+      startedAt: new Date().toISOString(),
+      status: validationErrors.some((issue) => issue.severity === 'error') ? 'failed' : 'passed',
+    },
   };
 }

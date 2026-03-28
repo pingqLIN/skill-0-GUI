@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildReviewPacketFromReviewData,
+  buildValidationEvidenceFromReviewData,
   buildReviewDataFromSkillDocument,
   extractSkillDocumentFromReviewData,
   parseSkillDocumentJson,
@@ -117,5 +118,65 @@ describe('skillDocumentAdapter', () => {
     expect(reviewPacket?.reviewState.reviewStatus).toBe('changes_requested');
     expect(reviewPacket?.operatorReminders).toHaveLength(1);
     expect(reviewPacket?.reviewDecisionGuidance).toContain('canonical bridge');
+  });
+
+  it('builds validation evidence from review workspace data', () => {
+    const imported = buildReviewDataFromSkillDocument(skillDocument, {
+      fileName: 'imported-skill.json',
+      sourceLabel: 'json/test',
+    });
+
+    const validationEvidence = buildValidationEvidenceFromReviewData(imported);
+
+    expect(validationEvidence).not.toBeNull();
+    expect(validationEvidence?.provenance.schemaVersion).toBe('2.4.0');
+    expect(validationEvidence?.validationRun.errors).toHaveLength(0);
+    expect(validationEvidence?.consistencyRun.issues).toHaveLength(0);
+    expect(validationEvidence?.evidenceWarnings).toContain('app.validationImportedJsonWarning');
+  });
+
+  it('uses the current review mode when building validation evidence warnings', () => {
+    const imported = buildReviewDataFromSkillDocument(skillDocument, {
+      fileName: 'imported-skill.json',
+      sourceLabel: 'json/test',
+    });
+
+    const validationEvidence = buildValidationEvidenceFromReviewData(imported, {
+      reviewMode: 'standalone',
+    });
+
+    expect(validationEvidence).not.toBeNull();
+    expect(validationEvidence?.evidenceWarnings).toContain('app.validationStandaloneWarning');
+    expect(validationEvidence?.evidenceWarnings).not.toContain('app.validationImportedJsonWarning');
+  });
+
+  it('surfaces schema and consistency failures in validation evidence', () => {
+    const brokenDocument = {
+      ...skillDocument,
+      execution_paths: [
+        {
+          id: 'path_001',
+          name: 'broken-path',
+          steps: ['missing_001'],
+        },
+      ],
+      meta: {
+        ...skillDocument.meta,
+        schema_version: 'unknown',
+      },
+    };
+    const imported = buildReviewDataFromSkillDocument(brokenDocument, {
+      fileName: 'broken-skill.json',
+      sourceLabel: 'json/test',
+    });
+
+    const validationEvidence = buildValidationEvidenceFromReviewData(imported);
+
+    expect(validationEvidence).not.toBeNull();
+    expect(validationEvidence?.validationRun.errors.map((issue) => issue.code)).toContain('missing_schema_version');
+    expect(validationEvidence?.consistencyRun.issues.map((issue) => issue.type)).toContain('missing_reference');
+    expect(validationEvidence?.consistencyRun.issues.map((issue) => issue.message)).toContain(
+      'app.validationMissingStepReference:path_001:missing_001',
+    );
   });
 });

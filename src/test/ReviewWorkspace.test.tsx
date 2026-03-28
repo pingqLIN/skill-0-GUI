@@ -99,6 +99,23 @@ describe('ReviewWorkspace', () => {
     expect(screen.getAllByText('app.bridgeModeBundled')).not.toHaveLength(0);
   });
 
+  it('shows reviewer-facing validation evidence for incomplete parser metadata', async () => {
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...baseProps}
+        bridgeStatus={{ mode: 'standalone', skill0Root: null }}
+        bridgeStatusError={null}
+      />,
+    );
+
+    const panel = await screen.findByTestId('validation-evidence-panel');
+    expect(panel).toHaveTextContent('app.validationStandaloneWarning');
+    expect(panel).toHaveTextContent('app.validationMissingSchemaVersion');
+    expect(panel).toHaveTextContent('app.validationMissingSkillId');
+    expect(panel).toHaveTextContent('app.validationMissingExecutionPaths');
+  });
+
   it('exports a review packet with reviewer decision metadata', async () => {
     const originalCreateObjectUrl = URL.createObjectURL;
     const originalRevokeObjectUrl = URL.revokeObjectURL;
