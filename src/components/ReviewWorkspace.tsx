@@ -208,7 +208,9 @@ export function ReviewWorkspace({
   const openDerivedWorkflow = () => {
     setActiveTab('pipeline');
     setIsDerivedWorkflowOpen(true);
-    document.getElementById('derived-workflow-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => {
+      document.getElementById('derived-workflow-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   };
 
   const buildReviewStateSnapshot = (): ReviewState => {

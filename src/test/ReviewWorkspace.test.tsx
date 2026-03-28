@@ -135,9 +135,10 @@ describe('ReviewWorkspace', () => {
   });
 
   it('offers recovery actions for validation issues', async () => {
-    const originalScrollIntoView = Element.prototype.scrollIntoView;
-    const scrollSpy = vi.fn();
-    Element.prototype.scrollIntoView = scrollSpy;
+    if (!Element.prototype.scrollIntoView) {
+      Element.prototype.scrollIntoView = () => {};
+    }
+    const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
     const resetSpy = vi.fn();
 
     render(
@@ -150,13 +151,16 @@ describe('ReviewWorkspace', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByTestId('validation-open-workflow'));
-    expect(scrollSpy).toHaveBeenCalled();
+    try {
+      fireEvent.click(await screen.findByTestId('validation-open-workflow'));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(scrollSpy).toHaveBeenCalled();
 
-    fireEvent.click(screen.getByText('app.returnToIntake'));
-    expect(resetSpy).toHaveBeenCalledTimes(1);
-
-    Element.prototype.scrollIntoView = originalScrollIntoView;
+      fireEvent.click(screen.getByText('app.returnToIntake'));
+      expect(resetSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      scrollSpy.mockRestore();
+    }
   });
 
   it('exports a review packet with reviewer decision metadata', async () => {

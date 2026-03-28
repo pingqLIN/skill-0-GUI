@@ -77,11 +77,19 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    void refreshBridgeStatus().then(() => {
-      if (cancelled) {
-        return;
-      }
-    });
+    fetchBridgeStatus()
+      .then((status) => {
+        if (!cancelled) {
+          setBridgeStatus(status);
+          setBridgeStatusError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setBridgeStatus(null);
+          setBridgeStatusError(err instanceof Error ? err.message : 'Unknown bridge status error');
+        }
+      });
 
     return () => {
       cancelled = true;
