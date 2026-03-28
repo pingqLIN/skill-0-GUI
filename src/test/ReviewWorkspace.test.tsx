@@ -56,6 +56,7 @@ describe('ReviewWorkspace', () => {
     engineRepoUrl: 'https://example.com/engine',
     onSelectContextPath: vi.fn(),
     onSaveEdit: vi.fn(),
+    onRetryBridgeStatus: vi.fn(),
     onUndo: vi.fn(),
     onResetWorkspace: vi.fn(),
   };
@@ -114,6 +115,48 @@ describe('ReviewWorkspace', () => {
     expect(panel).toHaveTextContent('app.validationMissingSchemaVersion');
     expect(panel).toHaveTextContent('app.validationMissingSkillId');
     expect(panel).toHaveTextContent('app.validationMissingExecutionPaths');
+  });
+
+  it('offers a bridge retry action when bridge status is unavailable', async () => {
+    const retrySpy = vi.fn();
+
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...baseProps}
+        onRetryBridgeStatus={retrySpy}
+        bridgeStatus={null}
+        bridgeStatusError="Bridge down"
+      />,
+    );
+
+    fireEvent.click(await screen.findByTestId('workspace-retry-bridge-status'));
+    expect(retrySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers recovery actions for validation issues', async () => {
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    const scrollSpy = vi.fn();
+    Element.prototype.scrollIntoView = scrollSpy;
+    const resetSpy = vi.fn();
+
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...baseProps}
+        onResetWorkspace={resetSpy}
+        bridgeStatus={{ mode: 'standalone', skill0Root: null }}
+        bridgeStatusError={null}
+      />,
+    );
+
+    fireEvent.click(await screen.findByTestId('validation-open-workflow'));
+    expect(scrollSpy).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('app.returnToIntake'));
+    expect(resetSpy).toHaveBeenCalledTimes(1);
+
+    Element.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   it('exports a review packet with reviewer decision metadata', async () => {

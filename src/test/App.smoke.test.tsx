@@ -80,8 +80,13 @@ describe('App smoke test', () => {
     expect(banner).toHaveTextContent('app.bridgeGuidanceStandalone');
   });
 
-  it('surfaces bridge verification guidance when the bridge status request fails', async () => {
-    vi.mocked(fetchBridgeStatus).mockRejectedValue(new Error('Bridge down'));
+  it('surfaces bridge verification guidance when the bridge status request fails and allows retry', async () => {
+    vi.mocked(fetchBridgeStatus)
+      .mockRejectedValueOnce(new Error('Bridge down'))
+      .mockResolvedValueOnce({
+        mode: 'skill-0',
+        skill0Root: '/home/miles/dev2/skill-0',
+      });
 
     await act(async () => {
       render(<App />);
@@ -91,6 +96,12 @@ describe('App smoke test', () => {
     expect(banner).toHaveTextContent('app.reviewEvidenceUnavailable');
     expect(banner).toHaveTextContent('Bridge down');
     expect(banner).toHaveTextContent('app.bridgeGuidanceUnavailable');
+
+    fireEvent.click(screen.getByTestId('retry-bridge-status'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('app.bridgeModeCanonical')).not.toHaveLength(0);
+    });
   });
 
   it('loads the review workspace after analysis completes', async () => {
@@ -204,5 +215,55 @@ describe('App smoke test', () => {
         ],
       });
     });
+  });
+
+  it('surfaces a recoverable intake error when zip preprocessing fails', async () => {
+    vi.mocked(JSZip.loadAsync).mockRejectedValue(new Error('Bad zip'));
+
+    const { container } = render(<App />);
+    const fileInput = container.querySelector('input[accept*=".zip"]') as HTMLInputElement | null;
+    expect(fileInput).not.toBeNull();
+
+    const zipFile = new File(['zip-binary'], 'broken.zip', { type: 'application/zip' });
+
+    await act(async () => {
+      fireEvent.change(fileInput!, {
+        target: { files: [zipFile] },
+      });
+    });
+
+    expect(await screen.findByText('app.errorIntakeProcessingFailed')).toBeInTheDocument();
+    expect(screen.getByText('app.clearIntake')).toBeInTheDocument();
+  });
+
+  it('keeps the intake state recoverable after parser failure', async () => {
+    vi.mocked(analyzeSkillText)
+      .mockRejectedValueOnce(new Error('Parser unavailable'))
+      .mockResolvedValueOnce({
+        projectId: 'demo-skill',
+        projectName: 'Demo Skill',
+        phases: [],
+        riskAssessment: { level: 'SAFE', details: '' },
+        threeClassification: { category: 'demo', granularity: 'task', operability: 90 },
+        parserResult: { decomposition: { actions: [], rules: [], directives: [] } },
+        globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
+      });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('app.placeholder'), {
+      target: { value: '# retryable skill' },
+    });
+    fireEvent.click(screen.getByText('app.analyzeBtn'));
+
+    expect(await screen.findByText('Parser unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('app.retryAnalysis'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('review-workspace')).toBeInTheDocument();
+    });
+    expect(analyzeSkillText).toHaveBeenCalledTimes(2);
   });
 });

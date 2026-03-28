@@ -17,6 +17,7 @@
     "exportJson": "Export JSON",
     "errorEmpty": "Please enter a skill description, code snippet, or URL.",
     "errorFailed": "Failed to analyze the skill. Please try again or use a different input.",
+    "errorIntakeProcessingFailed": "Failed to prepare the uploaded files. Try a different archive or clear the current intake and retry.",
     "exampleText": "A secure data pipeline that encrypts user logs before storing them in an AWS S3 bucket. It requires read access to local logs and write access to S3.",
     "tabs": {
       "pipeline": "Process Flow",
@@ -59,6 +60,7 @@
     "bridgeModeUnavailable": "Status unavailable",
     "bridgeModeBundled": "Bundled standalone parser",
     "bridgeModeChecking": "Checking bridge status...",
+    "retryBridgeStatus": "Retry bridge check",
     "bridgeGuidanceCanonical": "This review is using the canonical skill-0 bridge. Parser output is suitable for final equivalence review as long as the supporting files and findings are still inspected.",
     "bridgeGuidanceStandalone": "This review is using the standalone fallback parser. Treat the result as a compatibility preview and re-run it through the canonical skill-0 bridge before making a final equivalence decision.",
     "bridgeGuidanceUnavailable": "Parser mode could not be verified yet. Confirm bridge status before exporting or approving this review result.",
@@ -104,6 +106,9 @@
     "validationMissingExecutionPaths": "No execution paths were emitted for the current review snapshot.",
     "validationImportedJsonWarning": "This review was restored from a SkillDocument JSON import. Re-run the canonical bridge before final approval.",
     "validationStandaloneWarning": "This review is using the standalone fallback parser. Treat schema evidence as provisional until the canonical bridge is re-run.",
+    "validationOpenWorkflow": "Open derived workflow",
+    "validationExportJson": "Export current JSON",
+    "returnToIntake": "Return to intake",
     "equivalenceStatus": "Equivalence status",
     "equivalenceImplementationIdentity": "implementation identity",
     "equivalenceUnverified": "equivalence unverified",
@@ -128,6 +133,8 @@
     ,"selectFiles": "Select Files"
     ,"selectFolder": "Select Folder"
     ,"reviewAndAnalyze": "Review & Analyze"
+    ,"retryAnalysis": "Retry analysis"
+    ,"clearIntake": "Clear intake"
     ,"intakePreview": "Intake Preview"
     ,"intakePreviewHint": "Choose the primary skill file or JSON document before sending the bundle to the canonical parser or importing it directly."
     ,"intakeFiles": "files"
@@ -190,6 +197,8 @@
     "category": "Category",
     "granularity": "Granularity",
     "phase": "Phase",
+    "incompleteSnapshot": "Incomplete snapshot",
+    "incompleteSnapshotHint": "Some parser metrics or classification fields are missing. Review the snapshot carefully before relying on summary numbers.",
     "radar": {
       "operability": "Operability",
       "safety": "Safety",

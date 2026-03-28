@@ -41,6 +41,17 @@ export default function App() {
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
   const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
 
+  const refreshBridgeStatus = async () => {
+    try {
+      const status = await fetchBridgeStatus();
+      setBridgeStatus(status);
+      setBridgeStatusError(null);
+    } catch (err) {
+      setBridgeStatus(null);
+      setBridgeStatusError(err instanceof Error ? err.message : 'Unknown bridge status error');
+    }
+  };
+
   useEffect(() => {
     const preventWindowDrop = (event: DragEvent) => {
       if (event.dataTransfer?.types?.includes('Files')) {
@@ -66,23 +77,11 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-
-    const loadBridgeStatus = async () => {
-      try {
-        const status = await fetchBridgeStatus();
-        if (!cancelled) {
-          setBridgeStatus(status);
-          setBridgeStatusError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setBridgeStatus(null);
-          setBridgeStatusError(err instanceof Error ? err.message : 'Unknown bridge status error');
-        }
+    void refreshBridgeStatus().then(() => {
+      if (cancelled) {
+        return;
       }
-    };
-
-    void loadBridgeStatus();
+    });
 
     return () => {
       cancelled = true;
@@ -241,36 +240,43 @@ export default function App() {
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
 
-    const preparedFiles = await expandUploads(files);
-    const primaryFile = preparedFiles.find((file) => file.isPrimaryCandidate && file.text) ?? null;
-    const standaloneJsonImport = preparedFiles.length === 1 && preparedFiles[0].text
-      ? parseSkillDocumentJson(preparedFiles[0].text)
-      : null;
+    try {
+      const preparedFiles = await expandUploads(files);
+      const primaryFile = preparedFiles.find((file) => file.isPrimaryCandidate && file.text) ?? null;
+      const standaloneJsonImport = preparedFiles.length === 1 && preparedFiles[0].text
+        ? parseSkillDocumentJson(preparedFiles[0].text)
+        : null;
 
-    setPendingUploadFiles(preparedFiles);
-    setPendingPrimaryPath(primaryFile?.path ?? null);
-    setSupportFiles([]);
-    setSelectedContextPath(null);
-    setData(null);
-    setOriginalData(null);
-    setModifiedPaths(new Set());
+      setPendingUploadFiles(preparedFiles);
+      setPendingPrimaryPath(primaryFile?.path ?? null);
+      setSupportFiles([]);
+      setSelectedContextPath(null);
+      setData(null);
+      setOriginalData(null);
+      setModifiedPaths(new Set());
 
-    if (!primaryFile && standaloneJsonImport) {
-      loadSkillDocument(standaloneJsonImport, {
-        fileName: preparedFiles[0].name,
-        sourceLabel: preparedFiles[0].path,
-      });
-      return;
+      if (!primaryFile && standaloneJsonImport) {
+        loadSkillDocument(standaloneJsonImport, {
+          fileName: preparedFiles[0].name,
+          sourceLabel: preparedFiles[0].path,
+        });
+        return;
+      }
+
+      if (primaryFile) {
+        setInputText(primaryFile.text || '');
+        setError(null);
+        return;
+      }
+
+      setInputText('');
+      setError(t('app.errorPrimarySkillMissing'));
+    } catch (err) {
+      console.error(err);
+      setError(t('app.errorIntakeProcessingFailed'));
+      setPendingUploadFiles([]);
+      setPendingPrimaryPath(null);
     }
-
-    if (primaryFile) {
-      setInputText(primaryFile.text || '');
-      setError(null);
-      return;
-    }
-
-    setInputText('');
-    setError(t('app.errorPrimarySkillMissing'));
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -387,6 +393,26 @@ export default function App() {
     } finally {
       setIsExtracting(false);
     }
+  };
+
+  const retryCurrentAnalysis = () => {
+    if (pendingUploadFiles.length > 0) {
+      handleAnalyzePendingUpload();
+      return;
+    }
+
+    if (inputText.trim()) {
+      handlePasteUrl();
+    }
+  };
+
+  const clearIntake = () => {
+    setInputText('');
+    setError(null);
+    setPendingUploadFiles([]);
+    setPendingPrimaryPath(null);
+    setSupportFiles([]);
+    setSelectedContextPath(null);
   };
 
   const handleSaveEdit = (editorConfig: Exclude<EditorConfig, null>, updatedData: any) => {
@@ -655,6 +681,17 @@ export default function App() {
                         </div>
                         <p className="mt-2 text-xs leading-5 text-current/80">{bridgeReviewGuidance}</p>
                         <p className="mt-2 text-[11px] leading-5 text-current/70">{bridgeModeDetail}</p>
+                        {bridgeStatusError && (
+                          <button
+                            type="button"
+                            data-testid="retry-bridge-status"
+                            onClick={() => void refreshBridgeStatus()}
+                            className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl border border-current/20 bg-background/70 px-3 py-2 text-xs font-medium text-current transition hover:bg-background/85"
+                          >
+                            <Activity size={14} />
+                            {t('app.retryBridgeStatus')}
+                          </button>
+                        )}
                       </div>
                       <textarea
                         value={inputText}
@@ -664,9 +701,39 @@ export default function App() {
                       />
 
                       {error && (
-                        <div className="flex items-start gap-2 rounded-xl border border-destructive/15 bg-destructive/10 px-3 py-2 text-sm text-destructive backdrop-blur-lg">
-                          <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                          <span>{error}</span>
+                        <div className="rounded-xl border border-destructive/15 bg-destructive/10 px-3 py-3 text-sm text-destructive backdrop-blur-lg">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                            <span>{error}</span>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {(pendingUploadFiles.length > 0 || inputText.trim()) && (
+                              <button
+                                type="button"
+                                onClick={retryCurrentAnalysis}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-white/70 px-3 py-2 text-xs font-medium text-destructive transition hover:bg-white/85"
+                              >
+                                <Activity size={14} />
+                                {t('app.retryAnalysis')}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={clearIntake}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-white/70 px-3 py-2 text-xs font-medium text-destructive transition hover:bg-white/85"
+                            >
+                              {t('app.clearIntake')}
+                            </button>
+                            {bridgeStatusError && (
+                              <button
+                                type="button"
+                                onClick={() => void refreshBridgeStatus()}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-white/70 px-3 py-2 text-xs font-medium text-destructive transition hover:bg-white/85"
+                              >
+                                {t('app.retryBridgeStatus')}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -811,6 +878,7 @@ export default function App() {
               selectedContextPath={selectedContextPath}
               bridgeStatus={bridgeStatus}
               bridgeStatusError={bridgeStatusError}
+              onRetryBridgeStatus={() => void refreshBridgeStatus()}
               guiRepoUrl={GUI_REPO_URL}
               engineRepoUrl={ENGINE_REPO_URL}
               onSelectContextPath={setSelectedContextPath}

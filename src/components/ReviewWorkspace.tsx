@@ -39,6 +39,7 @@ type ReviewWorkspaceProps = {
   engineRepoUrl: string;
   onSelectContextPath: (path: string | null) => void;
   onSaveEdit: (config: Exclude<EditorConfig, null>, updatedData: any) => void;
+  onRetryBridgeStatus: () => void;
   onUndo: () => void;
   onResetWorkspace: () => void;
 };
@@ -55,6 +56,7 @@ export function ReviewWorkspace({
   engineRepoUrl,
   onSelectContextPath,
   onSaveEdit,
+  onRetryBridgeStatus,
   onUndo,
   onResetWorkspace,
 }: ReviewWorkspaceProps) {
@@ -192,13 +194,21 @@ export function ReviewWorkspace({
 
     return message.startsWith('app.') ? t(message) : message;
   };
+  const hasValidationRecoveryAction = Boolean(
+    validationEvidence?.validationRun.errors.length
+      || validationEvidence?.consistencyRun.issues.length
+      || validationEvidence?.evidenceWarnings.length,
+  );
+  const hasWorkflowRecovery = Boolean(
+    validationEvidence?.consistencyRun.issues.some((issue) =>
+      issue.type === 'missing_reference' || issue.type === 'orphan_path',
+    ),
+  );
 
   const openDerivedWorkflow = () => {
     setActiveTab('pipeline');
     setIsDerivedWorkflowOpen(true);
-    window.setTimeout(() => {
-      document.getElementById('derived-workflow-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
+    document.getElementById('derived-workflow-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const buildReviewStateSnapshot = (): ReviewState => {
@@ -898,6 +908,7 @@ export function ReviewWorkspace({
               title={bridgeModeLabel}
               summary={bridgeModeSummary}
               accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : bridgeStatus?.mode === 'standalone' ? 'default' : 'rose'}
+              defaultOpen={Boolean(bridgeStatusError)}
             >
               <div className="grid gap-3">
                 <MiniMetric label={t('app.bridgeMode')} value={bridgeModeLabel} />
@@ -905,6 +916,17 @@ export function ReviewWorkspace({
                 <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
                   {bridgeReviewGuidance}
                 </div>
+                {bridgeStatusError && (
+                  <button
+                    type="button"
+                    data-testid="workspace-retry-bridge-status"
+                    onClick={onRetryBridgeStatus}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/55 bg-background/76 px-3 py-2 text-xs font-medium text-foreground transition hover:border-primary/30 hover:text-primary"
+                  >
+                    <RefreshCw size={14} />
+                    {t('app.retryBridgeStatus')}
+                  </button>
+                )}
               </div>
             </InsightBlock>
 
@@ -972,6 +994,39 @@ export function ReviewWorkspace({
                           {t('app.validationNoIssues')}
                         </div>
                       )}
+                    {hasValidationRecoveryAction && (
+                      <div className="flex flex-wrap gap-2">
+                        {hasWorkflowRecovery && (
+                          <button
+                            type="button"
+                            data-testid="validation-open-workflow"
+                            onClick={openDerivedWorkflow}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/55 bg-background/76 px-3 py-2 text-xs font-medium text-foreground transition hover:border-primary/30 hover:text-primary"
+                          >
+                            <FileCode2 size={14} />
+                            {t('app.validationOpenWorkflow')}
+                          </button>
+                        )}
+                        {skillDocument && (
+                          <button
+                            type="button"
+                            onClick={exportSkillJson}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/55 bg-background/76 px-3 py-2 text-xs font-medium text-foreground transition hover:border-primary/30 hover:text-primary"
+                          >
+                            <Download size={14} />
+                            {t('app.validationExportJson')}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={onResetWorkspace}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/55 bg-background/76 px-3 py-2 text-xs font-medium text-foreground transition hover:border-primary/30 hover:text-primary"
+                        >
+                          <ChevronUp size={14} />
+                          {t('app.returnToIntake')}
+                        </button>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
