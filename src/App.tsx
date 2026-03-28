@@ -395,6 +395,8 @@ export default function App() {
     if (editorConfig.type === 'json' || editorConfig.type === 'skillDocument') {
       const sourceLabel = data?.parserResult?.original_definition?.source || 'json/editor';
       const rebuiltData = buildReviewDataFromSkillDocument(updatedData, {
+        editSource: editorConfig.type === 'json' ? 'json' : 'structured',
+        existingSession: data,
         fileName: `${data.projectId || 'skill-document'}.json`,
         sourceLabel,
       });

@@ -21,6 +21,7 @@ The repository now covers the following MVP items with live code and tests:
 - SkillDocument JSON export from the review workspace
 - raw JSON editor with format, parse validation, and apply-back-to-workspace flow
 - structured SkillDocument editor for `meta`, `actions`, `rules`, `directives`, and `execution_paths`
+- edited SkillDocument sessions now preserve the last known parser provenance instead of collapsing back to generic JSON-import mode
 - schema validation panel in the workspace right rail
 - custom consistency checks for:
   - duplicate ids
@@ -38,6 +39,7 @@ The current cycle resolved four concrete gaps from the MVP draft:
 2. Reviewer-visible quality gates now exist in the UI instead of being implicit test-only checks.
 3. Custom consistency rules no longer assume that only the first execution path may act as the implicit root.
 4. Reviewers no longer need to drop straight to raw JSON for first-pass CRUD on core decomposition structures.
+5. Structured and JSON saves now keep the last known parser provenance visible while still downgrading final equivalence to a re-validate-required state.
 
 ## 19.4 Current Known Gaps
 
@@ -47,7 +49,7 @@ The MVP loop is stronger, but still incomplete in the following areas:
 
 - the first CRUD surface now exists, but it is still side-panel based and does not yet support deep field-level guidance or issue-to-field jump links
 - no element navigator that selects and focuses specific decomposition nodes
-- structured edits still rebuild the workspace from the SkillDocument projection instead of preserving richer runtime/editor provenance
+- structured edits still rebuild the workspace from the SkillDocument projection, so parser evidence and review-specific enrichments are preserved only at a summary/provenance level, not as fully editable first-class state
 
 ### Testing workflow
 
@@ -70,7 +72,7 @@ The MVP loop is stronger, but still incomplete in the following areas:
 Execute the next MVP slices in this order:
 
 1. Structured form CRUD for `actions`, `rules`, `directives`, and `execution_paths`
-2. Form/JSON two-way sync refinements so raw JSON edits and structured edits preserve more session context
+2. Form/JSON two-way sync refinements so raw JSON edits and structured edits preserve more field-level review context and issue targeting
 3. Reviewer-facing test panel with validation rerun, consistency rerun, and simple path walk
 4. Reviewer notes and diff summary
 5. Dedicated review report export

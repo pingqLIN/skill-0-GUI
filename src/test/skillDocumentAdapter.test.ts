@@ -78,6 +78,44 @@ describe('skillDocumentAdapter', () => {
     expect(extractSkillDocumentFromReviewData(imported)).toEqual(imported.parserResult);
   });
 
+  it('preserves prior session provenance when rebuilding after an edit', () => {
+    const rebuilt = buildReviewDataFromSkillDocument(skillDocument, {
+      editSource: 'structured',
+      existingSession: {
+        bridge: {
+          error: null,
+          mode: 'skill-0',
+          skill0Root: '/home/miles/dev2/skill-0',
+        },
+        reviewerSummary: {
+          equivalenceNote: 'implementation_identity',
+          finalDecisionGuidance: 'Final equivalence review is acceptable.',
+          mode: 'canonical',
+          operatorReminders: [
+            {
+              action: 'Review parser findings before approval.',
+              detail: 'Canonical review session.',
+              id: 'rem-existing',
+              label: 'Canonical review',
+              level: 'medium',
+            },
+          ],
+        },
+      },
+      fileName: 'edited-skill.json',
+      sourceLabel: 'json/editor',
+    });
+
+    expect(rebuilt.bridge.mode).toBe('skill-0');
+    expect(rebuilt.bridge.skill0Root).toBe('/home/miles/dev2/skill-0');
+    expect(rebuilt.reviewerSummary.mode).toBe('canonical');
+    expect(rebuilt.reviewerSummary.equivalenceNote).toBe('equivalence_unverified');
+    expect(rebuilt.reviewerSummary.finalDecisionGuidance).toContain('after the last canonical skill-0 parser run');
+    expect(rebuilt.reviewerSummary.operatorReminders.some((reminder: any) => reminder.id === 'rem-existing')).toBe(true);
+    expect(rebuilt.reviewerSummary.operatorReminders.some((reminder: any) => reminder.id === 'rem-structured-edit')).toBe(true);
+    expect(rebuilt.securityScan.findings[0].ruleId).toBe('EDIT-001');
+  });
+
   it('preserves malformed execution path entries for downstream validation', () => {
     const extracted = extractSkillDocumentFromReviewData({
       parserResult: {

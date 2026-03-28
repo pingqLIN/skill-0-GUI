@@ -6,6 +6,13 @@ import type {
   SkillDocument,
 } from '../types/skillDocument';
 
+type BuildReviewDataOptions = {
+  fileName?: string;
+  sourceLabel?: string;
+  existingSession?: unknown;
+  editSource?: 'import' | 'json' | 'structured';
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -93,15 +100,59 @@ function buildRuleDecisionNodes(rules: RuleNode[]) {
   }));
 }
 
+function mapBridgeModeToReviewMode(mode: unknown) {
+  if (mode === 'skill-0') return 'canonical';
+  if (mode === 'standalone') return 'standalone';
+  return 'unknown';
+}
+
+function dedupeOperatorReminders(reminders: unknown[]) {
+  const seen = new Set<string>();
+  return reminders.filter((reminder) => {
+    if (!isRecord(reminder) || typeof reminder.id !== 'string') {
+      return false;
+    }
+    if (seen.has(reminder.id)) {
+      return false;
+    }
+    seen.add(reminder.id);
+    return true;
+  });
+}
+
+function buildReviewGuidance(reviewMode: 'canonical' | 'standalone' | 'unknown', editSource: 'import' | 'json' | 'structured') {
+  if (editSource === 'import') {
+    return 'Loaded from skill JSON import. Parser execution was not re-run. Validate structure and re-run through the canonical bridge before final equivalence decisions.';
+  }
+
+  const editorLabel = editSource === 'json' ? 'JSON editor' : 'structured editor';
+  if (reviewMode === 'canonical') {
+    return `This SkillDocument was updated in the ${editorLabel} after the last canonical skill-0 parser run. Original parser provenance is preserved, but final equivalence requires a fresh canonical re-run before approval.`;
+  }
+  if (reviewMode === 'standalone') {
+    return `This SkillDocument was updated in the ${editorLabel} after the last standalone parser run. Original parser provenance is preserved, but final equivalence still requires a fresh canonical re-run before approval.`;
+  }
+  return `This SkillDocument was updated in the ${editorLabel} after an unverified or imported session. Confirm parser mode and re-run through the canonical bridge before final equivalence decisions.`;
+}
+
 export function buildReviewDataFromSkillDocument(
   document: SkillDocument,
-  options: { fileName?: string; sourceLabel?: string } = {},
+  options: BuildReviewDataOptions = {},
 ) {
   const meta = document.meta ?? {};
   const actions = document.decomposition.actions ?? [];
   const rules = document.decomposition.rules ?? [];
   const directives = document.decomposition.directives ?? [];
   const executionPaths = document.execution_paths ?? [];
+  const previousSession = isRecord(options.existingSession) ? options.existingSession : null;
+  const previousBridge = previousSession && isRecord(previousSession.bridge) ? previousSession.bridge : null;
+  const previousReviewerSummary = previousSession && isRecord(previousSession.reviewerSummary)
+    ? previousSession.reviewerSummary
+    : null;
+  const reviewMode = previousReviewerSummary && typeof previousReviewerSummary.mode === 'string'
+    ? previousReviewerSummary.mode as 'canonical' | 'standalone' | 'unknown'
+    : mapBridgeModeToReviewMode(previousBridge?.mode);
+  const editSource = options.editSource ?? 'import';
   const category = directives[0]?.directive_type || actions[0]?.action_type || 'skill_document';
   const nonDeterministic = actions.filter((action) => action.deterministic === false).length;
   const strategicDirectives = directives.filter((directive) => directive.decomposable).length;
@@ -113,7 +164,7 @@ export function buildReviewDataFromSkillDocument(
   const goalAchievementRate = clamp(76 + (actions.length * 2) + strategicDirectives, 55, 98);
   const normalizedSkillName = slugifySkillName(meta.name || meta.title || options.fileName || 'imported-skill');
   const sourceLabel = options.sourceLabel || 'json/import';
-  const reviewGuidance = 'Loaded from skill JSON import. Parser execution was not re-run. Validate structure and re-run through the canonical bridge before final equivalence decisions.';
+  const reviewGuidance = buildReviewGuidance(reviewMode, editSource);
   const parserResult = {
     ...document,
     execution_paths: executionPaths,
@@ -136,12 +187,30 @@ export function buildReviewDataFromSkillDocument(
   const directivePhaseTasks = directives.length
     ? directives.map((directive: DirectiveNode) => `${directive.name || directive.directive_type}: ${directive.description || 'No description'}`)
     : ['No directives imported'];
+  const reviewerMode = editSource === 'import' ? 'unknown' : reviewMode;
+  const reminderId = editSource === 'json' ? 'rem-json-edit' : editSource === 'structured' ? 'rem-structured-edit' : 'rem-json-import';
+  const reminderLabel = editSource === 'json'
+    ? 'Edited JSON session'
+    : editSource === 'structured'
+      ? 'Edited structured session'
+      : 'Imported JSON session';
+  const reminderAction = editSource === 'import'
+    ? 'Run schema validation and a canonical bridge re-check before relying on this import for final review.'
+    : 'Re-run schema validation and the canonical bridge before relying on edited content for final equivalence review.';
+  const reminderDetail = editSource === 'import'
+    ? 'This session was restored from a SkillDocument JSON payload rather than a live parser execution.'
+    : `This session keeps its last known parser provenance, but the content was edited through the ${editSource === 'json' ? 'JSON editor' : 'structured editor'} after that parser run.`;
+  const previousOperatorReminders = previousReviewerSummary && Array.isArray(previousReviewerSummary.operatorReminders)
+    ? previousReviewerSummary.operatorReminders
+    : [];
 
   return {
     bridge: {
-      error: 'Loaded from skill JSON import. Parser execution was not re-run.',
-      mode: 'unknown',
-      skill0Root: null,
+      error: reviewGuidance,
+      mode: previousBridge?.mode === 'skill-0' || previousBridge?.mode === 'standalone'
+        ? previousBridge.mode
+        : 'unknown',
+      skill0Root: typeof previousBridge?.skill0Root === 'string' ? previousBridge.skill0Root : null,
     },
     globalMetrics: {
       decisionConfidence,
@@ -217,21 +286,24 @@ export function buildReviewDataFromSkillDocument(
     projectId: parserResult.meta.skill_id,
     projectName: parserResult.meta.title,
     reviewerSummary: {
-      equivalenceNote: 'equivalence_unverified',
+      equivalenceNote: editSource === 'import'
+        ? 'equivalence_unverified'
+        : 'equivalence_unverified',
       finalDecisionGuidance: reviewGuidance,
-      mode: 'unknown',
-      operatorReminders: [
+      mode: reviewerMode,
+      operatorReminders: dedupeOperatorReminders([
+        ...previousOperatorReminders,
         {
-          action: 'Run schema validation and a canonical bridge re-check before relying on this import for final review.',
-          detail: 'This session was restored from a SkillDocument JSON payload rather than a live parser execution.',
-          id: 'rem-json-import',
-          label: 'Imported JSON session',
+          action: reminderAction,
+          detail: reminderDetail,
+          id: reminderId,
+          label: reminderLabel,
           level: 'medium',
         },
-      ],
+      ]),
     },
     riskAssessment: {
-      details: 'Loaded from skill JSON import. Structural metrics are available, but parser execution was not re-run in this session.',
+      details: reviewGuidance,
       level: riskLevel,
       negativeIntent,
     },
@@ -239,15 +311,17 @@ export function buildReviewDataFromSkillDocument(
       blocked: false,
       findings: [{
         adjustedSeverity: 'MEDIUM',
-        adjustmentReason: 'Imported JSON provenance requires explicit re-validation.',
+        adjustmentReason: editSource === 'import'
+          ? 'Imported JSON provenance requires explicit re-validation.'
+          : 'Edited SkillDocument provenance requires explicit re-validation.',
         contextType: 'bridge',
         description: reviewGuidance,
-        detectionStandard: 'SkillDocument import',
+        detectionStandard: editSource === 'import' ? 'SkillDocument import' : 'SkillDocument edit',
         lineContent: sourceLabel,
         lineNumber: 0,
         originalSeverity: 'MEDIUM',
-        ruleId: 'IMPORT-001',
-        ruleName: 'Imported SkillDocument JSON',
+        ruleId: editSource === 'import' ? 'IMPORT-001' : 'EDIT-001',
+        ruleName: editSource === 'import' ? 'Imported SkillDocument JSON' : 'Edited SkillDocument session',
         standardUrl: 'https://github.com/pingqLIN/skill-0-review-studio',
       }],
       riskLevel,
