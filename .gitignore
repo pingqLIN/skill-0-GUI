@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+*:Zone.Identifier
+ChatGPT Image *.png
+FGDFGTEt.psd
+ufgfnnamed.jpg
+un1named.jpg
+un1named.psd
+unnramed.jpg

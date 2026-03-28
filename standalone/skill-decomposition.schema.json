@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Skill-0 Review Studio Standalone Skill Decomposition",
+  "type": "object",
+  "required": ["meta", "original_definition", "decomposition"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "meta": {
+      "type": "object"
+    },
+    "original_definition": {
+      "type": "object"
+    },
+    "decomposition": {
+      "type": "object",
+      "required": ["actions", "rules", "directives"],
+      "properties": {
+        "actions": {
+          "type": "array"
+        },
+        "rules": {
+          "type": "array"
+        },
+        "directives": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}

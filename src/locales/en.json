@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Skill-0 Engine",
+    "title": "Skill-0 Review Studio",
     "analyzeNew": "Analyze a New Skill",
     "dragDrop": "Drag & drop a text file, or paste a skill description/code snippet below to dynamically generate the execution pipeline and risk assessment.",
     "placeholder": "e.g., A Gemini Agent skill that scrapes user data from a website and saves it to a local CSV file...",
@@ -14,6 +14,7 @@
     "undo": "Undo Changes",
     "analyzeAnother": "Analyze Another",
     "export": "Export SKILL",
+    "exportJson": "Export JSON",
     "errorEmpty": "Please enter a skill description, code snippet, or URL.",
     "errorFailed": "Failed to analyze the skill. Please try again or use a different input.",
     "exampleText": "A secure data pipeline that encrypts user logs before storing them in an AWS S3 bucket. It requires read access to local logs and write access to S3.",
@@ -21,7 +22,120 @@
       "pipeline": "Process Flow",
       "vector": "Vector Semantics",
       "matrix": "Compliance Matrix"
-    }
+    },
+    "subtitle": "Analytical workspace for parser topology, risk posture, and traceability.",
+    "workspace": "Workspace",
+    "analysisReady": "Skill-0: Skill Decomposition Parser",
+    "emptyTitle": "A ternary classification system for parsing the internal structure of Claude Skills and MCP Tools",
+    "emptyLead": "Upload a SKILL definition, paste a draft, or test a parser scenario. The workspace is designed to make flow, security posture, and execution trace feel legible at a glance.",
+    "emptyFeatureFlowTitle": "Flow-first layout",
+    "emptyFeatureFlowBody": "Follow phases, decision nodes, and hand-offs in one continuous visual lane.",
+    "emptyFeatureMatrixTitle": "Risk-weighted surfaces",
+    "emptyFeatureMatrixBody": "See compliance pressure, findings, and classification weight without leaving the main workspace.",
+    "emptyFeatureTraceTitle": "Traceable context",
+    "emptyFeatureTraceBody": "Keep parser evidence, source links, and editor adjustments visible as part of the same tool.",
+    "inputStudio": "Input Studio",
+    "inputGuide": "Paste a SKILL.md excerpt, a SkillDocument JSON payload, a parser scenario, or a URL payload to generate a richer analytical workspace.",
+    "inputDrop": "Drop a primary SKILL file or SkillDocument JSON here. Additional JSON/YAML/TXT files stay as context when they are not valid imports.",
+    "workspaceHint": "Use the sample to preview the strengthened layout and motion system.",
+    "primaryWorkspace": "Primary workspace",
+    "workspaceViews": "Workspace views",
+    "returnToOverview": "Return to overview",
+    "quickActions": "Quick actions",
+    "jumpToPhase": "Jump to phase",
+    "projectSummary": "Project summary",
+    "detailsPanel": "Details panel",
+    "securityScan": "Security scan",
+    "sourceLinks": "Source links",
+    "guiRepo": "GUI repository",
+    "engineRepo": "Engine repository",
+    "bridgeMode": "Parser mode",
+    "bridgeSource": "Mode source",
+    "bridgeModeCanonical": "Canonical skill-0 bridge",
+    "bridgeModeStandalone": "Standalone fallback",
+    "bridgeModeCanonicalShort": "canonical",
+    "bridgeModeStandaloneShort": "fallback",
+    "bridgeModeUnavailableShort": "pending",
+    "bridgeModeUnavailable": "Status unavailable",
+    "bridgeModeBundled": "Bundled standalone parser",
+    "bridgeModeChecking": "Checking bridge status...",
+    "bridgeGuidanceCanonical": "This review is using the canonical skill-0 bridge. Parser output is suitable for final equivalence review as long as the supporting files and findings are still inspected.",
+    "bridgeGuidanceStandalone": "This review is using the standalone fallback parser. Treat the result as a compatibility preview and re-run it through the canonical skill-0 bridge before making a final equivalence decision.",
+    "bridgeGuidanceUnavailable": "Parser mode could not be verified yet. Confirm bridge status before exporting or approving this review result.",
+    "reviewReadiness": "Review readiness",
+    "reviewReadinessCanonical": "Canonical review path is available",
+    "reviewReadinessStandalone": "Fallback preview only",
+    "reviewReadinessUnavailable": "Bridge verification required",
+    "reviewEvidenceStatus": "Review evidence status",
+    "reviewEvidenceCanonical": "Canonical parser evidence ready",
+    "reviewEvidenceStandalone": "Fallback preview only",
+    "reviewEvidenceUnavailable": "Bridge verification required",
+    "reviewTruthPanel": "Review truthfulness",
+    "equivalenceStatus": "Equivalence status",
+    "equivalenceImplementationIdentity": "implementation identity",
+    "equivalenceUnverified": "equivalence unverified",
+    "equivalencePending": "pending verification",
+    "loadingWorkspaceModule": "Loading workspace module...",
+    "openGlobalEditor": "Open global editor",
+    "resetWorkspace": "Reset workspace",
+    "totalPhases": "phases",
+    "totalDecisions": "decisions",
+    "scanScore": "scan score",
+    "modifiedCount": "modified",
+    "firstFinding": "first finding",
+    "noActivePhase": "No active phase selected",
+    "selectPhaseHint": "Select a phase from the left rail to inspect its inputs, decisions, outputs, and current evidence scope.",
+    "actionsTray": "Action Tray",
+    "flowSequence": "Skill Flow Sequence",
+    "phaseFlowHint": "Move from A to F in order so the workspace follows the parser flow and its decision nodes.",
+    "currentFocus": "Current Focus",
+    "supportPanels": "Support Panels",
+    "supportPanelsHint": "Tuck summary metrics and radar views here, then expand only when you need them.",
+    "phaseStep": "Flow Step"
+    ,"selectFiles": "Select Files"
+    ,"selectFolder": "Select Folder"
+    ,"reviewAndAnalyze": "Review & Analyze"
+    ,"intakePreview": "Intake Preview"
+    ,"intakePreviewHint": "Choose the primary skill file or JSON document before sending the bundle to the canonical parser or importing it directly."
+    ,"intakeFiles": "files"
+    ,"primarySkill": "primary"
+    ,"primaryCandidate": "candidate"
+    ,"contextOnly": "context"
+    ,"errorPrimarySkillMissing": "Upload at least one primary SKILL file (.md, .skill, .txt) or a valid SkillDocument JSON file. Auxiliary collaboration files are stored as context only."
+    ,"collaborationContext": "Collaboration Context"
+    ,"contextFiles": "context files"
+    ,"noContextFiles": "No auxiliary collaboration files attached."
+    ,"totalActions": "actions"
+    ,"totalRules": "rules"
+    ,"totalDirectives": "directives"
+    ,"executionPaths": "execution paths"
+    ,"parserVersion": "Parser"
+    ,"schemaVersion": "Schema"
+    ,"source": "Source"
+    ,"sourceDefinition": "Source Definition"
+    ,"decompositionBoard": "Canonical Decomposition"
+    ,"parserBoardHint": "This view is driven directly by the original skill-0 parser output. Auxiliary files remain traceable context and do not alter parser equivalence."
+    ,"rawJson": "Raw Parser JSON"
+    ,"canonicalPayload": "Canonical payload from auto_parse.py"
+    ,"noExecutionPaths": "No execution paths were emitted by the current parser result."
+    ,"derivedWorkflow": "Derived Workflow"
+    ,"derivedWorkflowHint": "This visual workflow is a secondary projection from the canonical parser result."
+    ,"reverseTrace": "Reverse Trace"
+    ,"manifestSummary": "Manifest Summary"
+    ,"analysisLevel": "Analysis level"
+    ,"supportingFiles": "supporting files"
+    ,"commandReferences": "command references"
+    ,"analysisFindings": "analysis findings"
+    ,"operatorReminders": "Operator reminders"
+    ,"unresolvedReferences": "unresolved references"
+    ,"resolved": "resolved"
+    ,"unresolved": "unresolved"
+    ,"riskGrade": "Risk grade"
+    ,"shellFamily": "Shell family"
+    ,"noManifestSummary": "No manifest-oriented analysis was attached to this parser result."
+    ,"noSupportingFiles": "No supporting files were discovered for this skill bundle."
+    ,"noCommandReferences": "No command references were extracted from this parser result."
+    ,"noAnalysisFindings": "No evidence-backed analysis findings were produced."
   },
   "dashboard": {
     "summary": "Executive Summary",
@@ -32,6 +146,12 @@
     "reworkRate": "Rework Rate",
     "goalAchievement": "Goal Achievement",
     "riskAssessment": "Risk Assessment",
+    "parserSignals": "Parser signals",
+    "unresolved": "unresolved",
+    "commands": "commands",
+    "findings": "findings",
+    "analysisLevel": "Analysis level",
+    "supportingRefs": "Supporting refs",
     "intent": "Intent",
     "threeClassification": "Three-Classification",
     "category": "Category",
@@ -66,13 +186,17 @@
     "securityGates": "Security & Decision Gates",
     "decision": "Decision",
     "evaluate": "Evaluate",
-    "contextTelemetry": "Phase Context & Telemetry",
-    "testResults": "Test Results",
-    "status": "Status",
+    "contextTelemetry": "Phase Context & Evidence Scope",
+    "testResults": "Runtime Evidence",
+    "status": "Capture status",
     "passing": "Passing",
+    "notCapturedYet": "No live runtime evidence",
     "latency": "Latency",
     "memory": "Memory",
-    "references": "References",
+    "references": "Reference Scope",
+    "phaseSpecificRefsPending": "Phase-specific telemetry and trace links are not captured in the current runtime yet. Treat this panel as contextual guidance, not runtime evidence.",
+    "evidenceScopeHint": "This review view does not capture per-phase pass or fail status, latency, or memory metrics yet.",
+    "evidenceReviewHint": "Use canonical parser output, findings, and supporting files as the current evidence base.",
     "archGuidelines": "Architecture Guidelines",
     "secPolicies": "Security Policies",
     "apiDocs": "API Documentation",
@@ -93,6 +217,8 @@
   },
   "securityMatrix": {
     "overallRisk": "Overall Risk",
+    "findingsPanelTitle": "Reviewer Findings",
+    "findingsPanelDesc": "Includes parser-side structural findings and security scanner output.",
     "basedOnIntent": "Based on intent analysis",
     "riskFormulaTitle": "Risk Calculation Formula",
     "negativeIntent": "Negative Intent",
@@ -148,15 +274,25 @@
     "nearestNeighbor": "Nearest Neighbor",
     "distance": "Distance to restricted zone",
     "phase": "Phase",
+    "semanticMapMode": "Review Map",
+    "interactive3dMode": "Interactive 3D",
+    "interactive3dDisabled": "3D disabled in this deployment",
+    "semanticMapDesc": "Start with the lightweight review map to inspect structure, density, and phase relationships. Open 3D only when spatial exploration adds value.",
+    "mapReviewHint": "Use the review map first. It is faster, easier to scan, and better suited to reviewer workflows than forcing 3D by default.",
+    "publicMode3dNote": "This public build keeps the lightweight review map and omits the interactive 3D workspace to reduce payload size, GPU pressure, and device compatibility risk.",
+    "rebuildRecommendation": "Direct rebuild should stay selective: keep the parser workbench shell, but rebuild heavy or high-friction modules like VectorSpace, tokenized surfaces, and state boundaries incrementally.",
     "semanticVectorEmbeddings": "Semantic Vector Embeddings (3D Space)",
     "semanticVectorDesc": "Visualizing the skill's tasks, inputs, and outputs as vector embeddings in a high-dimensional semantic space. Drag to rotate, scroll to zoom."
   },
   "editor": {
     "editGlobal": "Edit Global Settings",
+    "editPhase": "Edit Phase",
     "editDecision": "Edit Decision Rule",
     "globalDesc": "Modify project metadata and risk levels.",
+    "phaseDesc": "Update the phase name, inputs, tasks, and outputs.",
     "decisionDesc": "Adjust thresholds and outcomes for this node.",
     "projectName": "Project Name",
+    "phaseName": "Phase Name",
     "riskLevel": "Risk Level",
     "low": "Low",
     "medium": "Medium",
@@ -168,6 +304,7 @@
     "outcomeYes": "Outcome (YES)",
     "outcomeNo": "Outcome (NO)",
     "warning": "Modifying decision rules may impact the overall risk assessment and compliance matrix.",
+    "close": "Close editor",
     "cancel": "Cancel",
     "save": "Save Changes"
   }

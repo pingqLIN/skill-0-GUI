@@ -1,86 +1,397 @@
-import React, { useState } from 'react';
-import { Moon, Sun, UploadCloud, Link as LinkIcon, FileCode2, Activity, RefreshCw, AlertCircle, Database, ShieldAlert, Edit2, Download, Undo2, Languages, Github } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import {
+  Activity,
+  AlertCircle,
+  Github,
+  Languages,
+  UploadCloud,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { mockSkillData } from './data/mockData';
-import { Flowchart } from './components/Flowchart';
-import { PhaseDetails } from './components/PhaseDetails';
-import { Dashboard } from './components/Dashboard';
-import { VectorSpace } from './components/VectorSpace';
-import { SecurityMatrix } from './components/SecurityMatrix';
-import { SideEditor } from './components/SideEditor';
-import { analyzeSkillText } from './services/geminiService';
+import { analyzeSkillText } from './services/parserBridgeService';
+import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
+import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
+import type { PreparedUploadFile, UploadedContextFile } from './types/intake';
+import type { SkillDocument } from './types/skillDocument';
+import type { EditorConfig } from './types/workspace';
+
+const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((module) => ({ default: module.ReviewWorkspace })));
+
+const GUI_REPO_URL = 'https://github.com/pingqLIN/skill-0-review-studio';
+const ENGINE_REPO_URL = 'https://github.com/pingqLIN/skill-0';
+const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
+const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const [darkMode, setDarkMode] = useState(true);
+  const darkMode = false;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
   const [data, setData] = useState<any | null>(null);
+  const [analysisSessionId, setAnalysisSessionId] = useState(0);
   const [originalData, setOriginalData] = useState<any | null>(null);
   const [modifiedPaths, setModifiedPaths] = useState<Set<string>>(new Set());
-  const [activePhase, setActivePhase] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'vector' | 'matrix'>('pipeline');
-  const [editorConfig, setEditorConfig] = useState<{ type: 'global' | 'decision', payload: any, phaseId?: string } | null>(null);
+  const [pendingUploadFiles, setPendingUploadFiles] = useState<PreparedUploadFile[]>([]);
+  const [pendingPrimaryPath, setPendingPrimaryPath] = useState<string | null>(null);
+  const [supportFiles, setSupportFiles] = useState<UploadedContextFile[]>([]);
+  const [selectedContextPath, setSelectedContextPath] = useState<string | null>(null);
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
+  const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const preventWindowDrop = (event: DragEvent) => {
+      if (event.dataTransfer?.types?.includes('Files')) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('dragover', preventWindowDrop);
+    window.addEventListener('drop', preventWindowDrop);
+
+    return () => {
+      window.removeEventListener('dragover', preventWindowDrop);
+      window.removeEventListener('drop', preventWindowDrop);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (folderInputRef.current) {
+      folderInputRef.current.setAttribute('webkitdirectory', '');
+      folderInputRef.current.setAttribute('directory', '');
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBridgeStatus = async () => {
+      try {
+        const status = await fetchBridgeStatus();
+        if (!cancelled) {
+          setBridgeStatus(status);
+          setBridgeStatusError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setBridgeStatus(null);
+          setBridgeStatusError(err instanceof Error ? err.message : 'Unknown bridge status error');
+        }
+      }
+    };
+
+    void loadBridgeStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
     i18n.changeLanguage(newLang);
   };
 
+  const getExtension = (fileName: string) => {
+    const dotIndex = fileName.lastIndexOf('.');
+    return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
+  };
+
+  const getUploadPath = (file: File) => file.webkitRelativePath || file.name;
+
+  const isPrimarySkillFile = (file: File) => {
+    const target = getUploadPath(file).toLowerCase();
+    const extension = getExtension(target);
+    return PRIMARY_SKILL_EXTENSIONS.includes(extension) || target.endsWith('skill.md');
+  };
+
+  const isPrimarySkillPath = (path: string) => {
+    const lower = path.toLowerCase();
+    const extension = getExtension(lower);
+    return PRIMARY_SKILL_EXTENSIONS.includes(extension) || lower.endsWith('skill.md');
+  };
+
+  const canPreviewAsText = (file: File) => {
+    const extension = getExtension(file.name);
+    return isPrimarySkillFile(file) || CONTEXT_PREVIEW_EXTENSIONS.includes(extension) || file.type.startsWith('text/');
+  };
+
+  const readFileAsText = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(reader.error || new Error(`Failed to read ${file.name}`));
+      reader.readAsText(file);
+    });
+
+  const prepareUploadFile = async (file: File): Promise<PreparedUploadFile> => {
+    const path = getUploadPath(file);
+    const prepared: PreparedUploadFile = {
+      name: file.name,
+      path,
+      type: file.type || getExtension(file.name) || 'unknown',
+      size: file.size,
+      role: 'context',
+      source: 'upload',
+      isPrimaryCandidate: false,
+    };
+
+    if (canPreviewAsText(file)) {
+      try {
+        prepared.text = await readFileAsText(file);
+        prepared.preview = prepared.text.slice(0, 280);
+        const isSkillDocumentImport = Boolean(parseSkillDocumentJson(prepared.text));
+        prepared.isPrimaryCandidate = isPrimarySkillFile(file) || isSkillDocumentImport;
+        prepared.role = prepared.isPrimaryCandidate ? 'primary' : 'context';
+      } catch {
+        prepared.text = undefined;
+      }
+    } else {
+      prepared.isPrimaryCandidate = isPrimarySkillFile(file);
+      prepared.role = prepared.isPrimaryCandidate ? 'primary' : 'context';
+    }
+
+    return prepared;
+  };
+
+  const expandZipUpload = async (file: File): Promise<PreparedUploadFile[]> => {
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(file);
+    const prepared: PreparedUploadFile[] = [];
+
+    for (const entry of Object.values(zip.files)) {
+      if (entry.dir) continue;
+
+      const path = entry.name;
+      const basename = path.split('/').pop() || path;
+      const extension = getExtension(basename);
+      const isPrimaryPathCandidate = isPrimarySkillPath(path);
+      const isTextLike = isPrimaryPathCandidate || CONTEXT_PREVIEW_EXTENSIONS.includes(extension) || extension === '.md' || extension === '.txt';
+
+      const item: PreparedUploadFile = {
+        name: basename,
+        path,
+        type: extension || 'zip-entry',
+        size: 0,
+        role: 'context',
+        source: 'zip',
+        isPrimaryCandidate: false,
+      };
+
+      if (isTextLike) {
+        try {
+          item.text = await entry.async('string');
+          item.size = item.text.length;
+          item.preview = item.text.slice(0, 280);
+          const isSkillDocumentImport = Boolean(parseSkillDocumentJson(item.text));
+          item.isPrimaryCandidate = isPrimaryPathCandidate || isSkillDocumentImport;
+          item.role = item.isPrimaryCandidate ? 'primary' : 'context';
+        } catch {
+          item.text = undefined;
+        }
+      } else {
+        item.isPrimaryCandidate = isPrimaryPathCandidate;
+        item.role = item.isPrimaryCandidate ? 'primary' : 'context';
+      }
+
+      prepared.push(item);
+    }
+
+    return prepared;
+  };
+
+  const expandUploads = async (files: File[]) => {
+    const prepared: PreparedUploadFile[] = [];
+
+    for (const file of files) {
+      if (getExtension(file.name) === '.zip') {
+        prepared.push(...await expandZipUpload(file));
+      } else {
+        prepared.push(await prepareUploadFile(file));
+      }
+    }
+
+    return prepared;
+  };
+
+  const loadSkillDocument = (
+    document: SkillDocument,
+    options: {
+      fileName?: string;
+      sourceLabel?: string;
+      supportFiles?: UploadedContextFile[];
+      selectedContextPath?: string | null;
+    } = {},
+  ) => {
+    const imported = buildReviewDataFromSkillDocument(document, options);
+    setData(imported);
+    setAnalysisSessionId((current) => current + 1);
+    setOriginalData(JSON.parse(JSON.stringify(imported)));
+    setModifiedPaths(new Set());
+    setPendingUploadFiles([]);
+    setPendingPrimaryPath(null);
+    setSupportFiles(options.supportFiles ?? []);
+    setSelectedContextPath(options.selectedContextPath ?? null);
+    setInputText(JSON.stringify(document, null, 2));
+    setError(null);
+  };
+
+  const handleFiles = async (files: File[]) => {
+    if (!files.length) return;
+
+    const preparedFiles = await expandUploads(files);
+    const primaryFile = preparedFiles.find((file) => file.isPrimaryCandidate && file.text) ?? null;
+    const standaloneJsonImport = preparedFiles.length === 1 && preparedFiles[0].text
+      ? parseSkillDocumentJson(preparedFiles[0].text)
+      : null;
+
+    setPendingUploadFiles(preparedFiles);
+    setPendingPrimaryPath(primaryFile?.path ?? null);
+    setSupportFiles([]);
+    setSelectedContextPath(null);
+    setData(null);
+    setOriginalData(null);
+    setModifiedPaths(new Set());
+
+    if (!primaryFile && standaloneJsonImport) {
+      loadSkillDocument(standaloneJsonImport, {
+        fileName: preparedFiles[0].name,
+        sourceLabel: preparedFiles[0].path,
+      });
+      return;
+    }
+
+    if (primaryFile) {
+      setInputText(primaryFile.text || '');
+      setError(null);
+      return;
+    }
+
+    setInputText('');
+    setError(t('app.errorPrimarySkillMissing'));
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const text = event.target?.result as string;
-        if (text) {
-          await processSkill(text);
-        }
-      };
-      reader.readAsText(file);
+    e.stopPropagation();
+    setIsDragActive(false);
+    const files = e.dataTransfer.files ? Array.from(e.dataTransfer.files) : [];
+    if (files.length) {
+      void handleFiles(files as File[]);
     }
   };
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragActive(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextTarget = e.relatedTarget as Node | null;
+    if (!nextTarget || !e.currentTarget.contains(nextTarget)) {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []) as File[];
+    if (files.length) {
+      void handleFiles(files);
+    }
+    e.target.value = '';
+  };
+
   const handlePasteUrl = () => {
-    if (inputText.trim()) {
-      processSkill(inputText);
+    const trimmed = inputText.trim();
+
+    if (trimmed) {
+      setPendingUploadFiles([]);
+      setPendingPrimaryPath(null);
+      const importedSkillDocument = parseSkillDocumentJson(trimmed);
+      if (importedSkillDocument) {
+        loadSkillDocument(importedSkillDocument, {
+          fileName: 'pasted-skill.json',
+          sourceLabel: 'json/paste',
+        });
+        return;
+      }
+      void processSkill(inputText);
     } else {
       setError(t('app.errorEmpty'));
     }
   };
 
-  const processSkill = async (text: string) => {
+  const handleAnalyzePendingUpload = () => {
+    const primaryFile = pendingUploadFiles.find((file) => file.path === pendingPrimaryPath && file.text)
+      ?? pendingUploadFiles.find((file) => file.isPrimaryCandidate && file.text);
+
+    if (!primaryFile?.text) {
+      setError(t('app.errorPrimarySkillMissing'));
+      return;
+    }
+
+    const contextEntries = pendingUploadFiles
+      .filter((file) => file.path !== primaryFile.path)
+      .map(({ isPrimaryCandidate, role: _role, ...rest }) => ({
+        ...rest,
+        role: 'context' as const,
+      }));
+
+    setSupportFiles(contextEntries);
+    setSelectedContextPath(contextEntries[0]?.path ?? null);
+    setInputText(primaryFile.text);
+    const importedSkillDocument = parseSkillDocumentJson(primaryFile.text);
+    if (importedSkillDocument) {
+      loadSkillDocument(importedSkillDocument, {
+        fileName: primaryFile.name,
+        sourceLabel: primaryFile.path,
+        selectedContextPath: contextEntries[0]?.path ?? null,
+        supportFiles: contextEntries,
+      });
+      return;
+    }
+    void processSkill(primaryFile.text, primaryFile.name, {
+      contextFiles: contextEntries,
+      primaryPath: primaryFile.path,
+    });
+  };
+
+  const processSkill = async (
+    text: string,
+    skillName = 'uploaded-skill',
+    options: { contextFiles?: UploadedContextFile[]; primaryPath?: string | null } = {},
+  ) => {
     setIsExtracting(true);
     setError(null);
     try {
-      const result = await analyzeSkillText(text);
+      const result = await analyzeSkillText(text, skillName, options);
       setData(result);
+      setAnalysisSessionId((current) => current + 1);
       setOriginalData(JSON.parse(JSON.stringify(result)));
       setModifiedPaths(new Set());
-      if (result.phases && result.phases.length > 0) {
-        setActivePhase(result.phases[0].id);
-      }
-      setActiveTab('pipeline');
+      setPendingUploadFiles([]);
+      setPendingPrimaryPath(null);
     } catch (err) {
       console.error(err);
-      setError(t('app.errorFailed'));
-      // Fallback to mock data on error for demonstration
-      setData(mockSkillData);
-      setOriginalData(JSON.parse(JSON.stringify(mockSkillData)));
+      setError(err instanceof Error ? err.message : t('app.errorFailed'));
+      setData(null);
+      setOriginalData(null);
       setModifiedPaths(new Set());
-      setActivePhase(mockSkillData.phases[0].id);
-      setActiveTab('pipeline');
     } finally {
       setIsExtracting(false);
     }
   };
 
-  const handleSaveEdit = (updatedData: any) => {
-    if (!editorConfig) return;
+  const handleSaveEdit = (editorConfig: Exclude<EditorConfig, null>, updatedData: any) => {
+    if (!data) return;
+
     const newData = JSON.parse(JSON.stringify(data));
     const newModified = new Set(modifiedPaths);
     let metricsChanged = false;
@@ -94,14 +405,28 @@ export default function App() {
       newData.riskAssessment = updatedData.riskAssessment;
       newData.threeClassification = updatedData.threeClassification;
       metricsChanged = true;
-    } else if (editorConfig.type === 'decision') {
-      const phaseIndex = newData.phases.findIndex((p: any) => p.id === editorConfig.phaseId);
+    } else if (editorConfig.type === 'phase') {
+      const phaseIndex = newData.phases.findIndex((phase: any) => phase.id === updatedData.id);
       if (phaseIndex !== -1) {
-        const nodeIndex = newData.phases[phaseIndex].decisionNodes.findIndex((n: any) => n.id === updatedData.id);
+        const oldPhase = newData.phases[phaseIndex];
+        const basePath = `phases.${updatedData.id}`;
+
+        if (oldPhase.name !== updatedData.name) newModified.add(`${basePath}.name`);
+        if (JSON.stringify(oldPhase.input) !== JSON.stringify(updatedData.input)) newModified.add(`${basePath}.input`);
+        if (JSON.stringify(oldPhase.tasks) !== JSON.stringify(updatedData.tasks)) newModified.add(`${basePath}.tasks`);
+        if (JSON.stringify(oldPhase.output) !== JSON.stringify(updatedData.output)) newModified.add(`${basePath}.output`);
+
+        newData.phases[phaseIndex] = { ...oldPhase, ...updatedData };
+        metricsChanged = true;
+      }
+    } else if (editorConfig.type === 'decision') {
+      const phaseIndex = newData.phases.findIndex((phase: any) => phase.id === editorConfig.phaseId);
+      if (phaseIndex !== -1) {
+        const nodeIndex = newData.phases[phaseIndex].decisionNodes.findIndex((node: any) => node.id === updatedData.id);
         if (nodeIndex !== -1) {
           const oldNode = newData.phases[phaseIndex].decisionNodes[nodeIndex];
           const basePath = `phases.${editorConfig.phaseId}.decisionNodes.${updatedData.id}`;
-          
+
           if (oldNode.question !== updatedData.question) newModified.add(`${basePath}.question`);
           if (oldNode.threshold !== updatedData.threshold) newModified.add(`${basePath}.threshold`);
           if (oldNode.outcomes.yes !== updatedData.outcomes.yes) newModified.add(`${basePath}.outcomes.yes`);
@@ -114,7 +439,6 @@ export default function App() {
     }
 
     if (metricsChanged) {
-      // Recalculate some metrics to show dynamic updates
       newData.globalMetrics.decisionConfidence = Math.min(100, Math.max(0, newData.globalMetrics.decisionConfidence + Math.floor(Math.random() * 11) - 5));
       newData.globalMetrics.reworkRate = Math.min(100, Math.max(0, newData.globalMetrics.reworkRate + Math.floor(Math.random() * 5) - 2));
       newModified.add('metrics');
@@ -122,7 +446,6 @@ export default function App() {
 
     setData(newData);
     setModifiedPaths(newModified);
-    setEditorConfig(null);
   };
 
   const handleUndo = () => {
@@ -132,283 +455,380 @@ export default function App() {
     }
   };
 
-  const exportSkill = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${data.projectId}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleResetWorkspace = () => {
+    setData(null);
+    setInputText('');
+    setPendingUploadFiles([]);
+    setPendingPrimaryPath(null);
+    setSupportFiles([]);
+    setSelectedContextPath(null);
   };
 
+  const loadExampleSkill = async () => {
+    setIsExtracting(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/example-skill');
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.text) {
+        throw new Error(payload?.error || t('app.errorFailed'));
+      }
+
+      setSupportFiles(payload?.source ? [{
+        name: payload.name || 'example-skill',
+        path: payload.source,
+        type: 'example/skill',
+        size: payload.text.length,
+        role: 'context',
+        source: 'upload',
+        preview: payload.source,
+      }] : []);
+      setSelectedContextPath(payload?.source || null);
+      setInputText(payload.text);
+      setPendingUploadFiles([]);
+      setPendingPrimaryPath(null);
+      await processSkill(payload.text, payload.name || 'example-skill');
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : t('app.errorFailed'));
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const bridgeModeLabel = bridgeStatus?.mode === 'skill-0'
+    ? t('app.bridgeModeCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.bridgeModeStandalone')
+      : t('app.bridgeModeUnavailable');
+  const bridgeModeDetail = bridgeStatus?.skill0Root
+    || (bridgeStatus?.mode === 'standalone'
+      ? t('app.bridgeModeBundled')
+      : bridgeStatusError || t('app.bridgeModeChecking'));
+  const bridgeReviewGuidance = bridgeStatus?.mode === 'skill-0'
+    ? t('app.bridgeGuidanceCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.bridgeGuidanceStandalone')
+      : t('app.bridgeGuidanceUnavailable');
+  const reviewReadinessLabel = bridgeStatus?.mode === 'skill-0'
+    ? t('app.reviewEvidenceCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.reviewEvidenceStandalone')
+      : t('app.reviewEvidenceUnavailable');
+  const reviewReadinessStyles = bridgeStatus?.mode === 'skill-0'
+    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+    : bridgeStatus?.mode === 'standalone'
+      ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
+      : 'border-border/50 bg-card/60 text-muted-foreground';
+
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark' : ''}`}>
-      {/* Header */}
-      <header className="border-b border-border px-6 py-4 flex justify-between items-center sticky top-0 bg-background z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold font-mono">
-            S0
+    <div className="app-shell min-h-screen transition-colors duration-300">
+      <header className="frost-banner">
+        <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-[0_18px_40px_-24px_hsl(var(--foreground)/0.55)]">
+              S0
+            </div>
+            <div className="min-w-0">
+              <p className="editorial-kicker">{t('app.workspace')}</p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
+                <span className="hidden text-xs text-muted-foreground/80 sm:inline">{t('app.subtitle')}</span>
+              </div>
+            </div>
           </div>
-          <h1 className="font-semibold tracking-tight text-lg">{t('app.title')}</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <a 
-            href="https://github.com/pingqLIN/skill-0" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="p-2 rounded-full hover:bg-muted transition-colors flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-            title="GitHub Repository"
-          >
-            <Github size={18} />
-            <span className="hidden sm:inline">GitHub</span>
-          </a>
-          <button 
-            onClick={toggleLanguage}
-            className="p-2 rounded-full hover:bg-muted transition-colors flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-            title="Toggle Language"
-          >
-            <Languages size={18} />
-            <span className="uppercase">{i18n.language.startsWith('zh') ? 'EN' : '中文'}</span>
-          </button>
-          <button 
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
-          >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+
+          <div className="flex items-center gap-2">
+            <div className={`hidden rounded-[1rem] border px-3 py-2 text-left backdrop-blur-xl sm:block ${
+              bridgeStatus?.mode === 'skill-0'
+                ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+                : bridgeStatus?.mode === 'standalone'
+                  ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
+                  : 'border-border/50 bg-card/60 text-muted-foreground'
+            }`}>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.bridgeMode')}</div>
+              <div className="mt-1 text-xs font-medium">{bridgeModeLabel}</div>
+              <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={bridgeModeDetail}>
+                {bridgeModeDetail}
+              </div>
+            </div>
+            <a
+              href={GUI_REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-medium text-muted-foreground backdrop-blur-xl transition-colors hover:border-primary/28 hover:text-foreground"
+              title={t('app.guiRepo')}
+            >
+              <Github size={16} />
+              <span className="hidden sm:inline">GitHub</span>
+            </a>
+            <button
+              onClick={toggleLanguage}
+              className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-medium text-muted-foreground backdrop-blur-xl transition-colors hover:border-primary/28 hover:text-foreground"
+              title="Toggle Language"
+            >
+              <Languages size={16} />
+              <span className="uppercase">{i18n.language.startsWith('zh') ? 'EN' : '中文'}</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-6 space-y-6">
+      <main className="mx-auto max-w-[1680px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {!data ? (
-          <div className="mt-10 max-w-2xl mx-auto">
-            <div 
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={handleDrop}
-              className="border-2 border-dashed border-border rounded-2xl p-12 flex flex-col items-center justify-center text-center hover:border-primary transition-colors bg-card"
-            >
-              {isExtracting ? (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex flex-col items-center gap-4"
-                >
-                  <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                  <p className="text-lg font-medium animate-pulse">{t('app.analyzing')}</p>
-                  <p className="text-sm text-muted-foreground font-mono">{t('app.applying')}</p>
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-center gap-4 w-full"
-                >
-                  <div className="p-4 bg-muted rounded-full">
-                    <UploadCloud size={32} className="text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold mb-2">{t('app.analyzeNew')}</h2>
-                    <p className="text-muted-foreground max-w-md text-sm mb-6">
-                      {t('app.dragDrop')}
-                    </p>
-                  </div>
-                  
-                  <div className="w-full space-y-3">
-                    <textarea 
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      placeholder={t('app.placeholder')}
-                      className="w-full h-32 p-3 rounded-lg border border-input bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent outline-none resize-none"
-                    />
-                    
-                    {error && (
-                      <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-2 rounded">
-                        <AlertCircle size={16} />
-                        {error}
-                      </div>
-                    )}
-
-                    <div className="flex gap-4 justify-center">
-                      <button 
-                        onClick={handlePasteUrl}
-                        disabled={!inputText.trim()}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Activity size={16} /> {t('app.analyzeBtn')}
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-            
-            <div className="mt-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                {t('app.tryExample')}
-              </p>
-              <button 
-                onClick={() => processSkill(t('app.exampleText'))}
-                className="mt-2 text-primary text-sm hover:underline"
-              >
-                {t('app.loadExample')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            {/* Section Divider */}
-            <div className="flex items-center gap-4 py-4">
-              <div className="h-px bg-border/50 flex-1" />
-              <span className="text-[10px] font-mono text-muted-foreground/70 uppercase tracking-[0.2em]">{t('app.analysisResult')}</span>
-              <div className="h-px bg-border/50 flex-1" />
-            </div>
-
-            {/* Header Info */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-1 mb-2">
-              <div>
-                <p className="text-[10px] text-muted-foreground font-mono mb-1.5 uppercase tracking-widest">{t('app.project')}: {data.projectId}</p>
-                <div 
-                  className="flex items-center gap-2 group cursor-pointer w-fit" 
-                  onClick={() => setEditorConfig({ type: 'global', payload: data })}
-                  title={t('editor.editGlobal')}
-                >
-                  <h2 className={`text-2xl font-semibold tracking-tight ${modifiedPaths.has('projectName') ? 'text-amber-500 dark:text-amber-400' : 'text-foreground'}`}>{data.projectName}</h2>
-                  <Edit2 size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="space-y-8">
+            <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+              <div className="flex items-center justify-end px-1 py-8 text-right sm:px-2 sm:py-10 xl:min-h-[430px]">
+                <div className="max-w-3xl space-y-3 text-right">
+                  <p className="text-pretty-wrap text-sm font-medium text-foreground/80">{t('app.analysisReady')}</p>
+                  <h2 className="text-pretty-wrap max-w-3xl text-3xl font-semibold leading-tight text-foreground sm:text-4xl sm:leading-tight">
+                    {t('app.emptyTitle')}
+                  </h2>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {modifiedPaths.size > 0 && (
-                  <button 
-                    onClick={handleUndo}
-                    className="px-3 py-1.5 bg-muted/50 text-muted-foreground text-xs rounded-md font-medium flex items-center gap-1.5 hover:bg-muted transition-colors shadow-sm border border-border/50"
-                  >
-                    <Undo2 size={14} /> {t('app.undo')}
-                  </button>
-                )}
-                <button 
-                  onClick={() => {
-                    setData(null);
-                    setInputText('');
+
+              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="editorial-kicker">{t('app.inputStudio')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.analyzeNew')}</h3>
+                  </div>
+                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
+                    <UploadCloud size={22} />
+                  </div>
+                </div>
+
+                <div
+                  onDragEnter={handleDragEnter}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!isDragActive) setIsDragActive(true);
                   }}
-                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors px-2 py-1.5"
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`rounded-[1.5rem] border border-dashed p-5 backdrop-blur-xl transition-colors ${
+                    isDragActive
+                      ? 'border-primary/50 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]'
+                      : 'border-border/60 bg-background/46 hover:border-primary/32 hover:bg-card/60'
+                  }`}
                 >
-                  <RefreshCw size={12} /> {t('app.analyzeAnother')}
-                </button>
-                <button 
-                  onClick={exportSkill}
-                  className="px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-md font-medium flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm"
-                >
-                  <Download size={14} /> {t('app.export')}
-                </button>
-              </div>
-            </div>
-
-            {/* Dashboard (Always visible on top) */}
-            <Dashboard data={data} onNavigatePhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} modifiedPaths={modifiedPaths} />
-
-            {/* Tabs (Segmented Control Style) */}
-            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg w-fit border border-border/40 mt-4">
-              <button
-                onClick={() => setActiveTab('pipeline')}
-                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  activeTab === 'pipeline' 
-                    ? 'bg-background text-foreground shadow-sm border border-border/50' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                {t('app.tabs.pipeline')}
-              </button>
-              <button
-                onClick={() => setActiveTab('vector')}
-                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  activeTab === 'vector' 
-                    ? 'bg-background text-foreground shadow-sm border border-border/50' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                {t('app.tabs.vector')}
-              </button>
-              <button
-                onClick={() => setActiveTab('matrix')}
-                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  activeTab === 'matrix' 
-                    ? 'bg-background text-foreground shadow-sm border border-border/50' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                {t('app.tabs.matrix')}
-              </button>
-            </div>
-
-            {/* Tab Content */}
-            <AnimatePresence mode="wait">
-              {activeTab === 'pipeline' && (
-                <motion.div 
-                  key="pipeline"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="grid grid-cols-1 lg:grid-cols-12 gap-6"
-                >
-                  <div className="lg:col-span-4 flex flex-col h-[calc(100vh-320px)] min-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    <Flowchart 
-                      phases={data.phases} 
-                      activePhase={activePhase} 
-                      onSelectPhase={setActivePhase} 
-                    />
-                  </div>
-
-                  <div className="lg:col-span-8 flex flex-col h-[calc(100vh-320px)] min-h-[500px] overflow-y-auto">
-                    {activePhase && data.phases.find((p: any) => p.id === activePhase) && (
-                      <PhaseDetails 
-                        phase={data.phases.find((p: any) => p.id === activePhase)!} 
-                        allPhases={data.phases}
-                        onNavigatePhase={setActivePhase}
-                        onClose={() => setActivePhase(null)}
-                        onEditDecision={(node) => setEditorConfig({ type: 'decision', payload: node, phaseId: activePhase })}
-                        modifiedPaths={modifiedPaths}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".md,.txt,.skill,.json,.yaml,.yml,.toml,.ini,.cfg,.csv,.tsv,.zip,text/plain,application/json,application/zip"
+                    multiple
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                  <input
+                    ref={folderInputRef}
+                    type="file"
+                    multiple
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                  {isExtracting ? (
+                    <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 text-center">
+                      <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                      <div className="space-y-1">
+                        <p className="text-lg font-medium text-foreground">{t('app.analyzing')}</p>
+                        <p className="text-sm text-muted-foreground">{t('app.applying')}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-sm leading-6 text-muted-foreground">{t('app.inputGuide')}</p>
+                      <div
+                        data-testid="intake-review-readiness"
+                        className={`rounded-[1.2rem] border px-4 py-3 backdrop-blur-xl ${reviewReadinessStyles}`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-current/75">{t('app.reviewEvidenceStatus')}</div>
+                            <p className="mt-1 text-sm font-medium text-current">{reviewReadinessLabel}</p>
+                          </div>
+                          <div className="rounded-full border border-current/15 bg-background/70 px-3 py-1.5 text-[11px] font-medium text-current">
+                            {bridgeModeLabel}
+                          </div>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-current/80">{bridgeReviewGuidance}</p>
+                        <p className="mt-2 text-[11px] leading-5 text-current/70">{bridgeModeDetail}</p>
+                      </div>
+                      <textarea
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder={t('app.placeholder')}
+                        className="min-h-40 w-full resize-none rounded-[1.35rem] border border-input/75 bg-white/55 px-4 py-3 text-sm leading-6 shadow-inner backdrop-blur-xl outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/18"
                       />
-                    )}
+
+                      {error && (
+                        <div className="flex items-start gap-2 rounded-xl border border-destructive/15 bg-destructive/10 px-3 py-2 text-sm text-destructive backdrop-blur-lg">
+                          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                          <span>{error}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">{t('app.inputDrop')}</div>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/70 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/35 hover:text-primary"
+                          >
+                            <UploadCloud size={16} />
+                            {t('app.selectFiles')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => folderInputRef.current?.click()}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/70 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/35 hover:text-primary"
+                          >
+                            <UploadCloud size={16} />
+                            {t('app.selectFolder')}
+                          </button>
+                          <button
+                            onClick={pendingUploadFiles.length > 0 ? handleAnalyzePendingUpload : handlePasteUrl}
+                            disabled={pendingUploadFiles.length > 0 ? !pendingPrimaryPath : !inputText.trim()}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.7)] transition hover:bg-primary/92 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Activity size={16} />
+                            {pendingUploadFiles.length > 0 ? t('app.reviewAndAnalyze') : t('app.analyzeBtn')}
+                          </button>
+                        </div>
+                      </div>
+
+                      {pendingUploadFiles.length > 0 && (
+                        <div className="rounded-[1.2rem] border border-border/55 bg-white/44 px-4 py-3 backdrop-blur-xl">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.intakePreview')}</div>
+                              <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('app.intakePreviewHint')}</p>
+                            </div>
+                            <div className="rounded-full border border-border/55 bg-background/72 px-3 py-1.5 text-[11px] font-medium text-foreground">
+                              {pendingUploadFiles.length} {t('app.intakeFiles')}
+                            </div>
+                          </div>
+                          <div className="mt-3 grid gap-2">
+                            {pendingUploadFiles.map((file) => {
+                              const isSelectedPrimary = file.path === pendingPrimaryPath;
+                              return (
+                                <button
+                                  key={`${file.path}-${file.size}`}
+                                  type="button"
+                                  onClick={() => file.isPrimaryCandidate && setPendingPrimaryPath(file.path)}
+                                  className={`rounded-[1rem] border px-3 py-3 text-left transition ${
+                                    isSelectedPrimary
+                                      ? 'border-primary/35 bg-primary/10'
+                                      : 'border-border/50 bg-background/68'
+                                  } ${file.isPrimaryCandidate ? 'hover:border-primary/30' : ''}`}
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="text-sm font-medium text-foreground">{file.name}</div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[11px] text-muted-foreground">{formatBytes(file.size)}</span>
+                                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                        isSelectedPrimary
+                                          ? 'bg-primary/14 text-primary'
+                                          : file.isPrimaryCandidate
+                                            ? 'bg-emerald-500/12 text-emerald-700'
+                                            : 'bg-background/72 text-muted-foreground'
+                                      }`}>
+                                        {isSelectedPrimary ? t('app.primarySkill') : file.isPrimaryCandidate ? t('app.primaryCandidate') : t('app.contextOnly')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-1 text-xs text-muted-foreground">{file.path}</div>
+                                  {file.preview && <p className="mt-2 text-xs leading-6 text-muted-foreground">{file.preview}</p>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {supportFiles.length > 0 && (
+                        <div className="rounded-[1.2rem] border border-border/55 bg-white/44 px-4 py-3 backdrop-blur-xl">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.collaborationContext')}</div>
+                          <div className="mt-3 grid gap-2">
+                            {supportFiles.map((file) => (
+                              <button
+                                key={`${file.path}-${file.size}`}
+                                type="button"
+                                onClick={() => setSelectedContextPath(file.path)}
+                                className={`rounded-[1rem] border px-3 py-3 text-left transition ${
+                                  selectedContextPath === file.path ? 'border-primary/35 bg-primary/8' : 'border-border/50 bg-background/68'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="text-sm font-medium text-foreground">{file.name}</div>
+                                  <div className="text-[11px] text-muted-foreground">{formatBytes(file.size)}</div>
+                                </div>
+                                <div className="mt-1 text-xs text-muted-foreground">{file.type}</div>
+                                <div className="mt-1 text-[11px] text-muted-foreground">{file.path}</div>
+                                {file.preview && (
+                                  <p className="mt-2 text-xs leading-6 text-muted-foreground">{file.preview}</p>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-5 flex items-center justify-between gap-4 rounded-[1.35rem] border border-border/45 bg-white/48 px-4 py-3 backdrop-blur-xl">
+                  <div>
+                    <p className="text-xs font-medium text-foreground">{t('app.tryExample')}</p>
+                    <p className="text-xs text-muted-foreground">{t('app.workspaceHint')}</p>
                   </div>
-                </motion.div>
-              )}
-
-              {activeTab === 'vector' && (
-                <motion.div
-                  key="vector"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <VectorSpace data={data} darkMode={darkMode} />
-                </motion.div>
-              )}
-
-              {activeTab === 'matrix' && (
-                <motion.div
-                  key="matrix"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <SecurityMatrix data={data} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+                  <button
+                    onClick={loadExampleSkill}
+                    className="rounded-full border border-border/60 px-4 py-2 text-xs font-medium text-muted-foreground transition hover:border-primary/32 hover:text-foreground"
+                  >
+                    {t('app.loadExample')}
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        ) : (
+          <Suspense
+            fallback={(
+              <div className="glass-panel flex min-h-[420px] items-center justify-center px-4 py-6 text-sm text-muted-foreground">
+                {t('app.loadingWorkspaceModule')}
+              </div>
+            )}
+          >
+            <ReviewWorkspace
+              key={analysisSessionId}
+              data={data}
+              darkMode={darkMode}
+              modifiedPaths={modifiedPaths}
+              supportFiles={supportFiles}
+              selectedContextPath={selectedContextPath}
+              bridgeStatus={bridgeStatus}
+              bridgeStatusError={bridgeStatusError}
+              guiRepoUrl={GUI_REPO_URL}
+              engineRepoUrl={ENGINE_REPO_URL}
+              onSelectContextPath={setSelectedContextPath}
+              onSaveEdit={handleSaveEdit}
+              onUndo={handleUndo}
+              onResetWorkspace={handleResetWorkspace}
+            />
+          </Suspense>
         )}
       </main>
-      
-      <SideEditor 
-        config={editorConfig} 
-        onClose={() => setEditorConfig(null)} 
-        onSave={handleSaveEdit} 
-      />
     </div>
   );
+}
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / (1024 ** exponent);
+  return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 }

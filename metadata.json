@@ -1,5 +1,5 @@
 {
-  "name": "Skill-0 Engine",
-  "description": "Interactive visualization tool for the Skill-0 project execution flow, analysis structure, and risk assessment.",
+  "name": "Skill-0 Review Studio",
+  "description": "Review-first workspace for Skill-0 parser output with canonical bridge support, standalone fallback, and a deployable external web runtime.",
   "requestFramePermissions": []
 }
