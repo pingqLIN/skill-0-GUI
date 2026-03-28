@@ -9,7 +9,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { analyzeSkillText } from './services/parserBridgeService';
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
+import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
 import type { PreparedUploadFile, UploadedContextFile } from './types/intake';
+import type { SkillDocument } from './types/skillDocument';
 import type { EditorConfig } from './types/workspace';
 
 const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((module) => ({ default: module.ReviewWorkspace })));
@@ -131,18 +133,24 @@ export default function App() {
       path,
       type: file.type || getExtension(file.name) || 'unknown',
       size: file.size,
-      role: isPrimarySkillFile(file) ? 'primary' : 'context',
+      role: 'context',
       source: 'upload',
-      isPrimaryCandidate: isPrimarySkillFile(file),
+      isPrimaryCandidate: false,
     };
 
     if (canPreviewAsText(file)) {
       try {
         prepared.text = await readFileAsText(file);
         prepared.preview = prepared.text.slice(0, 280);
+        const isSkillDocumentImport = Boolean(parseSkillDocumentJson(prepared.text));
+        prepared.isPrimaryCandidate = isPrimarySkillFile(file) || isSkillDocumentImport;
+        prepared.role = prepared.isPrimaryCandidate ? 'primary' : 'context';
       } catch {
         prepared.text = undefined;
       }
+    } else {
+      prepared.isPrimaryCandidate = isPrimarySkillFile(file);
+      prepared.role = prepared.isPrimaryCandidate ? 'primary' : 'context';
     }
 
     return prepared;
@@ -159,17 +167,17 @@ export default function App() {
       const path = entry.name;
       const basename = path.split('/').pop() || path;
       const extension = getExtension(basename);
-      const isPrimaryCandidate = isPrimarySkillPath(path);
-      const isTextLike = isPrimaryCandidate || CONTEXT_PREVIEW_EXTENSIONS.includes(extension) || extension === '.md' || extension === '.txt';
+      const isPrimaryPathCandidate = isPrimarySkillPath(path);
+      const isTextLike = isPrimaryPathCandidate || CONTEXT_PREVIEW_EXTENSIONS.includes(extension) || extension === '.md' || extension === '.txt';
 
       const item: PreparedUploadFile = {
         name: basename,
         path,
         type: extension || 'zip-entry',
         size: 0,
-        role: isPrimaryCandidate ? 'primary' : 'context',
+        role: 'context',
         source: 'zip',
-        isPrimaryCandidate,
+        isPrimaryCandidate: false,
       };
 
       if (isTextLike) {
@@ -177,9 +185,15 @@ export default function App() {
           item.text = await entry.async('string');
           item.size = item.text.length;
           item.preview = item.text.slice(0, 280);
+          const isSkillDocumentImport = Boolean(parseSkillDocumentJson(item.text));
+          item.isPrimaryCandidate = isPrimaryPathCandidate || isSkillDocumentImport;
+          item.role = item.isPrimaryCandidate ? 'primary' : 'context';
         } catch {
           item.text = undefined;
         }
+      } else {
+        item.isPrimaryCandidate = isPrimaryPathCandidate;
+        item.role = item.isPrimaryCandidate ? 'primary' : 'context';
       }
 
       prepared.push(item);
@@ -202,11 +216,36 @@ export default function App() {
     return prepared;
   };
 
+  const loadSkillDocument = (
+    document: SkillDocument,
+    options: {
+      fileName?: string;
+      sourceLabel?: string;
+      supportFiles?: UploadedContextFile[];
+      selectedContextPath?: string | null;
+    } = {},
+  ) => {
+    const imported = buildReviewDataFromSkillDocument(document, options);
+    setData(imported);
+    setAnalysisSessionId((current) => current + 1);
+    setOriginalData(JSON.parse(JSON.stringify(imported)));
+    setModifiedPaths(new Set());
+    setPendingUploadFiles([]);
+    setPendingPrimaryPath(null);
+    setSupportFiles(options.supportFiles ?? []);
+    setSelectedContextPath(options.selectedContextPath ?? null);
+    setInputText(JSON.stringify(document, null, 2));
+    setError(null);
+  };
+
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
 
     const preparedFiles = await expandUploads(files);
     const primaryFile = preparedFiles.find((file) => file.isPrimaryCandidate && file.text) ?? null;
+    const standaloneJsonImport = preparedFiles.length === 1 && preparedFiles[0].text
+      ? parseSkillDocumentJson(preparedFiles[0].text)
+      : null;
 
     setPendingUploadFiles(preparedFiles);
     setPendingPrimaryPath(primaryFile?.path ?? null);
@@ -215,6 +254,14 @@ export default function App() {
     setData(null);
     setOriginalData(null);
     setModifiedPaths(new Set());
+
+    if (!primaryFile && standaloneJsonImport) {
+      loadSkillDocument(standaloneJsonImport, {
+        fileName: preparedFiles[0].name,
+        sourceLabel: preparedFiles[0].path,
+      });
+      return;
+    }
 
     if (primaryFile) {
       setInputText(primaryFile.text || '');
@@ -262,9 +309,19 @@ export default function App() {
   };
 
   const handlePasteUrl = () => {
-    if (inputText.trim()) {
+    const trimmed = inputText.trim();
+
+    if (trimmed) {
       setPendingUploadFiles([]);
       setPendingPrimaryPath(null);
+      const importedSkillDocument = parseSkillDocumentJson(trimmed);
+      if (importedSkillDocument) {
+        loadSkillDocument(importedSkillDocument, {
+          fileName: 'pasted-skill.json',
+          sourceLabel: 'json/paste',
+        });
+        return;
+      }
       void processSkill(inputText);
     } else {
       setError(t('app.errorEmpty'));
@@ -290,6 +347,16 @@ export default function App() {
     setSupportFiles(contextEntries);
     setSelectedContextPath(contextEntries[0]?.path ?? null);
     setInputText(primaryFile.text);
+    const importedSkillDocument = parseSkillDocumentJson(primaryFile.text);
+    if (importedSkillDocument) {
+      loadSkillDocument(importedSkillDocument, {
+        fileName: primaryFile.name,
+        sourceLabel: primaryFile.path,
+        selectedContextPath: contextEntries[0]?.path ?? null,
+        supportFiles: contextEntries,
+      });
+      return;
+    }
     void processSkill(primaryFile.text, primaryFile.name, {
       contextFiles: contextEntries,
       primaryPath: primaryFile.path,

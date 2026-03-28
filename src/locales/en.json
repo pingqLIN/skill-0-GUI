@@ -14,6 +14,7 @@
     "undo": "Undo Changes",
     "analyzeAnother": "Analyze Another",
     "export": "Export SKILL",
+    "exportJson": "Export JSON",
     "errorEmpty": "Please enter a skill description, code snippet, or URL.",
     "errorFailed": "Failed to analyze the skill. Please try again or use a different input.",
     "exampleText": "A secure data pipeline that encrypts user logs before storing them in an AWS S3 bucket. It requires read access to local logs and write access to S3.",
@@ -34,8 +35,8 @@
     "emptyFeatureTraceTitle": "Traceable context",
     "emptyFeatureTraceBody": "Keep parser evidence, source links, and editor adjustments visible as part of the same tool.",
     "inputStudio": "Input Studio",
-    "inputGuide": "Paste a SKILL.md excerpt, a parser scenario, or a URL payload to generate a richer analytical workspace.",
-    "inputDrop": "Drop the primary SKILL file here. Additional JSON/YAML/TXT collaboration files will be attached as context only.",
+    "inputGuide": "Paste a SKILL.md excerpt, a SkillDocument JSON payload, a parser scenario, or a URL payload to generate a richer analytical workspace.",
+    "inputDrop": "Drop a primary SKILL file or SkillDocument JSON here. Additional JSON/YAML/TXT files stay as context when they are not valid imports.",
     "workspaceHint": "Use the sample to preview the strengthened layout and motion system.",
     "primaryWorkspace": "Primary workspace",
     "workspaceViews": "Workspace views",
@@ -82,12 +83,12 @@
     ,"selectFolder": "Select Folder"
     ,"reviewAndAnalyze": "Review & Analyze"
     ,"intakePreview": "Intake Preview"
-    ,"intakePreviewHint": "Choose the primary skill file before sending the bundle to the canonical parser."
+    ,"intakePreviewHint": "Choose the primary skill file or JSON document before sending the bundle to the canonical parser or importing it directly."
     ,"intakeFiles": "files"
     ,"primarySkill": "primary"
     ,"primaryCandidate": "candidate"
     ,"contextOnly": "context"
-    ,"errorPrimarySkillMissing": "Upload at least one primary SKILL file (.md, .skill, or .txt). Auxiliary collaboration files are stored as context only."
+    ,"errorPrimarySkillMissing": "Upload at least one primary SKILL file (.md, .skill, .txt) or a valid SkillDocument JSON file. Auxiliary collaboration files are stored as context only."
     ,"collaborationContext": "Collaboration Context"
     ,"contextFiles": "context files"
     ,"noContextFiles": "No auxiliary collaboration files attached."

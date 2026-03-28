@@ -83,6 +83,36 @@ describe('App smoke test', () => {
     expect(analyzeSkillText).toHaveBeenCalledWith('# demo skill', 'uploaded-skill', {});
   });
 
+  it('loads an imported skill document JSON without calling the parser bridge', async () => {
+    const importedSkillDocument = {
+      decomposition: {
+        actions: [{ action_type: 'io_read', id: 'a_001', name: 'Read files' }],
+        directives: [{ directive_type: 'strategy', id: 'd_001', name: 'Keep evidence' }],
+        rules: [{ id: 'r_001', name: 'Review findings' }],
+      },
+      execution_paths: [{ id: 'path_001', steps: ['a_001', 'r_001', 'd_001'] }],
+      meta: {
+        schema_version: '2.4.0',
+        skill_id: 'claude__imported-json',
+        title: 'Imported JSON Skill',
+      },
+    };
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('app.placeholder'), {
+      target: { value: JSON.stringify(importedSkillDocument, null, 2) },
+    });
+    fireEvent.click(screen.getByText('app.analyzeBtn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('review-workspace')).toBeInTheDocument();
+    });
+    expect(analyzeSkillText).not.toHaveBeenCalled();
+  });
+
   it('analyzes a zipped skill bundle through the dynamic JSZip intake path', async () => {
     vi.mocked(analyzeSkillText).mockResolvedValue({
       projectId: 'zip-skill',

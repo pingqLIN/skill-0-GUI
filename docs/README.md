@@ -52,6 +52,7 @@ This dossier documents both layers explicitly and distinguishes between:
 | 15 | [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md) | Issue-ready milestone list derived from the development plan | Ch. 13, Ch. 14 |
 | 16 | [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md) | Active execution baseline, closed findings, and current priority order | Ch. 8, Ch. 14, Ch. 15 |
 | 17 | [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md) | Reconciled late-stage roadmap after MVP-plan review and current upstream audit | Ch. 14, Ch. 15, Ch. 16 |
+| 18 | [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md) | Repository-grounded execution order derived from the local MVP planning draft | Ch. 17 |
 
 ## Fast Reading Paths
 
@@ -70,8 +71,9 @@ Before trusting exported review artifacts, read [shared/02-mode-and-equivalence-
 7. [11-evidence-based-warning-template.md](./11-evidence-based-warning-template.md)
 8. [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md)
 9. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
-10. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
-11. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
+10. [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md)
+11. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
+12. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
 12. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 
 ### For engineers
@@ -87,8 +89,9 @@ Read in this order:
 7. [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md)
 8. [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
 9. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
-10. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
-11. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
+10. [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md)
+11. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
+12. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
 12. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 
 ### For operators and deployers
@@ -100,7 +103,8 @@ Read in this order:
 3. [09-complex-skill-analysis-spec.md](./09-complex-skill-analysis-spec.md)
 4. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
 5. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
-6. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
+6. [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md)
+7. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 
 Supplemental note:
 

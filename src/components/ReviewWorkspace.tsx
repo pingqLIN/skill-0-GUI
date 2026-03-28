@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
+import { extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
 import type { UploadedContextFile } from '../types/intake';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
 
@@ -113,6 +114,7 @@ export function ReviewWorkspace({
     : bridgeStatus?.mode === 'standalone'
       ? t('app.bridgeGuidanceStandalone')
       : t('app.bridgeGuidanceUnavailable');
+  const skillDocument = extractSkillDocumentFromReviewData(data);
   const reviewMode = data?.reviewerSummary?.mode
     || (bridgeStatus?.mode === 'skill-0'
       ? 'canonical'
@@ -268,6 +270,20 @@ export function ReviewWorkspace({
     URL.revokeObjectURL(url);
   };
 
+  const exportSkillJson = () => {
+    if (!skillDocument) {
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(skillDocument, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${data.projectId}-${exportModeSuffix}.skill.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid gap-7 xl:grid-cols-[16rem_minmax(0,1fr)_20rem]">
@@ -342,6 +358,15 @@ export function ReviewWorkspace({
                         <span>{t('app.export')}</span>
                         <Download size={14} className="text-muted-foreground" />
                       </button>
+                      {skillDocument && (
+                        <button
+                          onClick={exportSkillJson}
+                          className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        >
+                          <span>{t('app.exportJson')}</span>
+                          <Download size={14} className="text-muted-foreground" />
+                        </button>
+                      )}
                       <button
                         onClick={onResetWorkspace}
                         className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
