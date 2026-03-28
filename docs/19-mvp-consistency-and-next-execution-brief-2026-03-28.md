@@ -22,6 +22,7 @@ The repository now covers the following MVP items with live code and tests:
 - raw JSON editor with format, parse validation, and apply-back-to-workspace flow
 - structured SkillDocument editor for `meta`, `actions`, `rules`, `directives`, and `execution_paths`
 - edited SkillDocument sessions now preserve the last known parser provenance instead of collapsing back to generic JSON-import mode
+- validation and consistency panels now offer issue-to-field jump actions back into the structured SkillDocument editor
 - schema validation panel in the workspace right rail
 - custom consistency checks for:
   - duplicate ids
@@ -40,6 +41,7 @@ The current cycle resolved four concrete gaps from the MVP draft:
 3. Custom consistency rules no longer assume that only the first execution path may act as the implicit root.
 4. Reviewers no longer need to drop straight to raw JSON for first-pass CRUD on core decomposition structures.
 5. Structured and JSON saves now keep the last known parser provenance visible while still downgrading final equivalence to a re-validate-required state.
+6. Reviewers can jump from the right-rail validation / consistency issues back into the structured editor instead of manually hunting through the form.
 
 ## 19.4 Current Known Gaps
 
@@ -47,7 +49,7 @@ The MVP loop is stronger, but still incomplete in the following areas:
 
 ### Structured editing
 
-- the first CRUD surface now exists, but it is still side-panel based and does not yet support deep field-level guidance or issue-to-field jump links
+- the first CRUD surface now exists, but it is still side-panel based and does not yet support deep field-level guidance beyond the current issue-to-field jump links
 - no element navigator that selects and focuses specific decomposition nodes
 - structured edits still rebuild the workspace from the SkillDocument projection, so parser evidence and review-specific enrichments are preserved only at a summary/provenance level, not as fully editable first-class state
 

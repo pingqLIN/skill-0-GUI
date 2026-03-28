@@ -44,6 +44,7 @@
     "quickActions": "快速操作",
     "openStructuredEditor": "開啟結構化編輯器",
     "openJsonEditor": "開啟 JSON 編輯器",
+    "openIssueInEditor": "在編輯器中開啟",
     "jumpToPhase": "跳至階段",
     "projectSummary": "專案摘要",
     "detailsPanel": "細節側欄",

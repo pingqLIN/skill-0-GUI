@@ -14,7 +14,11 @@ vi.mock('../components/Dashboard', () => ({ Dashboard: () => <div data-testid="d
 vi.mock('../components/PhaseDetails', () => ({ PhaseDetails: () => <div data-testid="phase-details" /> }));
 vi.mock('../components/VectorSpace', () => ({ VectorSpace: () => <div data-testid="vector-space" /> }));
 vi.mock('../components/SecurityMatrix', () => ({ SecurityMatrix: () => <div data-testid="security-matrix" /> }));
-vi.mock('../components/SideEditor', () => ({ SideEditor: () => null }));
+vi.mock('../components/SideEditor', () => ({
+  SideEditor: ({ config }: any) => config
+    ? <div data-testid="side-editor-config">{`${config.type}:${config.focusPath ?? 'none'}`}</div>
+    : null,
+}));
 vi.mock('../components/DecompositionBoard', () => ({ DecompositionBoard: () => <div data-testid="decomposition-board" /> }));
 
 const sampleData = {
@@ -164,6 +168,76 @@ describe('ReviewWorkspace', () => {
     expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
     expect(screen.getByText('app.validationInvalid')).toBeInTheDocument();
     expect(screen.getByText('SCHEMA_PATH_ID')).toBeInTheDocument();
+  });
+
+  it('opens the structured editor at the validation issue field path', async () => {
+    const props = {
+      darkMode: false,
+      modifiedPaths: new Set<string>(),
+      supportFiles: [],
+      selectedContextPath: null,
+      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
+      bridgeStatusError: null,
+      guiRepoUrl: 'https://example.com/gui',
+      engineRepoUrl: 'https://example.com/engine',
+      onSelectContextPath: vi.fn(),
+      onSaveEdit: vi.fn(),
+      onUndo: vi.fn(),
+      onResetWorkspace: vi.fn(),
+    };
+
+    const malformedData = {
+      ...sampleData,
+      parserResult: {
+        ...sampleData.parserResult,
+        execution_paths: [{ branches: [{ condition: 'fallback' }], name: 'broken-path' }],
+        original_definition: { source: 'json/test' },
+      },
+    };
+
+    render(<ReviewWorkspace data={malformedData} {...props} />);
+
+    fireEvent.click(await screen.findByText('app.openIssueInEditor'));
+
+    expect(screen.getByTestId('side-editor-config')).toHaveTextContent('skillDocument:execution_paths[0].id');
+  });
+
+  it('opens the structured editor at the consistency issue field path', async () => {
+    const props = {
+      darkMode: false,
+      modifiedPaths: new Set<string>(),
+      supportFiles: [],
+      selectedContextPath: null,
+      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
+      bridgeStatusError: null,
+      guiRepoUrl: 'https://example.com/gui',
+      engineRepoUrl: 'https://example.com/engine',
+      onSelectContextPath: vi.fn(),
+      onSaveEdit: vi.fn(),
+      onUndo: vi.fn(),
+      onResetWorkspace: vi.fn(),
+    };
+
+    const inconsistentData = {
+      ...sampleData,
+      parserResult: {
+        ...sampleData.parserResult,
+        decomposition: {
+          actions: [{ id: 'a_001', name: 'Read files', action_type: 'io_read' }],
+          directives: [],
+          rules: [],
+        },
+        execution_paths: [{ id: 'path_001', steps: ['missing_step'] }],
+        original_definition: { source: 'json/test' },
+      },
+    };
+
+    render(<ReviewWorkspace data={inconsistentData} {...props} />);
+
+    const buttons = await screen.findAllByText('app.openIssueInEditor');
+    fireEvent.click(buttons[buttons.length - 1]);
+
+    expect(screen.getByTestId('side-editor-config')).toHaveTextContent('skillDocument:execution_paths[0].steps');
   });
 
   it('exposes the structured SkillDocument editor from the action tray', async () => {

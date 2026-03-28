@@ -16,6 +16,10 @@ import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
 import { extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
 import { checkSkillDocumentConsistency } from '../services/skillDocumentConsistency';
+import {
+  resolveConsistencyIssueFieldPath,
+  resolveValidationIssueFieldPath,
+} from '../services/skillDocumentIssueNavigation';
 import { validateSkillDocument } from '../services/skillDocumentValidation';
 import type { UploadedContextFile } from '../types/intake';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
@@ -125,6 +129,17 @@ export function ReviewWorkspace({
   const consistencyIssues = consistencyResult?.issues ?? [];
   const consistencyErrors = consistencyIssues.filter((issue) => issue.severity === 'error');
   const consistencyWarnings = consistencyIssues.filter((issue) => issue.severity === 'warning');
+  const openSkillDocumentEditor = (focusPath?: string) => {
+    if (!skillDocument) {
+      return;
+    }
+
+    setEditorConfig({
+      type: 'skillDocument',
+      payload: skillDocument,
+      focusPath,
+    });
+  };
   const reviewMode = data?.reviewerSummary?.mode
     || (bridgeStatus?.mode === 'skill-0'
       ? 'canonical'
@@ -717,22 +732,34 @@ export function ReviewWorkspace({
                   </div>
                   {validationIssues.length > 0 ? (
                     <div className="space-y-2">
-                      {validationIssues.slice(0, 5).map((issue) => (
-                        <div key={`${issue.code}-${issue.path}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="font-medium text-foreground">{issue.code}</span>
-                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                              issue.severity === 'error'
-                                ? 'bg-destructive/12 text-destructive'
-                                : 'bg-amber-500/12 text-amber-700'
-                            }`}>
-                              {issue.severity}
-                            </span>
+                      {validationIssues.slice(0, 5).map((issue) => {
+                        const focusPath = resolveValidationIssueFieldPath(issue);
+                        return (
+                          <div key={`${issue.code}-${issue.path}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="font-medium text-foreground">{issue.code}</span>
+                              <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                issue.severity === 'error'
+                                  ? 'bg-destructive/12 text-destructive'
+                                  : 'bg-amber-500/12 text-amber-700'
+                              }`}>
+                                {issue.severity}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.path}</p>
+                            <p className="mt-2">{issue.message}</p>
+                            {focusPath && (
+                              <button
+                                type="button"
+                                onClick={() => openSkillDocumentEditor(focusPath)}
+                                className="mt-3 inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
+                              >
+                                {t('app.openIssueInEditor')}
+                              </button>
+                            )}
                           </div>
-                          <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.path}</p>
-                          <p className="mt-2">{issue.message}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
@@ -769,24 +796,36 @@ export function ReviewWorkspace({
                   </div>
                   {consistencyIssues.length > 0 ? (
                     <div className="space-y-2">
-                      {consistencyIssues.slice(0, 5).map((issue, index) => (
-                        <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="font-medium text-foreground">{issue.type}</span>
-                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                              issue.severity === 'error'
-                                ? 'bg-destructive/12 text-destructive'
-                                : 'bg-amber-500/12 text-amber-700'
-                            }`}>
-                              {issue.severity}
-                            </span>
+                      {consistencyIssues.slice(0, 5).map((issue, index) => {
+                        const focusPath = skillDocument ? resolveConsistencyIssueFieldPath(skillDocument, issue) : null;
+                        return (
+                          <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="font-medium text-foreground">{issue.type}</span>
+                              <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                issue.severity === 'error'
+                                  ? 'bg-destructive/12 text-destructive'
+                                  : 'bg-amber-500/12 text-amber-700'
+                              }`}>
+                                {issue.severity}
+                              </span>
+                            </div>
+                            {issue.targetId && (
+                              <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.targetId}</p>
+                            )}
+                            <p className="mt-2">{issue.message}</p>
+                            {focusPath && (
+                              <button
+                                type="button"
+                                onClick={() => openSkillDocumentEditor(focusPath)}
+                                className="mt-3 inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
+                              >
+                                {t('app.openIssueInEditor')}
+                              </button>
+                            )}
                           </div>
-                          {issue.targetId && (
-                            <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.targetId}</p>
-                          )}
-                          <p className="mt-2">{issue.message}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">

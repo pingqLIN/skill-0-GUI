@@ -108,6 +108,10 @@ function createEmptyExecutionPath(): ExecutionPath {
   };
 }
 
+function escapeAttributeValue(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<any>(null);
@@ -181,6 +185,24 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
       previouslyFocusedRef.current?.focus();
     };
   }, [config, onClose]);
+
+  useEffect(() => {
+    if (!config || config.type !== 'skillDocument' || !config.focusPath || !panelRef.current) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = panelRef.current?.querySelector<HTMLElement>(
+        `[data-field-path="${escapeAttributeValue(config.focusPath)}"]`,
+      );
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [config]);
 
   if (!config || !formData) return null;
 
@@ -340,6 +362,12 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
     setJsonError(null);
     onSave(parsedSkillDocument);
   };
+
+  const fieldPathProps = (path: string) => (
+    config.type === 'skillDocument'
+      ? { 'data-field-path': path }
+      : {}
+  );
 
   const renderSectionHeader = (title: string, description: string, action: React.ReactNode) => (
     <div className="flex items-start justify-between gap-3">
@@ -553,6 +581,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                             type="text"
                             value={formData.meta?.title ?? ''}
                             onChange={(event) => handleSkillMetaChange('title', event.target.value)}
+                            {...fieldPathProps('meta.title')}
                             className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                           />
                         </div>
@@ -562,6 +591,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                             type="text"
                             value={formData.meta?.name ?? ''}
                             onChange={(event) => handleSkillMetaChange('name', event.target.value)}
+                            {...fieldPathProps('meta.name')}
                             className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                           />
                         </div>
@@ -570,6 +600,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                           <textarea
                             value={formData.meta?.description ?? ''}
                             onChange={(event) => handleSkillMetaChange('description', event.target.value)}
+                            {...fieldPathProps('meta.description')}
                             className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                           />
                         </div>
@@ -579,6 +610,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                             type="text"
                             value={formData.meta?.version ?? ''}
                             onChange={(event) => handleSkillMetaChange('version', event.target.value)}
+                            {...fieldPathProps('meta.version')}
                             className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                           />
                         </div>
@@ -588,6 +620,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                             type="text"
                             value={formData.meta?.schema_version ?? ''}
                             onChange={(event) => handleSkillMetaChange('schema_version', event.target.value)}
+                            {...fieldPathProps('meta.schema_version')}
                             className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                           />
                         </div>
@@ -624,15 +657,15 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                             <div className="grid gap-4 md:grid-cols-2">
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.id')}</label>
-                                <input type="text" value={action.id} onChange={(event) => handleSkillFieldChange('actions', index, 'id', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={action.id} onChange={(event) => handleSkillFieldChange('actions', index, 'id', event.target.value)} {...fieldPathProps(`decomposition.actions[${index}].id`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.name')}</label>
-                                <input type="text" value={action.name} onChange={(event) => handleSkillFieldChange('actions', index, 'name', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={action.name} onChange={(event) => handleSkillFieldChange('actions', index, 'name', event.target.value)} {...fieldPathProps(`decomposition.actions[${index}].name`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.actionType')}</label>
-                                <input type="text" value={action.action_type} onChange={(event) => handleSkillFieldChange('actions', index, 'action_type', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={action.action_type} onChange={(event) => handleSkillFieldChange('actions', index, 'action_type', event.target.value)} {...fieldPathProps(`decomposition.actions[${index}].action_type`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.deterministic')}</label>
@@ -648,7 +681,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                               </div>
                               <div className="space-y-2 md:col-span-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.description')}</label>
-                                <textarea value={action.description ?? ''} onChange={(event) => handleSkillFieldChange('actions', index, 'description', event.target.value)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <textarea value={action.description ?? ''} onChange={(event) => handleSkillFieldChange('actions', index, 'description', event.target.value)} {...fieldPathProps(`decomposition.actions[${index}].description`)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.mutableElements')}</label>
@@ -698,31 +731,31 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                             <div className="grid gap-4 md:grid-cols-2">
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.id')}</label>
-                                <input type="text" value={rule.id} onChange={(event) => handleSkillFieldChange('rules', index, 'id', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={rule.id} onChange={(event) => handleSkillFieldChange('rules', index, 'id', event.target.value)} {...fieldPathProps(`decomposition.rules[${index}].id`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.name')}</label>
-                                <input type="text" value={rule.name} onChange={(event) => handleSkillFieldChange('rules', index, 'name', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={rule.name} onChange={(event) => handleSkillFieldChange('rules', index, 'name', event.target.value)} {...fieldPathProps(`decomposition.rules[${index}].name`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.conditionType')}</label>
-                                <input type="text" value={rule.condition_type ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'condition_type', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={rule.condition_type ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'condition_type', event.target.value)} {...fieldPathProps(`decomposition.rules[${index}].condition_type`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.returns')}</label>
-                                <input type="text" value={rule.returns ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'returns', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={rule.returns ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'returns', event.target.value)} {...fieldPathProps(`decomposition.rules[${index}].returns`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2 md:col-span-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.conditionExpression')}</label>
-                                <textarea value={rule.condition_expression ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'condition_expression', event.target.value)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 font-mono text-xs shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <textarea value={rule.condition_expression ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'condition_expression', event.target.value)} {...fieldPathProps(`decomposition.rules[${index}].condition_expression`)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 font-mono text-xs shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2 md:col-span-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.description')}</label>
-                                <textarea value={rule.description ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'description', event.target.value)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <textarea value={rule.description ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'description', event.target.value)} {...fieldPathProps(`decomposition.rules[${index}].description`)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2 md:col-span-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.failAction')}</label>
-                                <input type="text" value={rule.fail_action ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'fail_action', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={rule.fail_action ?? ''} onChange={(event) => handleSkillFieldChange('rules', index, 'fail_action', event.target.value)} {...fieldPathProps(`decomposition.rules[${index}].fail_action`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                             </div>
                           </div>
@@ -760,15 +793,15 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                             <div className="grid gap-4 md:grid-cols-2">
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.id')}</label>
-                                <input type="text" value={directive.id} onChange={(event) => handleSkillFieldChange('directives', index, 'id', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={directive.id} onChange={(event) => handleSkillFieldChange('directives', index, 'id', event.target.value)} {...fieldPathProps(`decomposition.directives[${index}].id`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.name')}</label>
-                                <input type="text" value={directive.name} onChange={(event) => handleSkillFieldChange('directives', index, 'name', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={directive.name} onChange={(event) => handleSkillFieldChange('directives', index, 'name', event.target.value)} {...fieldPathProps(`decomposition.directives[${index}].name`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.directiveType')}</label>
-                                <input type="text" value={directive.directive_type} onChange={(event) => handleSkillFieldChange('directives', index, 'directive_type', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={directive.directive_type} onChange={(event) => handleSkillFieldChange('directives', index, 'directive_type', event.target.value)} {...fieldPathProps(`decomposition.directives[${index}].directive_type`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.decomposable')}</label>
@@ -784,11 +817,11 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                               </div>
                               <div className="space-y-2 md:col-span-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.description')}</label>
-                                <textarea value={directive.description ?? ''} onChange={(event) => handleSkillFieldChange('directives', index, 'description', event.target.value)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <textarea value={directive.description ?? ''} onChange={(event) => handleSkillFieldChange('directives', index, 'description', event.target.value)} {...fieldPathProps(`decomposition.directives[${index}].description`)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2 md:col-span-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.decompositionHint')}</label>
-                                <textarea value={directive.decomposition_hint ?? ''} onChange={(event) => handleSkillFieldChange('directives', index, 'decomposition_hint', event.target.value)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <textarea value={directive.decomposition_hint ?? ''} onChange={(event) => handleSkillFieldChange('directives', index, 'decomposition_hint', event.target.value)} {...fieldPathProps(`decomposition.directives[${index}].decomposition_hint`)} className="min-h-24 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                             </div>
                           </div>
@@ -826,32 +859,32 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                             <div className="grid gap-4 md:grid-cols-2">
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.id')}</label>
-                                <input type="text" value={executionPath.id} onChange={(event) => handleExecutionPathFieldChange(index, 'id', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={executionPath.id} onChange={(event) => handleExecutionPathFieldChange(index, 'id', event.target.value)} {...fieldPathProps(`execution_paths[${index}].id`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.name')}</label>
-                                <input type="text" value={executionPath.name ?? ''} onChange={(event) => handleExecutionPathFieldChange(index, 'name', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={executionPath.name ?? ''} onChange={(event) => handleExecutionPathFieldChange(index, 'name', event.target.value)} {...fieldPathProps(`execution_paths[${index}].name`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2 md:col-span-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.entryCondition')}</label>
-                                <input type="text" value={executionPath.entry_condition ?? ''} onChange={(event) => handleExecutionPathFieldChange(index, 'entry_condition', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={executionPath.entry_condition ?? ''} onChange={(event) => handleExecutionPathFieldChange(index, 'entry_condition', event.target.value)} {...fieldPathProps(`execution_paths[${index}].entry_condition`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.steps')}</label>
-                                <textarea value={listValue(executionPath.steps)} onChange={(event) => handleExecutionPathFieldChange(index, 'steps', parseLineList(event.target.value))} className="min-h-28 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 font-mono text-xs shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <textarea value={listValue(executionPath.steps)} onChange={(event) => handleExecutionPathFieldChange(index, 'steps', parseLineList(event.target.value))} {...fieldPathProps(`execution_paths[${index}].steps`)} className="min-h-28 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 font-mono text-xs shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.branches')}</label>
-                                <textarea value={branchesToText(executionPath.branches)} onChange={(event) => handleExecutionPathFieldChange(index, 'branches', parseBranchesText(event.target.value))} className="min-h-28 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 font-mono text-xs shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <textarea value={branchesToText(executionPath.branches)} onChange={(event) => handleExecutionPathFieldChange(index, 'branches', parseBranchesText(event.target.value))} {...fieldPathProps(`execution_paths[${index}].branches`)} className="min-h-28 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 font-mono text-xs shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                                 <p className="text-[11px] leading-5 text-muted-foreground">{t('editor.branchesHelp')}</p>
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.successEnd')}</label>
-                                <input type="text" value={executionPath.success_end ?? ''} onChange={(event) => handleExecutionPathFieldChange(index, 'success_end', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={executionPath.success_end ?? ''} onChange={(event) => handleExecutionPathFieldChange(index, 'success_end', event.target.value)} {...fieldPathProps(`execution_paths[${index}].success_end`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{t('editor.failureEnd')}</label>
-                                <input type="text" value={executionPath.failure_end ?? ''} onChange={(event) => handleExecutionPathFieldChange(index, 'failure_end', event.target.value)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={executionPath.failure_end ?? ''} onChange={(event) => handleExecutionPathFieldChange(index, 'failure_end', event.target.value)} {...fieldPathProps(`execution_paths[${index}].failure_end`)} className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                               </div>
                             </div>
                           </div>

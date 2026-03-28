@@ -44,6 +44,7 @@
     "quickActions": "Quick actions",
     "openStructuredEditor": "Open structured editor",
     "openJsonEditor": "Open JSON editor",
+    "openIssueInEditor": "Open in editor",
     "jumpToPhase": "Jump to phase",
     "projectSummary": "Project summary",
     "detailsPanel": "Details panel",
