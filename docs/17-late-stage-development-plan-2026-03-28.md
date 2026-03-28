@@ -82,7 +82,23 @@ Current upstream realities that matter:
 3. `skill-0-GUI` should avoid inventing parallel contracts.
    - It should consume the live schema/governance/parser-mode semantics from `skill-0`, not restate or fork them casually.
 
-## 17.5 Product Positioning For The Late Stage
+## 17.5 Current Verified GUI Baseline
+
+The current repository state is already beyond “MVP bootstrap”:
+
+- `npm run lint` passes
+- `npm test` passes with `14` test files and `31` tests
+- `npm run build` passes
+- `npm run docs:check` passes
+- `npm run verify:build-size` passes
+- `npm run verify:public-build` passes
+
+Implication:
+
+- later-phase planning must assume a working source-driven baseline already exists
+- the roadmap should optimize for reviewer trust and workflow completion, not source restoration
+
+## 17.6 Product Positioning For The Late Stage
 
 The correct late-stage positioning is:
 
@@ -95,7 +111,7 @@ This implies:
 - not an AI-autofix product in the current phase
 - not a full collaboration platform yet
 
-## 17.6 Late-Stage Workstreams
+## 17.7 Late-Stage Workstreams
 
 ### Workstream A. Trustworthy Review Surfaces
 
@@ -168,7 +184,7 @@ Scope:
 - maintain build-size/public-build guarantees
 - document manual release and deployment steps clearly if CI automation is not the whole answer
 
-## 17.7 Recommended Execution Order
+## 17.8 Recommended Execution Order
 
 Use this order for the next development cycle:
 
@@ -189,7 +205,7 @@ Use this order for the next development cycle:
 5. **E1. Delivery/documentation cleanup**
    - only after the reviewer workflow is stable
 
-## 17.8 Issues That Should Not Be Reopened As Major Phases
+## 17.9 Issues That Should Not Be Reopened As Major Phases
 
 These were important earlier, but should no longer dominate planning:
 
@@ -200,7 +216,7 @@ These were important earlier, but should no longer dominate planning:
 
 They are now maintenance concerns, not the main roadmap.
 
-## 17.9 Suggested Milestone Reframe
+## 17.10 Suggested Milestone Reframe
 
 Reframe the next milestones as:
 
@@ -240,7 +256,7 @@ Deliverables:
 - verification checklist is authoritative
 - deployment/release path is explicit
 
-## 17.10 Immediate Backlog To Carry Forward
+## 17.11 Immediate Backlog To Carry Forward
 
 The most actionable near-term backlog is:
 
@@ -250,7 +266,7 @@ The most actionable near-term backlog is:
 4. finish the notes/diff/export review packet flow
 5. add explicit query-error states across the review surfaces
 
-## 17.11 Stop-Loss Rules
+## 17.12 Stop-Loss Rules
 
 To prevent another over-broad planning cycle:
 
@@ -259,7 +275,7 @@ To prevent another over-broad planning cycle:
 3. do not fork schema or parser semantics away from `skill-0`
 4. if graph-first review intelligence proves too expensive, ship list-based evidence views first
 
-## 17.12 Definition Of Success
+## 17.13 Definition Of Success
 
 This late-stage plan is successful when:
 
