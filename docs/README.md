@@ -51,6 +51,7 @@ This dossier documents both layers explicitly and distinguishes between:
 | 14 | [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md) | Integrated development plan for UI recovery and remaining engineering work | Ch. 8, Ch. 12, Ch. 13 |
 | 15 | [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md) | Issue-ready milestone list derived from the development plan | Ch. 13, Ch. 14 |
 | 16 | [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md) | Active execution baseline, closed findings, and current priority order | Ch. 8, Ch. 14, Ch. 15 |
+| 17 | [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md) | Reconciled late-stage roadmap after MVP-plan review and current upstream audit | Ch. 14, Ch. 15, Ch. 16 |
 
 ## Fast Reading Paths
 
@@ -71,6 +72,7 @@ Before trusting exported review artifacts, read [shared/02-mode-and-equivalence-
 9. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
 10. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 11. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
+12. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 
 ### For engineers
 
@@ -87,6 +89,7 @@ Read in this order:
 9. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
 10. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 11. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
+12. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 
 ### For operators and deployers
 
@@ -97,6 +100,7 @@ Read in this order:
 3. [09-complex-skill-analysis-spec.md](./09-complex-skill-analysis-spec.md)
 4. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
 5. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
+6. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 
 Supplemental note:
 
@@ -173,5 +177,6 @@ The UI recovery set for the tracked workbench model is:
 3. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 4. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
 5. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
+6. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 
-These chapters distinguish historical design-model planning from the current runtime status. Use Chapter 16 as the active execution brief; treat Chapters 14 and 15 as archived planning context.
+These chapters distinguish historical design-model planning from the current runtime status. Use Chapter 16 as the active execution brief and Chapter 17 as the reconciled late-stage roadmap; treat Chapters 14 and 15 as archived planning context.
