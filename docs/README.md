@@ -58,6 +58,8 @@ This dossier documents both layers explicitly and distinguishes between:
 
 Read in this order:
 
+Before trusting exported review artifacts, read [shared/02-mode-and-equivalence-contract.md](./shared/02-mode-and-equivalence-contract.md) first.
+
 1. [01-project-overview.md](./01-project-overview.md)
 2. [02-runtime-and-system-architecture.md](./02-runtime-and-system-architecture.md)
 3. [03-functional-modules.md](./03-functional-modules.md)

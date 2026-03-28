@@ -127,6 +127,8 @@ Export behavior supports two output shapes:
 1. parser-result-oriented export
 2. higher-level phase-flow export when parser result is absent
 
+Every exported review artifact should also carry parser mode, mode source, and an explicit equivalence framing such as `implementation_identity`, `equivalence_unverified`, or `degraded_path`.
+
 ## 3.7 Mode Awareness and Deployment Safety
 
 The system now has an explicit operational distinction between:

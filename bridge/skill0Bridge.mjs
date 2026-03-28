@@ -152,6 +152,38 @@ function severityWeight(value) {
   return 1;
 }
 
+function buildReviewDecisionSummary(bridge) {
+  if (bridge.mode === 'skill-0') {
+    return {
+      equivalenceNote: 'implementation_identity',
+      finalDecisionGuidance: 'Result was produced by the canonical skill-0 bridge. Final equivalence review is acceptable if supporting files and findings are inspected.',
+      mode: 'canonical',
+    };
+  }
+
+  if (bridge.mode === 'standalone') {
+    if (bridge.skill0Root && bridge.error) {
+      return {
+        equivalenceNote: 'degraded_path',
+        finalDecisionGuidance: 'Canonical bridge execution degraded to the standalone compatibility path. Re-run in canonical mode before any parity-sensitive or final equivalence decision.',
+        mode: 'standalone',
+      };
+    }
+
+    return {
+      equivalenceNote: 'equivalence_unverified',
+      finalDecisionGuidance: 'Result was produced by the standalone compatibility path. Re-run with the canonical skill-0 bridge before parity-sensitive or final equivalence decisions.',
+      mode: 'standalone',
+    };
+  }
+
+  return {
+    equivalenceNote: 'equivalence_unverified',
+    finalDecisionGuidance: 'Parser mode could not be verified. Do not treat this result as final equivalence evidence until bridge status is confirmed.',
+    mode: 'unknown',
+  };
+}
+
 function buildOperatorReminders({ parserResult, securityFindings, bridge, riskLevel }) {
   const manifest = parserResult?.manifest ?? null;
   const reminders = [];
@@ -962,6 +994,7 @@ function transformParserResult(parserResult, bridge) {
     riskLevel,
     securityFindings,
   });
+  const reviewDecisionSummary = buildReviewDecisionSummary(bridge);
 
   return {
     bridge,
@@ -1043,6 +1076,9 @@ function transformParserResult(parserResult, bridge) {
     projectId: meta.skill_id || `skill-0-${Date.now()}`,
     projectName: meta.title || meta.name || 'Skill-0 Parsed Skill',
     reviewerSummary: {
+      equivalenceNote: reviewDecisionSummary.equivalenceNote,
+      finalDecisionGuidance: reviewDecisionSummary.finalDecisionGuidance,
+      mode: reviewDecisionSummary.mode,
       operatorReminders,
     },
     riskAssessment: {

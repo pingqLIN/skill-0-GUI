@@ -119,6 +119,7 @@ Use these commands to validate a change locally before pushing:
 Known limits to keep in mind:
 
 - standalone mode is compatible with canonical output, but it is not identical to the canonical `skill-0` parser
+- standalone-generated exports and review summaries must be treated as compatibility-oriented artifacts, not final canonical-equivalence proof
 - the optional 3D workspace still creates a large secondary bundle, so public builds should keep `VITE_ENABLE_3D=false`
 - mirrored shared docs must stay in sync with `skill-0/docs/shared/` and are checked by CI
 

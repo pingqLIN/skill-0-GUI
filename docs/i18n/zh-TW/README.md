@@ -7,6 +7,7 @@
 - 以 `standalone` 模式部署
 - 公開版停用互動式 3D 工作區
 - 保留輕量 review map、parser 分析面板與匯出流程
+- standalone 匯出結果屬於相容性審查產物，不應視為 canonical 等價性的最終證據
 - 目前適合 public beta，不是含持久化的最終正式版
 
 目前工程狀態：

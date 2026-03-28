@@ -7,6 +7,7 @@ Current public release posture:
 - deploy in `standalone` mode
 - disable the interactive 3D workspace in public builds
 - keep the lightweight review map, parser surfaces, and export flow
+- treat standalone exports as compatibility-review artifacts, not strict canonical-equivalence evidence
 - treat this release as a public beta, not a persistence-backed final product
 
 Current engineering state:

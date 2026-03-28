@@ -113,6 +113,25 @@ export function ReviewWorkspace({
     : bridgeStatus?.mode === 'standalone'
       ? t('app.bridgeGuidanceStandalone')
       : t('app.bridgeGuidanceUnavailable');
+  const reviewMode = data?.reviewerSummary?.mode
+    || (bridgeStatus?.mode === 'skill-0'
+      ? 'canonical'
+      : bridgeStatus?.mode === 'standalone'
+        ? 'standalone'
+        : 'unknown');
+  const reviewEquivalenceStatus = data?.reviewerSummary?.equivalenceNote
+    || (reviewMode === 'canonical' ? 'implementation_identity' : 'equivalence_unverified');
+  const reviewDecisionGuidance = data?.reviewerSummary?.finalDecisionGuidance
+    || (bridgeStatus?.mode === 'skill-0'
+      ? 'Result was produced by the canonical skill-0 bridge. Final equivalence review is acceptable if supporting files and findings are inspected.'
+      : bridgeStatus?.mode === 'standalone'
+        ? 'Result was produced by the standalone compatibility path. Re-run with the canonical skill-0 bridge before parity-sensitive or final equivalence decisions.'
+        : 'Parser mode could not be verified. Do not treat this result as final equivalence evidence until bridge status is confirmed.');
+  const exportModeSuffix = reviewMode === 'canonical'
+    ? 'canonical'
+    : reviewMode === 'standalone'
+      ? 'standalone'
+      : 'unknown';
 
   const openDerivedWorkflow = () => {
     setActiveTab('pipeline');
@@ -139,12 +158,15 @@ export function ReviewWorkspace({
         `- parser_version: ${meta.parser_version || 'unknown'}`,
         `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
         `- parser_mode_source: ${bridgeModeDetail}`,
+        `- review_mode: ${reviewMode}`,
+        `- equivalence_status: ${reviewEquivalenceStatus}`,
+        `- review_decision_guidance: ${reviewDecisionGuidance}`,
         `- source: ${original.source || 'uploaded skill'}`,
         '',
       ];
 
-      if (bridgeStatus?.mode === 'standalone') {
-        lines.push('> Review note: generated in standalone fallback mode. Re-run with the canonical skill-0 bridge before making a final equivalence decision.');
+      if (reviewEquivalenceStatus !== 'implementation_identity') {
+        lines.push(`> Review note: ${reviewDecisionGuidance}`);
         lines.push('');
       }
 
@@ -196,11 +218,14 @@ export function ReviewWorkspace({
       `- risk_level: ${skillData.riskAssessment.level}`,
       `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
       `- parser_mode_source: ${bridgeModeDetail}`,
+      `- review_mode: ${reviewMode}`,
+      `- equivalence_status: ${reviewEquivalenceStatus}`,
+      `- review_decision_guidance: ${reviewDecisionGuidance}`,
       '',
     ];
 
-    if (bridgeStatus?.mode === 'standalone') {
-      lines.push('> Review note: generated in standalone fallback mode. Re-run with the canonical skill-0 bridge before making a final equivalence decision.');
+    if (reviewEquivalenceStatus !== 'implementation_identity') {
+      lines.push(`> Review note: ${reviewDecisionGuidance}`);
       lines.push('');
     }
 
@@ -238,7 +263,7 @@ export function ReviewWorkspace({
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `${data.projectId}.skill.md`;
+    anchor.download = `${data.projectId}-${exportModeSuffix}.skill.md`;
     anchor.click();
     URL.revokeObjectURL(url);
   };

@@ -40,6 +40,7 @@ The following findings were addressed during the current audit/remediation pass:
 
 - remove or relabel UI elements that still present placeholder telemetry or generic references as if they were real evidence
 - strengthen exported review artifacts so canonical vs standalone mode is explicit outside the live workspace too
+- require every exported report or summary to carry parser mode, mode source, equivalence status, and a canonical re-run requirement whenever the result is fallback-derived or unknown
 
 ### Priority B: Parser confidence
 
