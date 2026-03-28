@@ -30,6 +30,7 @@ What is true now:
 - documentation for external review now exists
 - development and production runtimes share the same bridge logic
 - the current CI workflow checks entrypoints, TypeScript, mirrored docs, tests, and the production build
+- the standard build now enforces an entry-size guard through `npm run verify:build-size`
 - `npm run build` and `npm test` are currently green in the working tree
 
 ## 8.2 Major Improvements Completed
@@ -93,51 +94,33 @@ Impact:
 
 - indicates the current asset/dependency state may still have historical drift
 
-### Vite dev parity gap
+### Intake and runtime hardening debt
 
-The Express runtime and the Vite dev middleware share the same bridge logic, but the Vite side still benefits from explicit automated parity coverage.
+The project now supports multi-file and zip-based intake, but those flows need continued hardening because they serialize real collaboration context through the parser bridge.
 
 Impact:
 
-- runtime behavior is aligned in practice
-- the development server should continue to be protected by dedicated API parity tests
+- the deployable runtime must keep body-size limits compatible with realistic review bundles
+- the zip and folder intake flows need dedicated regression coverage
 
 ## 8.4 Recommended Next Steps
 
 ### Priority 1
 
-Harden the restored `src/` application tree instead of treating source restoration itself as the blocker.
+Harden real intake and editing flows:
 
-Selective rebuild guidance:
-
-- continue rebuilding high-friction modules incrementally
-- do not default to a full UI rewrite while measured, isolated rebuilds are still working
+- keep zip and multi-file bundle intake test-backed
+- preserve workspace-local state when edits or undo operations update parsed data
+- continue removing UI behaviors that look authoritative but are actually placeholders
 
 ### Priority 2
-
-Add automated tests for:
-
-- `GET /api/bridge-status`
-- `GET /api/example-skill`
-- `POST /api/parse-skill`
-
-in both:
-
-- Vite dev mode
-
-Status:
-
-- Express runtime mode now has automated route and live integration coverage
-- Vite dev middleware parity still needs explicit automated coverage
-
-### Priority 3
 
 Add fixture-based comparison tests between:
 
 - canonical parser output
 - standalone parser output
 
-### Priority 4
+### Priority 3
 
 Expose bridge mode visually in the frontend so end users can tell whether they are reviewing canonical or fallback-derived results.
 
@@ -145,6 +128,14 @@ Status:
 
 - completed for the main workspace shell
 - still needs stronger user-facing explanation inside exported reports and review summaries
+
+### Priority 4
+
+Continue bundle and runtime hardening:
+
+- keep `index-*.js` below the current build-size guard
+- decide whether the large async 3D vendor chunk should be reduced further or explicitly accepted as internal-only cost
+- keep public builds free of the 3D workspace
 
 ### Priority 5
 
@@ -182,7 +173,11 @@ to sequence:
 
 ### Priority 8
 
-Use the integrated execution plan in:
+Use the current execution brief and the historical planning set together:
+
+- [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
+
+Use the older integrated plan as historical planning context only:
 
 - [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Info, ArrowRight, ArrowLeft, Edit2, Activity, BookOpen, Link as LinkIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Info, ArrowRight, ArrowLeft, Edit2, Activity, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export function PhaseDetails({ phase, allPhases, onNavigatePhase, onClose, onEditPhase, onEditDecision, modifiedPaths = new Set() }: { phase: any, allPhases: any[], onNavigatePhase: (id: string) => void, onClose: () => void, onEditPhase: (phase: any) => void, onEditDecision: (node: any) => void, modifiedPaths?: Set<string> }) {
@@ -210,26 +210,24 @@ export function PhaseDetails({ phase, allPhases, onNavigatePhase, onClose, onEdi
                     <div className="space-y-2">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground/80">{t('phaseDetails.status')}</span>
-                        <span className="text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">{t('phaseDetails.passing')}</span>
+                        <span className="font-medium bg-background px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground">{t('phaseDetails.notCapturedYet')}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground/80">{t('phaseDetails.latency')}</span>
-                        <span className="font-mono text-foreground/80">124ms</span>
+                        <span className="font-mono text-muted-foreground">--</span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground/80">{t('phaseDetails.memory')}</span>
-                        <span className="font-mono text-foreground/80">42MB</span>
+                        <span className="font-mono text-muted-foreground">--</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="bg-muted/10 p-4 rounded-lg border border-border/40 shadow-sm">
                     <h4 className="text-xs font-semibold mb-3 flex items-center gap-1.5 text-foreground/80"><BookOpen size={14} className="text-amber-500/70"/> {t('phaseDetails.references')}</h4>
-                    <ul className="space-y-2">
-                      <li><a href="https://github.com/pingqLIN/skill-0" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.architectureGuidelines')}</a></li>
-                      <li><a href="https://github.com/pingqLIN/skill-0/blob/main/README.md" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.securityPolicies')}</a></li>
-                      <li><a href="https://github.com/pingqLIN/skill-0" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground/80 hover:text-primary hover:underline flex items-center gap-1.5"><LinkIcon size={12}/> {t('phaseDetails.apiDocumentation')}</a></li>
-                    </ul>
+                    <p className="text-xs leading-6 text-muted-foreground/80">
+                      {t('phaseDetails.phaseSpecificRefsPending')}
+                    </p>
                   </div>
                 </div>
 
@@ -247,5 +245,4 @@ export function PhaseDetails({ phase, allPhases, onNavigatePhase, onClose, onEdi
     </motion.div>
   );
 }
-
 

@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest';
 import App from '../App';
 import { analyzeSkillText } from '../services/parserBridgeService';
+import JSZip from 'jszip';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -16,6 +17,11 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../components/ReviewWorkspace', () => ({
   ReviewWorkspace: () => <div data-testid="review-workspace" />,
+}));
+vi.mock('jszip', () => ({
+  default: {
+    loadAsync: vi.fn(),
+  },
 }));
 vi.mock('../components/Flowchart', () => ({ Flowchart: () => <div data-testid="flowchart" /> }));
 vi.mock('../components/PhaseDetails', () => ({ PhaseDetails: () => <div data-testid="phase-details" /> }));
@@ -37,6 +43,7 @@ vi.mock('../services/bridgeStatusService', () => ({
 describe('App smoke test', () => {
   beforeEach(() => {
     vi.mocked(analyzeSkillText).mockReset();
+    vi.mocked(JSZip.loadAsync).mockReset();
   });
 
   it('renders the intake workspace shell', async () => {
@@ -74,5 +81,62 @@ describe('App smoke test', () => {
       expect(screen.getByTestId('review-workspace')).toBeInTheDocument();
     });
     expect(analyzeSkillText).toHaveBeenCalledWith('# demo skill', 'uploaded-skill', {});
+  });
+
+  it('analyzes a zipped skill bundle through the dynamic JSZip intake path', async () => {
+    vi.mocked(analyzeSkillText).mockResolvedValue({
+      projectId: 'zip-skill',
+      projectName: 'Zip Skill',
+      phases: [],
+      riskAssessment: { level: 'SAFE', details: '' },
+      threeClassification: { category: 'demo', granularity: 'task', operability: 90 },
+      parserResult: { decomposition: { actions: [], rules: [], directives: [] } },
+      globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
+    });
+
+    vi.mocked(JSZip.loadAsync).mockResolvedValue({
+      files: {
+        'bundle/SKILL.md': {
+          dir: false,
+          name: 'bundle/SKILL.md',
+          async: vi.fn().mockResolvedValue('# zipped skill'),
+        },
+        'bundle/docs/policy.md': {
+          dir: false,
+          name: 'bundle/docs/policy.md',
+          async: vi.fn().mockResolvedValue('# Policy'),
+        },
+      },
+    } as any);
+
+    const { container } = render(<App />);
+    const fileInput = container.querySelector('input[accept*=".zip"]') as HTMLInputElement | null;
+    expect(fileInput).not.toBeNull();
+
+    const zipFile = new File(['zip-binary'], 'bundle.zip', { type: 'application/zip' });
+
+    await act(async () => {
+      fireEvent.change(fileInput!, {
+        target: { files: [zipFile] },
+      });
+    });
+
+    expect(await screen.findByText('bundle/SKILL.md')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('app.reviewAndAnalyze'));
+
+    await waitFor(() => {
+      expect(analyzeSkillText).toHaveBeenCalledWith('# zipped skill', 'SKILL.md', {
+        primaryPath: 'bundle/SKILL.md',
+        contextFiles: [
+          expect.objectContaining({
+            name: 'policy.md',
+            path: 'bundle/docs/policy.md',
+            role: 'context',
+            text: '# Policy',
+          }),
+        ],
+      });
+    });
   });
 });

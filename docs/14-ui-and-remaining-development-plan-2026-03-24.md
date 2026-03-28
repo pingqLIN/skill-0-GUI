@@ -7,6 +7,12 @@ Related chapters:
 - [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md)
 - [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
 
+Status note:
+
+- this chapter is now a historical planning baseline
+- source restoration, Vitest setup, runtime parity coverage, and the initial performance split are already complete
+- use [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md) as the current execution document
+
 ## 14.1 Purpose
 
 This chapter defines the execution plan for:

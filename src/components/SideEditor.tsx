@@ -81,6 +81,20 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
     }));
   };
 
+  const handleListChange = (field: string, value: string) => {
+    const items = value
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    setFormData((prev: any) => ({
+      ...prev,
+      [field]: items,
+    }));
+  };
+
+  const listValue = (items: unknown) => Array.isArray(items) ? items.join('\n') : '';
+
   return (
     <AnimatePresence>
       {config && (
@@ -107,10 +121,18 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
             <div className="flex items-center justify-between p-5 border-b border-border/50 bg-muted/10">
               <div>
                 <h2 id={titleId} className="font-semibold tracking-tight text-sm text-foreground">
-                  {config.type === 'global' ? t('editor.editGlobal') : t('editor.editDecision')}
+                  {config.type === 'global'
+                    ? t('editor.editGlobal')
+                    : config.type === 'phase'
+                      ? t('editor.editPhase')
+                      : t('editor.editDecision')}
                 </h2>
                 <p className="text-[10px] text-muted-foreground/80 mt-1 uppercase tracking-widest">
-                  {config.type === 'global' ? t('editor.globalDesc') : t('editor.decisionDesc')}
+                  {config.type === 'global'
+                    ? t('editor.globalDesc')
+                    : config.type === 'phase'
+                      ? t('editor.phaseDesc')
+                      : t('editor.decisionDesc')}
                 </p>
               </div>
               <button
@@ -201,6 +223,45 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
                         className="w-full bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive/50 focus:border-destructive/50 transition-all shadow-sm"
                       />
                     </div>
+                  </div>
+                </>
+              )}
+
+              {config.type === 'phase' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">{t('editor.phaseName')}</label>
+                    <input
+                      ref={initialFieldRef}
+                      type="text"
+                      value={formData.name ?? ''}
+                      onChange={(e) => handleChange('name', e.target.value)}
+                      className="w-full bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">{t('phaseDetails.inputs')}</label>
+                    <textarea
+                      value={listValue(formData.input)}
+                      onChange={(e) => handleListChange('input', e.target.value)}
+                      className="min-h-28 w-full resize-y bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">{t('phaseDetails.tasks')}</label>
+                    <textarea
+                      value={listValue(formData.tasks)}
+                      onChange={(e) => handleListChange('tasks', e.target.value)}
+                      className="min-h-32 w-full resize-y bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">{t('phaseDetails.outputs')}</label>
+                    <textarea
+                      value={listValue(formData.output)}
+                      onChange={(e) => handleListChange('output', e.target.value)}
+                      className="min-h-28 w-full resize-y bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-sm"
+                    />
                   </div>
                 </>
               )}

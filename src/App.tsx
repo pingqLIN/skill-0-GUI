@@ -27,6 +27,7 @@ export default function App() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const [data, setData] = useState<any | null>(null);
+  const [analysisSessionId, setAnalysisSessionId] = useState(0);
   const [originalData, setOriginalData] = useState<any | null>(null);
   const [modifiedPaths, setModifiedPaths] = useState<Set<string>>(new Set());
   const [inputText, setInputText] = useState('');
@@ -281,7 +282,10 @@ export default function App() {
 
     const contextEntries = pendingUploadFiles
       .filter((file) => file.path !== primaryFile.path)
-      .map(({ isPrimaryCandidate, ...rest }) => rest);
+      .map(({ isPrimaryCandidate, role: _role, ...rest }) => ({
+        ...rest,
+        role: 'context' as const,
+      }));
 
     setSupportFiles(contextEntries);
     setSelectedContextPath(contextEntries[0]?.path ?? null);
@@ -302,6 +306,7 @@ export default function App() {
     try {
       const result = await analyzeSkillText(text, skillName, options);
       setData(result);
+      setAnalysisSessionId((current) => current + 1);
       setOriginalData(JSON.parse(JSON.stringify(result)));
       setModifiedPaths(new Set());
       setPendingUploadFiles([]);
@@ -701,6 +706,7 @@ export default function App() {
             )}
           >
             <ReviewWorkspace
+              key={analysisSessionId}
               data={data}
               darkMode={darkMode}
               modifiedPaths={modifiedPaths}

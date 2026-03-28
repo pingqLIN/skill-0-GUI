@@ -1,6 +1,6 @@
 # Skill-0 Review Studio Documentation Index
 
-Updated: `2026-03-24`
+Updated: `2026-03-28`
 
 This documentation set is the primary review package for `Skill-0 Review Studio`. It is organized as a main index plus chaptered companion documents so each functional area can be reviewed independently while still mapping back to one master table of contents.
 
@@ -50,6 +50,7 @@ This dossier documents both layers explicitly and distinguishes between:
 | 13 | [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md) | Execution-oriented rebuild backlog for restoring the workbench UI | Ch. 5, Ch. 8, Ch. 12 |
 | 14 | [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md) | Integrated development plan for UI recovery and remaining engineering work | Ch. 8, Ch. 12, Ch. 13 |
 | 15 | [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md) | Issue-ready milestone list derived from the development plan | Ch. 13, Ch. 14 |
+| 16 | [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md) | Active execution baseline, closed findings, and current priority order | Ch. 8, Ch. 14, Ch. 15 |
 
 ## Fast Reading Paths
 
@@ -65,8 +66,9 @@ Read in this order:
 6. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
 7. [11-evidence-based-warning-template.md](./11-evidence-based-warning-template.md)
 8. [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md)
-9. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
-10. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
+9. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
+10. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
+11. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
 
 ### For engineers
 
@@ -80,8 +82,9 @@ Read in this order:
 6. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
 7. [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md)
 8. [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
-9. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
-10. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
+9. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
+10. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
+11. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
 
 ### For operators and deployers
 
@@ -91,6 +94,7 @@ Read in this order:
 2. [08-development-status-risks-and-roadmap.md](./08-development-status-risks-and-roadmap.md)
 3. [09-complex-skill-analysis-spec.md](./09-complex-skill-analysis-spec.md)
 4. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
+5. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
 
 Supplemental note:
 
@@ -166,5 +170,6 @@ The UI recovery set for the tracked workbench model is:
 2. [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
 3. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 4. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
+5. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
 
-These chapters distinguish design-model quality findings from runtime status, and translate the review into an execution order for continuing to harden the restored source-driven UI.
+These chapters distinguish historical design-model planning from the current runtime status. Use Chapter 16 as the active execution brief; treat Chapters 14 and 15 as archived planning context.

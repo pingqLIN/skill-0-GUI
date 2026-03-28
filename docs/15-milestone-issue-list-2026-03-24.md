@@ -6,6 +6,13 @@ Related chapters:
 - [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
 - [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 
+Status note:
+
+- M1 and M1.5 are already complete in the current repository state
+- bridge parity coverage and the first performance hardening pass are also complete
+- treat this milestone list as archived planning context, not the active execution queue
+- use [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md) for the live priority order
+
 ## 15.1 Purpose
 
 This chapter converts the development plan into issue-ready milestone tickets.

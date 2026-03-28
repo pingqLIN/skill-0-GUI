@@ -116,4 +116,36 @@ describe('server runtime routes', () => {
     expect(parsePayload.parserResult.original_definition.skill_name).toBe('demo-skill');
     expect(parsePayload.parserResult.manifest.analysis_level).toBe('manifest');
   });
+
+  it('accepts larger multi-file payloads that exceed the old 1mb limit', async () => {
+    const runtime = await startTestServer();
+    activeServer = runtime.server;
+
+    const oversizedContext = 'a'.repeat((1024 * 1024) + 256);
+    const parseResponse = await fetch(`${runtime.url}/api/parse-skill`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: '# Demo Skill\n\n## Rules\n- Validate large collaboration bundles.\n',
+        skillName: 'large-bundle-skill',
+        primaryPath: 'skills/demo/SKILL.md',
+        contextFiles: [
+          {
+            name: 'large-policy.md',
+            path: 'skills/demo/docs/large-policy.md',
+            type: '.md',
+            size: oversizedContext.length,
+            role: 'context',
+            source: 'upload',
+            text: oversizedContext,
+          },
+        ],
+      }),
+    });
+
+    const parsePayload = await parseResponse.json();
+
+    expect(parseResponse.status).toBe(200);
+    expect(parsePayload.parserResult.original_definition.skill_name).toBe('large-bundle-skill');
+  });
 });

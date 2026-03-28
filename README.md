@@ -36,8 +36,9 @@ Prerequisites: Node.js 20+.
 
 1. Install dependencies with `npm install`
 2. Copy `.env.example` to `.env.local` if you want to override `SKILL0_PARSER_ROOT`, `PORT`, or `SKILL0_MODE`
-3. Start the dev server with `npm run dev`
-4. Open `http://localhost:3000/`
+3. Optionally set `SKILL0_API_BODY_LIMIT` if your review flow needs to accept larger collaboration bundles than the default `10mb`
+4. Start the dev server with `npm run dev`
+5. Open `http://localhost:3000/`
 
 Useful frontend flag:
 
@@ -108,7 +109,9 @@ Use these commands to validate a change locally before pushing:
 - `npm run lint`
 - `npm test`
 - `npm run build`
+- `npm run verify:build-size`
 - `npm run build:public`
+- `npm run verify:public-build`
 - `npm run docs:check`
 - `node --check server.mjs`
 - `node --check bridge/skill0Bridge.mjs`

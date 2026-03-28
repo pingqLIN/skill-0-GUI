@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import {
   ShieldAlert,
   Edit2,
@@ -62,15 +62,6 @@ export function ReviewWorkspace({
   const [isDerivedWorkflowOpen, setIsDerivedWorkflowOpen] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [editorConfig, setEditorConfig] = useState<EditorConfig>(null);
-
-  useEffect(() => {
-    setActiveTab('pipeline');
-    setActivePhase(data?.phases?.[0]?.id ?? null);
-    setIsWorkspaceFocusMode(false);
-    setIsDerivedWorkflowOpen(false);
-    setShowActions(false);
-    setEditorConfig(null);
-  }, [data]);
 
   const parserActions = data?.parserResult?.decomposition?.actions ?? [];
   const parserRules = data?.parserResult?.decomposition?.rules ?? [];
@@ -442,7 +433,17 @@ export function ReviewWorkspace({
                 <p className="editorial-kicker">{t('app.workspaceViews')}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{t('app.phaseFlowHint')}</p>
               </div>
-              <div className="flex items-center gap-1 rounded-[1rem] border border-border/45 bg-white/46 p-1 backdrop-blur-xl">
+              <div className="flex flex-wrap items-center gap-2">
+                {isWorkspaceFocusMode && (
+                  <button
+                    type="button"
+                    onClick={() => setIsWorkspaceFocusMode(false)}
+                    className="rounded-xl border border-border/50 bg-background/76 px-4 py-2 text-xs font-medium text-foreground shadow-sm backdrop-blur-xl transition hover:border-primary/35 hover:text-primary"
+                  >
+                    {t('app.returnToOverview')}
+                  </button>
+                )}
+                <div className="flex items-center gap-1 rounded-[1rem] border border-border/45 bg-white/46 p-1 backdrop-blur-xl">
                 {workspaceTabs.map((view) => (
                   <button
                     key={view.id}
@@ -459,6 +460,7 @@ export function ReviewWorkspace({
                     {view.label}
                   </button>
                 ))}
+                </div>
               </div>
             </div>
           </div>
