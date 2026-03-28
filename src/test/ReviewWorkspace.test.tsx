@@ -165,4 +165,28 @@ describe('ReviewWorkspace', () => {
     expect(screen.getByText('app.validationInvalid')).toBeInTheDocument();
     expect(screen.getByText('SCHEMA_PATH_ID')).toBeInTheDocument();
   });
+
+  it('exposes the structured SkillDocument editor from the action tray', async () => {
+    const props = {
+      darkMode: false,
+      modifiedPaths: new Set<string>(),
+      supportFiles: [],
+      selectedContextPath: null,
+      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
+      bridgeStatusError: null,
+      guiRepoUrl: 'https://example.com/gui',
+      engineRepoUrl: 'https://example.com/engine',
+      onSelectContextPath: vi.fn(),
+      onSaveEdit: vi.fn(),
+      onUndo: vi.fn(),
+      onResetWorkspace: vi.fn(),
+    };
+
+    render(<ReviewWorkspace data={sampleData} {...props} />);
+
+    fireEvent.click(await screen.findByText('app.actionsTray'));
+
+    expect(screen.getAllByText('app.openStructuredEditor').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('app.openJsonEditor').length).toBeGreaterThan(0);
+  });
 });

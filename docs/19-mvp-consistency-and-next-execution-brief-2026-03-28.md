@@ -9,7 +9,7 @@ Related chapters:
 
 ## 19.1 Purpose
 
-This brief records the current MVP implementation boundary after the SkillDocument import/editor work and the first custom consistency-check pass completed on `2026-03-28`.
+This brief records the current MVP implementation boundary after the SkillDocument import/editor work, the first custom consistency-check pass, and the first structured SkillDocument CRUD slice completed on `2026-03-28`.
 
 It is the handoff note for the next execution cycle.
 
@@ -20,6 +20,7 @@ The repository now covers the following MVP items with live code and tests:
 - SkillDocument JSON import from pasted JSON and uploaded `.json` files
 - SkillDocument JSON export from the review workspace
 - raw JSON editor with format, parse validation, and apply-back-to-workspace flow
+- structured SkillDocument editor for `meta`, `actions`, `rules`, `directives`, and `execution_paths`
 - schema validation panel in the workspace right rail
 - custom consistency checks for:
   - duplicate ids
@@ -31,11 +32,12 @@ The repository now covers the following MVP items with live code and tests:
 
 ## 19.3 What This Cycle Closed
 
-The current cycle resolved three concrete gaps from the MVP draft:
+The current cycle resolved four concrete gaps from the MVP draft:
 
 1. SkillDocument imports no longer depend on the parser bridge just to boot the review workspace.
 2. Reviewer-visible quality gates now exist in the UI instead of being implicit test-only checks.
 3. Custom consistency rules no longer assume that only the first execution path may act as the implicit root.
+4. Reviewers no longer need to drop straight to raw JSON for first-pass CRUD on core decomposition structures.
 
 ## 19.4 Current Known Gaps
 
@@ -43,9 +45,9 @@ The MVP loop is stronger, but still incomplete in the following areas:
 
 ### Structured editing
 
-- no real CRUD surface for `actions`, `rules`, `directives`, and `execution_paths`
+- the first CRUD surface now exists, but it is still side-panel based and does not yet support deep field-level guidance or issue-to-field jump links
 - no element navigator that selects and focuses specific decomposition nodes
-- form editing still centers on the older review-data shape rather than the full SkillDocument structure
+- structured edits still rebuild the workspace from the SkillDocument projection instead of preserving richer runtime/editor provenance
 
 ### Testing workflow
 
@@ -68,7 +70,7 @@ The MVP loop is stronger, but still incomplete in the following areas:
 Execute the next MVP slices in this order:
 
 1. Structured form CRUD for `actions`, `rules`, `directives`, and `execution_paths`
-2. Form/JSON two-way sync so raw JSON edits and structured edits stay aligned
+2. Form/JSON two-way sync refinements so raw JSON edits and structured edits preserve more session context
 3. Reviewer-facing test panel with validation rerun, consistency rerun, and simple path walk
 4. Reviewer notes and diff summary
 5. Dedicated review report export

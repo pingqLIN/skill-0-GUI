@@ -123,4 +123,60 @@ describe('SideEditor', () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText('editor.invalidSkillDocument')).toBeInTheDocument();
   });
+
+  it('supports structured SkillDocument edits with add and remove flows', () => {
+    const onSave = vi.fn();
+
+    render(
+      <SideEditor
+        config={{
+          type: 'skillDocument',
+          payload: {
+            decomposition: {
+              actions: [{ id: 'a_001', name: 'Read files', action_type: 'io_read' }],
+              directives: [{ id: 'd_001', name: 'Keep evidence', directive_type: 'strategy' }],
+              rules: [],
+            },
+            execution_paths: [{ id: 'path_001', steps: ['a_001'] }],
+            meta: {
+              title: 'Imported Skill',
+            },
+          },
+        }}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.change(screen.getByDisplayValue('Imported Skill'), {
+      target: { value: 'Structured Skill' },
+    });
+    fireEvent.change(screen.getByDisplayValue('Read files'), {
+      target: { value: 'Inspect files' },
+    });
+    fireEvent.click(screen.getByText('editor.addRule'));
+    fireEvent.click(screen.getByLabelText('editor.remove editor.directiveLabel'));
+    fireEvent.click(screen.getByText('editor.save'));
+
+    expect(onSave).toHaveBeenCalledWith({
+      decomposition: {
+        actions: [{ id: 'a_001', name: 'Inspect files', action_type: 'io_read' }],
+        directives: [],
+        rules: [{
+          condition_expression: '',
+          condition_type: '',
+          description: '',
+          fail_action: '',
+          id: '',
+          name: '',
+          notes: '',
+          returns: '',
+        }],
+      },
+      execution_paths: [{ id: 'path_001', steps: ['a_001'] }],
+      meta: {
+        title: 'Structured Skill',
+      },
+    });
+  });
 });

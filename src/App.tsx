@@ -392,14 +392,14 @@ export default function App() {
   const handleSaveEdit = (editorConfig: Exclude<EditorConfig, null>, updatedData: any) => {
     if (!data) return;
 
-    if (editorConfig.type === 'json') {
+    if (editorConfig.type === 'json' || editorConfig.type === 'skillDocument') {
       const sourceLabel = data?.parserResult?.original_definition?.source || 'json/editor';
       const rebuiltData = buildReviewDataFromSkillDocument(updatedData, {
         fileName: `${data.projectId || 'skill-document'}.json`,
         sourceLabel,
       });
       setData(rebuiltData);
-      setModifiedPaths(new Set(['skillDocument.json']));
+      setModifiedPaths(new Set([editorConfig.type === 'json' ? 'skillDocument.json' : 'skillDocument.structured']));
       return;
     }
 
