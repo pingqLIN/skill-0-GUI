@@ -98,4 +98,52 @@ describe('ReviewWorkspace', () => {
     expect(truthBanner).toHaveTextContent('app.equivalenceStatus: app.equivalenceUnverified');
     expect(screen.getAllByText('app.bridgeModeBundled')).not.toHaveLength(0);
   });
+
+  it('exports a review packet with reviewer decision metadata', async () => {
+    const originalCreateObjectUrl = URL.createObjectURL;
+    const originalRevokeObjectUrl = URL.revokeObjectURL;
+    const originalScrollTo = window.scrollTo;
+    URL.createObjectURL = vi.fn(() => 'blob:review-packet') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
+    window.scrollTo = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const stringifySpy = vi.spyOn(JSON, 'stringify');
+
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...baseProps}
+        bridgeStatus={{ mode: 'skill-0', skill0Root: '/home/miles/dev2/skill-0' }}
+        bridgeStatusError={null}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('app.reviewerName'), { target: { value: 'Miles' } });
+    fireEvent.change(screen.getByLabelText('app.reviewDecision'), { target: { value: 'approved' } });
+    fireEvent.change(screen.getByLabelText('app.reviewNotes'), { target: { value: 'Ready for merge after canonical verification.' } });
+
+    const reviewDecisionPanel = screen.getByTestId('review-decision-panel');
+    expect(reviewDecisionPanel).toHaveTextContent('app.reviewStatusApproved');
+    expect(reviewDecisionPanel).toHaveTextContent('Miles');
+    expect(reviewDecisionPanel).toHaveTextContent('Ready for merge after canonical verification.');
+
+    fireEvent.click(screen.getByText('app.actionsTray'));
+    fireEvent.click(await screen.findByText('app.exportReviewPacket'));
+
+    expect(clickSpy).toHaveBeenCalled();
+    const packet = stringifySpy.mock.calls.at(-1)?.[0] as any;
+    expect(packet.projectId).toBe('demo-skill');
+    expect(packet.parserMode).toBe('skill-0');
+    expect(packet.reviewState.reviewerName).toBe('Miles');
+    expect(packet.reviewState.reviewStatus).toBe('approved');
+    expect(packet.reviewState.globalNotes[0].content).toContain('Ready for merge');
+    expect(packet.reviewState.decisionLog[0].action).toBe('approved');
+    expect(packet.reviewDecisionGuidance).toContain('canonical skill-0 bridge');
+
+    URL.createObjectURL = originalCreateObjectUrl;
+    URL.revokeObjectURL = originalRevokeObjectUrl;
+    window.scrollTo = originalScrollTo;
+    clickSpy.mockRestore();
+    stringifySpy.mockRestore();
+  });
 });
