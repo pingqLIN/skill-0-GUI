@@ -96,4 +96,73 @@ describe('ReviewWorkspace', () => {
     expect(screen.getByText('app.validationValid')).toBeInTheDocument();
     expect(screen.getByText('SCHEMA_ORIGINAL_DEFINITION_RECOMMENDED')).toBeInTheDocument();
   });
+
+  it('renders consistency issues for invalid execution path references', async () => {
+    const props = {
+      darkMode: false,
+      modifiedPaths: new Set<string>(),
+      supportFiles: [],
+      selectedContextPath: null,
+      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
+      bridgeStatusError: null,
+      guiRepoUrl: 'https://example.com/gui',
+      engineRepoUrl: 'https://example.com/engine',
+      onSelectContextPath: vi.fn(),
+      onSaveEdit: vi.fn(),
+      onUndo: vi.fn(),
+      onResetWorkspace: vi.fn(),
+    };
+
+    const inconsistentData = {
+      ...sampleData,
+      parserResult: {
+        ...sampleData.parserResult,
+        decomposition: {
+          actions: [{ id: 'a_001', name: 'Read files', action_type: 'io_read' }],
+          directives: [],
+          rules: [],
+        },
+        execution_paths: [{ id: 'path_001', steps: ['missing_step'] }],
+        original_definition: { source: 'json/test' },
+      },
+    };
+
+    render(<ReviewWorkspace data={inconsistentData} {...props} />);
+
+    expect(await screen.findByText('app.consistencyChecks')).toBeInTheDocument();
+    expect(screen.getByText('app.consistencyInvalid')).toBeInTheDocument();
+    expect(screen.getByText('missing_reference')).toBeInTheDocument();
+  });
+
+  it('surfaces malformed execution paths in the validation panel', async () => {
+    const props = {
+      darkMode: false,
+      modifiedPaths: new Set<string>(),
+      supportFiles: [],
+      selectedContextPath: null,
+      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
+      bridgeStatusError: null,
+      guiRepoUrl: 'https://example.com/gui',
+      engineRepoUrl: 'https://example.com/engine',
+      onSelectContextPath: vi.fn(),
+      onSaveEdit: vi.fn(),
+      onUndo: vi.fn(),
+      onResetWorkspace: vi.fn(),
+    };
+
+    const malformedData = {
+      ...sampleData,
+      parserResult: {
+        ...sampleData.parserResult,
+        execution_paths: [{ branches: [{ condition: 'fallback' }], name: 'broken-path' }],
+        original_definition: { source: 'json/test' },
+      },
+    };
+
+    render(<ReviewWorkspace data={malformedData} {...props} />);
+
+    expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
+    expect(screen.getByText('app.validationInvalid')).toBeInTheDocument();
+    expect(screen.getByText('SCHEMA_PATH_ID')).toBeInTheDocument();
+  });
 });

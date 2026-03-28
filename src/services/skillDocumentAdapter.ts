@@ -39,21 +39,23 @@ function normalizeExecutionPaths(value: unknown): ExecutionPath[] {
   }
 
   return value
-    .filter((item) => isRecord(item) && typeof item.id === 'string' && Array.isArray(item.steps))
+    .filter((item) => isRecord(item))
     .map((item) => ({
       branches: Array.isArray(item.branches)
         ? item.branches
-          .filter((branch) => isRecord(branch) && typeof branch.target === 'string')
+          .filter((branch) => isRecord(branch))
           .map((branch) => ({
             condition: typeof branch.condition === 'string' ? branch.condition : undefined,
-            target: branch.target as string,
+            target: typeof branch.target === 'string' ? branch.target : '',
           }))
         : undefined,
       entry_condition: typeof item.entry_condition === 'string' ? item.entry_condition : undefined,
       failure_end: typeof item.failure_end === 'string' ? item.failure_end : undefined,
-      id: item.id as string,
+      id: typeof item.id === 'string' ? item.id : '',
       name: typeof item.name === 'string' ? item.name : undefined,
-      steps: (item.steps as unknown[]).filter((step): step is string => typeof step === 'string'),
+      steps: Array.isArray(item.steps)
+        ? item.steps.filter((step): step is string => typeof step === 'string')
+        : [],
       success_end: typeof item.success_end === 'string' ? item.success_end : undefined,
     }));
 }

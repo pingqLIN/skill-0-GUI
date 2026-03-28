@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
 import { extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
+import { checkSkillDocumentConsistency } from '../services/skillDocumentConsistency';
 import { validateSkillDocument } from '../services/skillDocumentValidation';
 import type { UploadedContextFile } from '../types/intake';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
@@ -120,6 +121,10 @@ export function ReviewWorkspace({
   const validationIssues = validationResult?.issues ?? [];
   const validationErrors = validationIssues.filter((issue) => issue.severity === 'error');
   const validationWarnings = validationIssues.filter((issue) => issue.severity === 'warning');
+  const consistencyResult = skillDocument ? checkSkillDocumentConsistency(skillDocument) : null;
+  const consistencyIssues = consistencyResult?.issues ?? [];
+  const consistencyErrors = consistencyIssues.filter((issue) => issue.severity === 'error');
+  const consistencyWarnings = consistencyIssues.filter((issue) => issue.severity === 'warning');
   const reviewMode = data?.reviewerSummary?.mode
     || (bridgeStatus?.mode === 'skill-0'
       ? 'canonical'
@@ -168,12 +173,34 @@ export function ReviewWorkspace({
         `- review_mode: ${reviewMode}`,
         `- equivalence_status: ${reviewEquivalenceStatus}`,
         `- review_decision_guidance: ${reviewDecisionGuidance}`,
+        `- schema_validation_status: ${validationResult?.valid ? 'valid' : 'invalid'}`,
+        `- schema_validation_errors: ${validationErrors.length}`,
+        `- schema_validation_warnings: ${validationWarnings.length}`,
+        `- consistency_status: ${consistencyResult?.valid ? 'consistent' : 'inconsistent'}`,
+        `- consistency_errors: ${consistencyErrors.length}`,
+        `- consistency_warnings: ${consistencyWarnings.length}`,
         `- source: ${original.source || 'uploaded skill'}`,
         '',
       ];
 
       if (reviewEquivalenceStatus !== 'implementation_identity') {
         lines.push(`> Review note: ${reviewDecisionGuidance}`);
+        lines.push('');
+      }
+
+      if (validationIssues.length > 0) {
+        lines.push('## Validation Summary', '');
+        validationIssues.slice(0, 5).forEach((issue) => {
+          lines.push(`- [${issue.severity}] ${issue.code} @ ${issue.path}: ${issue.message}`);
+        });
+        lines.push('');
+      }
+
+      if (consistencyIssues.length > 0) {
+        lines.push('## Consistency Summary', '');
+        consistencyIssues.slice(0, 5).forEach((issue) => {
+          lines.push(`- [${issue.severity}] ${issue.type}${issue.targetId ? ` @ ${issue.targetId}` : ''}: ${issue.message}`);
+        });
         lines.push('');
       }
 
@@ -228,11 +255,33 @@ export function ReviewWorkspace({
       `- review_mode: ${reviewMode}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
       `- review_decision_guidance: ${reviewDecisionGuidance}`,
+      `- schema_validation_status: ${validationResult?.valid ? 'valid' : 'invalid'}`,
+      `- schema_validation_errors: ${validationErrors.length}`,
+      `- schema_validation_warnings: ${validationWarnings.length}`,
+      `- consistency_status: ${consistencyResult?.valid ? 'consistent' : 'inconsistent'}`,
+      `- consistency_errors: ${consistencyErrors.length}`,
+      `- consistency_warnings: ${consistencyWarnings.length}`,
       '',
     ];
 
     if (reviewEquivalenceStatus !== 'implementation_identity') {
       lines.push(`> Review note: ${reviewDecisionGuidance}`);
+      lines.push('');
+    }
+
+    if (validationIssues.length > 0) {
+      lines.push('## Validation Summary', '');
+      validationIssues.slice(0, 5).forEach((issue) => {
+        lines.push(`- [${issue.severity}] ${issue.code} @ ${issue.path}: ${issue.message}`);
+      });
+      lines.push('');
+    }
+
+    if (consistencyIssues.length > 0) {
+      lines.push('## Consistency Summary', '');
+      consistencyIssues.slice(0, 5).forEach((issue) => {
+        lines.push(`- [${issue.severity}] ${issue.type}${issue.targetId ? ` @ ${issue.targetId}` : ''}: ${issue.message}`);
+      });
       lines.push('');
     }
 
@@ -676,6 +725,60 @@ export function ReviewWorkspace({
               ) : (
                 <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
                   {t('app.validationUnavailable')}
+                </div>
+              )}
+            </InsightBlock>
+
+            <InsightBlock
+              kicker={t('app.detailsPanel')}
+              title={t('app.consistencyChecks')}
+              summary={consistencyResult
+                ? consistencyErrors.length > 0
+                  ? `${t('app.consistencyInvalid')} · ${consistencyErrors.length} ${t('app.consistencyErrors')}`
+                  : consistencyWarnings.length > 0
+                    ? `${t('app.consistencyValid')} · ${consistencyWarnings.length} ${t('app.consistencyWarnings')}`
+                    : t('app.consistencyValid')
+                : t('app.consistencyUnavailable')}
+              accent={consistencyErrors.length > 0 ? 'rose' : consistencyWarnings.length > 0 ? 'default' : 'emerald'}
+              defaultOpen
+            >
+              {consistencyResult ? (
+                <div className="space-y-3">
+                  <div className="grid gap-2">
+                    <MiniMetric label={t('app.consistencyStatus')} value={consistencyResult.valid ? t('app.consistencyValid') : t('app.consistencyInvalid')} />
+                    <MiniMetric label={t('app.consistencyErrors')} value={String(consistencyErrors.length)} highlight={consistencyErrors.length > 0} />
+                    <MiniMetric label={t('app.consistencyWarnings')} value={String(consistencyWarnings.length)} highlight={consistencyWarnings.length > 0} />
+                  </div>
+                  {consistencyIssues.length > 0 ? (
+                    <div className="space-y-2">
+                      {consistencyIssues.slice(0, 5).map((issue, index) => (
+                        <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-medium text-foreground">{issue.type}</span>
+                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                              issue.severity === 'error'
+                                ? 'bg-destructive/12 text-destructive'
+                                : 'bg-amber-500/12 text-amber-700'
+                            }`}>
+                              {issue.severity}
+                            </span>
+                          </div>
+                          {issue.targetId && (
+                            <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.targetId}</p>
+                          )}
+                          <p className="mt-2">{issue.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
+                      {t('app.consistencyNoIssues')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                  {t('app.consistencyUnavailable')}
                 </div>
               )}
             </InsightBlock>

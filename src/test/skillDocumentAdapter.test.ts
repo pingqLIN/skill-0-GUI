@@ -77,4 +77,31 @@ describe('skillDocumentAdapter', () => {
 
     expect(extractSkillDocumentFromReviewData(imported)).toEqual(imported.parserResult);
   });
+
+  it('preserves malformed execution path entries for downstream validation', () => {
+    const extracted = extractSkillDocumentFromReviewData({
+      parserResult: {
+        decomposition: skillDocument.decomposition,
+        execution_paths: [
+          {
+            branches: [{ condition: 'fallback' }],
+            name: 'broken-path',
+          },
+        ],
+        meta: skillDocument.meta,
+      },
+    });
+
+    expect(extracted?.execution_paths).toEqual([
+      {
+        branches: [{ condition: 'fallback', target: '' }],
+        entry_condition: undefined,
+        failure_end: undefined,
+        id: '',
+        name: 'broken-path',
+        steps: [],
+        success_end: undefined,
+      },
+    ]);
+  });
 });
