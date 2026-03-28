@@ -351,6 +351,15 @@ export function ReviewWorkspace({
                         <span>{t('app.openGlobalEditor')}</span>
                         <Edit2 size={14} className="text-muted-foreground" />
                       </button>
+                      {skillDocument && (
+                        <button
+                          onClick={() => setEditorConfig({ type: 'json', payload: skillDocument })}
+                          className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        >
+                          <span>{t('app.openJsonEditor')}</span>
+                          <FileCode2 size={14} className="text-muted-foreground" />
+                        </button>
+                      )}
                       <button
                         onClick={exportSkill}
                         className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"

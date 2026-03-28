@@ -392,6 +392,17 @@ export default function App() {
   const handleSaveEdit = (editorConfig: Exclude<EditorConfig, null>, updatedData: any) => {
     if (!data) return;
 
+    if (editorConfig.type === 'json') {
+      const sourceLabel = data?.parserResult?.original_definition?.source || 'json/editor';
+      const rebuiltData = buildReviewDataFromSkillDocument(updatedData, {
+        fileName: `${data.projectId || 'skill-document'}.json`,
+        sourceLabel,
+      });
+      setData(rebuiltData);
+      setModifiedPaths(new Set(['skillDocument.json']));
+      return;
+    }
+
     const newData = JSON.parse(JSON.stringify(data));
     const newModified = new Set(modifiedPaths);
     let metricsChanged = false;

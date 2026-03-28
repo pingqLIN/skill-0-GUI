@@ -2,18 +2,28 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { X, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { parseSkillDocumentJson } from '../services/skillDocumentAdapter';
 
 export function SideEditor({ config, onClose, onSave }: { config: any, onClose: () => void, onSave: (data: any) => void }) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<any>(null);
+  const [jsonText, setJsonText] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const initialFieldRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
+  const initialFieldRef = useRef<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
 
   useEffect(() => {
     if (config) {
       setFormData(JSON.parse(JSON.stringify(config.payload)));
+      if (config.type === 'json') {
+        setJsonText(JSON.stringify(config.payload, null, 2));
+        setJsonError(null);
+      } else {
+        setJsonText('');
+        setJsonError(null);
+      }
     }
   }, [config]);
 
@@ -95,6 +105,37 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
 
   const listValue = (items: unknown) => Array.isArray(items) ? items.join('\n') : '';
 
+  const formatJson = () => {
+    try {
+      const parsed = JSON.parse(jsonText);
+      setJsonText(JSON.stringify(parsed, null, 2));
+      setJsonError(null);
+    } catch (error) {
+      setJsonError(error instanceof Error ? error.message : t('editor.invalidJson'));
+    }
+  };
+
+  const handleSave = () => {
+    if (config.type !== 'json') {
+      onSave(formData);
+      return;
+    }
+
+    const parsedSkillDocument = parseSkillDocumentJson(jsonText);
+    if (!parsedSkillDocument) {
+      try {
+        JSON.parse(jsonText);
+        setJsonError(t('editor.invalidSkillDocument'));
+      } catch (error) {
+        setJsonError(error instanceof Error ? error.message : t('editor.invalidJson'));
+      }
+      return;
+    }
+
+    setJsonError(null);
+    onSave(parsedSkillDocument);
+  };
+
   return (
     <AnimatePresence>
       {config && (
@@ -125,14 +166,18 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
                     ? t('editor.editGlobal')
                     : config.type === 'phase'
                       ? t('editor.editPhase')
-                      : t('editor.editDecision')}
+                      : config.type === 'decision'
+                        ? t('editor.editDecision')
+                        : t('editor.editJson')}
                 </h2>
                 <p className="text-[10px] text-muted-foreground/80 mt-1 uppercase tracking-widest">
                   {config.type === 'global'
                     ? t('editor.globalDesc')
                     : config.type === 'phase'
                       ? t('editor.phaseDesc')
-                      : t('editor.decisionDesc')}
+                      : config.type === 'decision'
+                        ? t('editor.decisionDesc')
+                        : t('editor.jsonDesc')}
                 </p>
               </div>
               <button
@@ -265,11 +310,46 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
                   </div>
                 </>
               )}
+
+              {config.type === 'json' && (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">{t('editor.jsonDocument')}</label>
+                      <button
+                        type="button"
+                        onClick={formatJson}
+                        className="rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
+                      >
+                        {t('editor.formatJson')}
+                      </button>
+                    </div>
+                    <textarea
+                      ref={initialFieldRef}
+                      value={jsonText}
+                      onChange={(e) => {
+                        setJsonText(e.target.value);
+                        if (jsonError) {
+                          setJsonError(null);
+                        }
+                      }}
+                      className="min-h-[420px] w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-3 font-mono text-xs leading-6 shadow-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      spellCheck={false}
+                    />
+                    <p className="text-xs leading-6 text-muted-foreground">{t('editor.jsonHelp')}</p>
+                    {jsonError && (
+                      <div className="rounded-lg border border-destructive/20 bg-destructive/8 px-3 py-2 text-xs leading-6 text-destructive">
+                        {jsonError}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="p-5 border-t border-border/50 bg-muted/5">
               <button 
-                onClick={() => onSave(formData)}
+                onClick={handleSave}
                 className="w-full bg-primary text-primary-foreground py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-sm"
               >
                 <Save size={16} /> {t('editor.save')}
