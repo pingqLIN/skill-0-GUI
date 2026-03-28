@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useState } from 'react';
 import {
   ShieldAlert,
+  AlertTriangle,
   Edit2,
   Download,
   Undo2,
@@ -114,6 +115,16 @@ export function ReviewWorkspace({
     : bridgeStatus?.mode === 'standalone'
       ? t('app.bridgeGuidanceStandalone')
       : t('app.bridgeGuidanceUnavailable');
+  const reviewReadinessLabel = bridgeStatus?.mode === 'skill-0'
+    ? t('app.reviewEvidenceCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.reviewEvidenceStandalone')
+      : t('app.reviewEvidenceUnavailable');
+  const reviewReadinessStyles = bridgeStatus?.mode === 'skill-0'
+    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+    : bridgeStatus?.mode === 'standalone'
+      ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
+      : 'border-border/55 bg-background/70 text-muted-foreground';
   const skillDocument = extractSkillDocumentFromReviewData(data);
   const reviewMode = data?.reviewerSummary?.mode
     || (bridgeStatus?.mode === 'skill-0'
@@ -123,6 +134,11 @@ export function ReviewWorkspace({
         : 'unknown');
   const reviewEquivalenceStatus = data?.reviewerSummary?.equivalenceNote
     || (reviewMode === 'canonical' ? 'implementation_identity' : 'equivalence_unverified');
+  const reviewEquivalenceLabel = reviewEquivalenceStatus === 'implementation_identity'
+    ? t('app.equivalenceImplementationIdentity')
+    : reviewEquivalenceStatus === 'equivalence_unverified'
+      ? t('app.equivalenceUnverified')
+      : t('app.equivalencePending');
   const reviewDecisionGuidance = data?.reviewerSummary?.finalDecisionGuidance
     || (bridgeStatus?.mode === 'skill-0'
       ? 'Result was produced by the canonical skill-0 bridge. Final equivalence review is acceptable if supporting files and findings are inspected.'
@@ -134,6 +150,11 @@ export function ReviewWorkspace({
     : reviewMode === 'standalone'
       ? 'standalone'
       : 'unknown';
+  const bridgeToneClass = bridgeStatus?.mode === 'skill-0'
+    ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-900'
+    : bridgeStatus?.mode === 'standalone'
+      ? 'border-amber-500/20 bg-amber-500/10 text-amber-900'
+      : 'border-border/50 bg-background/70 text-foreground';
 
   const openDerivedWorkflow = () => {
     setActiveTab('pipeline');
@@ -417,6 +438,22 @@ export function ReviewWorkspace({
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">{bridgeModeDetail}</p>
             </div>
+
+            <div
+              data-testid="review-readiness-banner"
+              className={`rounded-[1.35rem] border p-4 backdrop-blur-2xl ${reviewReadinessStyles}`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={15} className="shrink-0" />
+                  <p className="editorial-kicker text-current/80">{t('app.reviewEvidenceStatus')}</p>
+                </div>
+                <span className="rounded-full border border-current/15 bg-background/70 px-2.5 py-1 text-[11px] font-medium text-current">
+                  {reviewReadinessLabel}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-current/80">{bridgeReviewGuidance}</p>
+            </div>
           </div>
         </aside>
 
@@ -478,6 +515,30 @@ export function ReviewWorkspace({
           </div>
 
           <div className="glass-panel px-4 py-4 sm:px-5">
+            <div
+              data-testid="review-truth-banner"
+              className={`mb-4 rounded-[1.1rem] border px-4 py-4 backdrop-blur-xl ${bridgeToneClass}`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="editorial-kicker">{t('app.reviewTruthPanel')}</p>
+                  <h3 className="mt-2 text-base font-semibold tracking-tight">{bridgeModeLabel}</h3>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
+                    {bridgeModeSummary}
+                  </span>
+                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
+                    {t('app.equivalenceStatus')}: {reviewEquivalenceLabel}
+                  </span>
+                </div>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-current/80">{bridgeReviewGuidance}</p>
+              <p className="mt-2 text-xs leading-5 text-current/75">
+                {t('app.bridgeSource')}: {bridgeModeDetail}
+              </p>
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="editorial-kicker">{t('app.workspaceViews')}</p>
@@ -639,7 +700,7 @@ export function ReviewWorkspace({
               kicker={t('app.bridgeMode')}
               title={bridgeModeLabel}
               summary={bridgeModeSummary}
-              accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : 'default'}
+              accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : bridgeStatus?.mode === 'standalone' ? 'default' : 'rose'}
             >
               <div className="grid gap-3">
                 <MiniMetric label={t('app.bridgeMode')} value={bridgeModeLabel} />

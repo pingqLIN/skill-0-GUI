@@ -506,6 +506,21 @@ export default function App() {
     || (bridgeStatus?.mode === 'standalone'
       ? t('app.bridgeModeBundled')
       : bridgeStatusError || t('app.bridgeModeChecking'));
+  const bridgeReviewGuidance = bridgeStatus?.mode === 'skill-0'
+    ? t('app.bridgeGuidanceCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.bridgeGuidanceStandalone')
+      : t('app.bridgeGuidanceUnavailable');
+  const reviewReadinessLabel = bridgeStatus?.mode === 'skill-0'
+    ? t('app.reviewEvidenceCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.reviewEvidenceStandalone')
+      : t('app.reviewEvidenceUnavailable');
+  const reviewReadinessStyles = bridgeStatus?.mode === 'skill-0'
+    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+    : bridgeStatus?.mode === 'standalone'
+      ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
+      : 'border-border/50 bg-card/60 text-muted-foreground';
 
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
@@ -625,6 +640,22 @@ export default function App() {
                   ) : (
                     <div className="space-y-4">
                       <p className="text-sm leading-6 text-muted-foreground">{t('app.inputGuide')}</p>
+                      <div
+                        data-testid="intake-review-readiness"
+                        className={`rounded-[1.2rem] border px-4 py-3 backdrop-blur-xl ${reviewReadinessStyles}`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-current/75">{t('app.reviewEvidenceStatus')}</div>
+                            <p className="mt-1 text-sm font-medium text-current">{reviewReadinessLabel}</p>
+                          </div>
+                          <div className="rounded-full border border-current/15 bg-background/70 px-3 py-1.5 text-[11px] font-medium text-current">
+                            {bridgeModeLabel}
+                          </div>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-current/80">{bridgeReviewGuidance}</p>
+                        <p className="mt-2 text-[11px] leading-5 text-current/70">{bridgeModeDetail}</p>
+                      </div>
                       <textarea
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
@@ -638,7 +669,6 @@ export default function App() {
                           <span>{error}</span>
                         </div>
                       )}
-
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="text-xs text-muted-foreground">{t('app.inputDrop')}</div>
                         <div className="flex flex-col gap-3 sm:flex-row">

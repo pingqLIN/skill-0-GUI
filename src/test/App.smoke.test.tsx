@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest';
 import App from '../App';
 import { analyzeSkillText } from '../services/parserBridgeService';
+import { fetchBridgeStatus } from '../services/bridgeStatusService';
 import JSZip from 'jszip';
 
 vi.mock('react-i18next', () => ({
@@ -44,6 +45,10 @@ describe('App smoke test', () => {
   beforeEach(() => {
     vi.mocked(analyzeSkillText).mockReset();
     vi.mocked(JSZip.loadAsync).mockReset();
+    vi.mocked(fetchBridgeStatus).mockResolvedValue({
+      mode: 'skill-0',
+      skill0Root: '/home/miles/dev2/skill-0',
+    });
   });
 
   it('renders the intake workspace shell', async () => {
@@ -55,6 +60,37 @@ describe('App smoke test', () => {
     expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect(await screen.findAllByText('app.bridgeModeCanonical')).not.toHaveLength(0);
+    const banner = await screen.findByTestId('intake-review-readiness');
+    expect(banner).toHaveTextContent('app.reviewReadiness');
+    expect(banner).toHaveTextContent('app.reviewReadinessCanonical');
+  });
+
+  it('surfaces standalone parser review guidance before analysis starts', async () => {
+    vi.mocked(fetchBridgeStatus).mockResolvedValue({
+      mode: 'standalone',
+      skill0Root: null,
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    const banner = await screen.findByTestId('intake-review-readiness');
+    expect(banner).toHaveTextContent('app.reviewReadinessStandalone');
+    expect(banner).toHaveTextContent('app.bridgeGuidanceStandalone');
+  });
+
+  it('surfaces bridge verification guidance when the bridge status request fails', async () => {
+    vi.mocked(fetchBridgeStatus).mockRejectedValue(new Error('Bridge down'));
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    const banner = await screen.findByTestId('intake-review-readiness');
+    expect(banner).toHaveTextContent('app.reviewReadinessUnavailable');
+    expect(banner).toHaveTextContent('Bridge down');
+    expect(banner).toHaveTextContent('app.bridgeGuidanceUnavailable');
   });
 
   it('loads the review workspace after analysis completes', async () => {

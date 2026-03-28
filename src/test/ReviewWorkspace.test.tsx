@@ -47,20 +47,24 @@ const sampleData = {
 };
 
 describe('ReviewWorkspace', () => {
+  const baseProps = {
+    darkMode: false,
+    modifiedPaths: new Set<string>(),
+    supportFiles: [],
+    selectedContextPath: null,
+    guiRepoUrl: 'https://example.com/gui',
+    engineRepoUrl: 'https://example.com/engine',
+    onSelectContextPath: vi.fn(),
+    onSaveEdit: vi.fn(),
+    onUndo: vi.fn(),
+    onResetWorkspace: vi.fn(),
+  };
+
   it('preserves the active tab when parent data rerenders after an edit', async () => {
     const props = {
-      darkMode: false,
-      modifiedPaths: new Set<string>(),
-      supportFiles: [],
-      selectedContextPath: null,
+      ...baseProps,
       bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
       bridgeStatusError: null,
-      guiRepoUrl: 'https://example.com/gui',
-      engineRepoUrl: 'https://example.com/engine',
-      onSelectContextPath: vi.fn(),
-      onSaveEdit: vi.fn(),
-      onUndo: vi.fn(),
-      onResetWorkspace: vi.fn(),
     };
 
     const { rerender } = render(<ReviewWorkspace data={sampleData} {...props} />);
@@ -72,5 +76,26 @@ describe('ReviewWorkspace', () => {
     rerender(<ReviewWorkspace data={JSON.parse(JSON.stringify(sampleData))} {...props} />);
 
     expect(screen.getByTestId('vector-space')).toBeInTheDocument();
+  });
+
+  it('shows mode-aware review evidence guidance when the workspace is using the standalone parser', async () => {
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...baseProps}
+        bridgeStatus={{ mode: 'standalone', skill0Root: null }}
+        bridgeStatusError={null}
+      />,
+    );
+
+    const readinessBanner = await screen.findByTestId('review-readiness-banner');
+    const truthBanner = screen.getByTestId('review-truth-banner');
+
+    expect(readinessBanner).toHaveTextContent('app.reviewEvidenceStatus');
+    expect(readinessBanner).toHaveTextContent('app.reviewEvidenceStandalone');
+    expect(readinessBanner).toHaveTextContent('app.bridgeGuidanceStandalone');
+    expect(truthBanner).toHaveTextContent('app.reviewTruthPanel');
+    expect(truthBanner).toHaveTextContent('app.equivalenceStatus: app.equivalenceUnverified');
+    expect(screen.getAllByText('app.bridgeModeBundled')).not.toHaveLength(0);
   });
 });
