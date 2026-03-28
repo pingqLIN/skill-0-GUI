@@ -90,6 +90,7 @@ describe('skillDocumentAdapter', () => {
       bridgeMode: 'unknown',
       bridgeModeSource: 'json/test',
       equivalenceStatus: 'equivalence_unverified',
+      modifiedPaths: ['projectName', 'phases.A.name', 'metrics'],
       reviewDecisionGuidance: 'Re-run the canonical bridge before final approval.',
       reviewMode: 'unknown',
       reviewState: {
@@ -116,6 +117,16 @@ describe('skillDocumentAdapter', () => {
     expect(reviewPacket?.projectId).toBe('claude__imported-skill');
     expect(reviewPacket?.skillDocument?.meta.skill_id).toBe('claude__imported-skill');
     expect(reviewPacket?.reviewState.reviewStatus).toBe('changes_requested');
+    expect(reviewPacket?.reviewState.diffSummary?.changed).toEqual(['phases.A.name', 'projectName']);
+    expect(reviewPacket?.reviewState.diffSummary?.stats.fieldsChanged).toBe(2);
+    expect(reviewPacket?.validationEvidence?.provenance.schemaVersion).toBe('2.4.0');
+    expect(reviewPacket?.reviewChecklist.map((item) => item.id)).toEqual([
+      'bridge-mode',
+      'schema-validation',
+      'consistency-review',
+      'review-decision',
+    ]);
+    expect(reviewPacket?.reviewChecklist[0].status).toBe('blocked');
     expect(reviewPacket?.operatorReminders).toHaveLength(1);
     expect(reviewPacket?.reviewDecisionGuidance).toContain('canonical bridge');
   });
