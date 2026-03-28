@@ -208,6 +208,10 @@ export function PhaseDetails({ phase, allPhases, onNavigatePhase, onClose, onEdi
                   <div data-testid="phase-evidence-scope" className="bg-muted/10 p-4 rounded-lg border border-border/40 shadow-sm">
                     <h4 className="text-xs font-semibold mb-3 flex items-center gap-1.5 text-foreground/80"><Activity size={14} className="text-blue-500/70"/> {t('phaseDetails.testResults')}</h4>
                     <div className="space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground/80">{t('phaseDetails.status')}</span>
+                        <span className="font-medium bg-background px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground">{t('phaseDetails.notCapturedYet')}</span>
+                      </div>
                       <p className="text-xs leading-6 text-muted-foreground/80">
                         {t('phaseDetails.evidenceScopeHint')}
                       </p>

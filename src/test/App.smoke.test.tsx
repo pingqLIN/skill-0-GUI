@@ -61,8 +61,8 @@ describe('App smoke test', () => {
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect(await screen.findAllByText('app.bridgeModeCanonical')).not.toHaveLength(0);
     const banner = await screen.findByTestId('intake-review-readiness');
-    expect(banner).toHaveTextContent('app.reviewReadiness');
-    expect(banner).toHaveTextContent('app.reviewReadinessCanonical');
+    expect(banner).toHaveTextContent('app.reviewEvidenceStatus');
+    expect(banner).toHaveTextContent('app.reviewEvidenceCanonical');
   });
 
   it('surfaces standalone parser review guidance before analysis starts', async () => {
@@ -76,7 +76,7 @@ describe('App smoke test', () => {
     });
 
     const banner = await screen.findByTestId('intake-review-readiness');
-    expect(banner).toHaveTextContent('app.reviewReadinessStandalone');
+    expect(banner).toHaveTextContent('app.reviewEvidenceStandalone');
     expect(banner).toHaveTextContent('app.bridgeGuidanceStandalone');
   });
 
@@ -88,7 +88,7 @@ describe('App smoke test', () => {
     });
 
     const banner = await screen.findByTestId('intake-review-readiness');
-    expect(banner).toHaveTextContent('app.reviewReadinessUnavailable');
+    expect(banner).toHaveTextContent('app.reviewEvidenceUnavailable');
     expect(banner).toHaveTextContent('Bridge down');
     expect(banner).toHaveTextContent('app.bridgeGuidanceUnavailable');
   });
