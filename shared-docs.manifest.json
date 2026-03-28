@@ -1,0 +1,22 @@
+[
+  {
+    "source": "README.md",
+    "target": "README.md"
+  },
+  {
+    "source": "01-parser-contract.md",
+    "target": "01-parser-contract.md"
+  },
+  {
+    "source": "02-mode-and-equivalence-contract.md",
+    "target": "02-mode-and-equivalence-contract.md"
+  },
+  {
+    "source": "03-shared-terminology.md",
+    "target": "03-shared-terminology.md"
+  },
+  {
+    "source": "04-cross-repo-session-rules.md",
+    "target": "04-cross-repo-session-rules.md"
+  }
+]
