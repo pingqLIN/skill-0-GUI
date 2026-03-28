@@ -9,8 +9,9 @@ Related chapters:
 - [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
 
 Raw planning inputs reviewed for this chapter:
-- [../skill-0-review-studio-mvp-plan.md](../skill-0-review-studio-mvp-plan.md)
-- [../skill-0-review-studio-mvp-plan2.md](../skill-0-review-studio-mvp-plan2.md)
+
+- local MVP planning note: `skill-0-review-studio-mvp-plan.md`
+- local technical review note: `skill-0-review-studio-mvp-plan2.md`
 
 ## 17.1 Purpose
 
