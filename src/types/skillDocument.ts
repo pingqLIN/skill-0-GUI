@@ -196,6 +196,19 @@ export type ConsistencyRun = {
   issues: ConsistencyIssue[];
 };
 
+export type ValidationEvidence = {
+  provenance: {
+    parsedBy: string;
+    parserVersion: string;
+    schemaVersion: string;
+    skillId: string;
+    source: string;
+  };
+  validationRun: ValidationRun;
+  consistencyRun: ConsistencyRun;
+  evidenceWarnings: string[];
+};
+
 export type PathTestRun = {
   id: string;
   name: string;

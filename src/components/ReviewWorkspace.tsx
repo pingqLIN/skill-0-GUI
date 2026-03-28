@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
-import { buildReviewPacketFromReviewData, extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
+import { buildReviewPacketFromReviewData, buildValidationEvidenceFromReviewData, extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
 import type { UploadedContextFile } from '../types/intake';
 import type { ReviewPacket, ReviewState } from '../types/skillDocument';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
@@ -169,6 +169,29 @@ export function ReviewWorkspace({
       : reviewStatus === 'in_review'
         ? t('app.reviewStatusInReview')
         : t('app.reviewStatusDraft');
+  const validationEvidence = buildValidationEvidenceFromReviewData(data, { reviewMode });
+  const validationHasErrors = Boolean(
+    validationEvidence?.validationRun.errors.some((issue) => issue.severity === 'error')
+      || validationEvidence?.consistencyRun.issues.some((issue) => issue.severity === 'error'),
+  );
+  const validationHasWarnings = Boolean(
+    validationEvidence?.evidenceWarnings.length
+      || validationEvidence?.validationRun.errors.some((issue) => issue.severity === 'warning')
+      || validationEvidence?.consistencyRun.issues.some((issue) => issue.severity === 'warning'),
+  );
+  const validationStatusLabel = validationHasErrors
+    ? t('app.validationStatusFailed')
+    : validationHasWarnings
+      ? t('app.validationStatusAttention')
+      : t('app.validationStatusPassed');
+  const translateEvidenceMessage = (message: string) => {
+    if (message.startsWith('app.validationMissingStepReference:')) {
+      const [, pathId, step] = message.split(':');
+      return `${t('app.validationMissingStepReference')} ${pathId} -> ${step}`;
+    }
+
+    return message.startsWith('app.') ? t(message) : message;
+  };
 
   const openDerivedWorkflow = () => {
     setActiveTab('pipeline');
@@ -874,6 +897,79 @@ export function ReviewWorkspace({
                 <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
                   {bridgeReviewGuidance}
                 </div>
+              </div>
+            </InsightBlock>
+
+            <InsightBlock
+              kicker={t('app.validationEvidence')}
+              title={validationStatusLabel}
+              summary={validationEvidence?.provenance.schemaVersion || 'n/a'}
+              accent={validationHasErrors ? 'rose' : validationHasWarnings ? 'default' : 'emerald'}
+              defaultOpen
+            >
+              <div data-testid="validation-evidence-panel" className="space-y-3">
+                {validationEvidence ? (
+                  <>
+                    <div className="grid gap-2">
+                      <MiniMetric label={t('app.schemaVersion')} value={validationEvidence.provenance.schemaVersion} />
+                      <MiniMetric label={t('app.parserVersion')} value={validationEvidence.provenance.parserVersion} />
+                      <MiniMetric label={t('app.reviewMode')} value={reviewMode} />
+                      <MiniMetric label={t('app.source')} value={validationEvidence.provenance.source} />
+                    </div>
+
+                    {validationEvidence.evidenceWarnings.length > 0 && (
+                      <div className="rounded-[1.25rem] border border-amber-500/25 bg-amber-500/8 p-3 text-sm leading-6 text-amber-900">
+                        {validationEvidence.evidenceWarnings.map((warning) => (
+                          <p key={warning}>{t(warning)}</p>
+                        ))}
+                      </div>
+                    )}
+
+                    {validationEvidence.validationRun.errors.length > 0 && (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          {t('app.validationIssues')}
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {validationEvidence.validationRun.errors.map((issue) => (
+                            <div key={`${issue.code}-${issue.path}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                              <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
+                              <div>{issue.path}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {validationEvidence.consistencyRun.issues.length > 0 && (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          {t('app.consistencyIssues')}
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {validationEvidence.consistencyRun.issues.map((issue, index) => (
+                            <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                              <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
+                              {issue.targetId && <div>{issue.targetId}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {validationEvidence.validationRun.errors.length === 0
+                      && validationEvidence.consistencyRun.issues.length === 0
+                      && validationEvidence.evidenceWarnings.length === 0 && (
+                        <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-900">
+                          {t('app.validationNoIssues')}
+                        </div>
+                      )}
+                  </>
+                ) : (
+                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    {t('app.validationUnavailable')}
+                  </div>
+                )}
               </div>
             </InsightBlock>
 
