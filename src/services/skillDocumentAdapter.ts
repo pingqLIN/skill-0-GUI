@@ -2,6 +2,8 @@ import type {
   ActionNode,
   DirectiveNode,
   ExecutionPath,
+  ReviewPacket,
+  ReviewState,
   RuleNode,
   SkillDocument,
 } from '../types/skillDocument';
@@ -290,5 +292,48 @@ export function extractSkillDocumentFromReviewData(data: unknown): SkillDocument
     original_definition: isRecord(parserResult.original_definition)
       ? parserResult.original_definition as SkillDocument['original_definition']
       : undefined,
+  };
+}
+
+export function buildReviewPacketFromReviewData(
+  data: unknown,
+  options: {
+    bridgeMode: ReviewPacket['parserMode'];
+    bridgeModeSource: string;
+    equivalenceStatus: string;
+    reviewDecisionGuidance: string;
+    reviewMode: string;
+    reviewState: ReviewState;
+    skillDocument?: SkillDocument | null;
+  },
+): ReviewPacket | null {
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  const skillDocument = options.skillDocument ?? extractSkillDocumentFromReviewData(data);
+  const projectId = typeof data.projectId === 'string'
+    ? data.projectId
+    : skillDocument?.meta?.skill_id || 'unknown-project';
+  const projectName = typeof data.projectName === 'string'
+    ? data.projectName
+    : skillDocument?.meta?.title || skillDocument?.meta?.name || 'Untitled Review';
+  const reviewerSummary = isRecord(data.reviewerSummary) ? data.reviewerSummary : null;
+  const operatorReminders = Array.isArray(reviewerSummary?.operatorReminders)
+    ? reviewerSummary.operatorReminders.filter((item): item is Record<string, unknown> => isRecord(item))
+    : [];
+
+  return {
+    equivalenceStatus: options.equivalenceStatus,
+    exportedAt: new Date().toISOString(),
+    operatorReminders,
+    parserMode: options.bridgeMode,
+    parserModeSource: options.bridgeModeSource,
+    projectId,
+    projectName,
+    reviewDecisionGuidance: options.reviewDecisionGuidance,
+    reviewMode: options.reviewMode,
+    reviewState: options.reviewState,
+    skillDocument,
   };
 }

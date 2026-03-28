@@ -152,6 +152,20 @@ export type ReviewState = {
   diffSummary?: DiffSummary;
 };
 
+export type ReviewPacket = {
+  exportedAt: string;
+  projectId: string;
+  projectName: string;
+  parserMode: 'skill-0' | 'standalone' | 'unknown';
+  parserModeSource: string;
+  reviewMode: string;
+  equivalenceStatus: string;
+  reviewDecisionGuidance: string;
+  operatorReminders: Array<Record<string, unknown>>;
+  reviewState: ReviewState;
+  skillDocument: SkillDocument | null;
+};
+
 export type ValidationIssue = {
   code: string;
   path: string;

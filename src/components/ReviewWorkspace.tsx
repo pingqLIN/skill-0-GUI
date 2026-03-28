@@ -15,8 +15,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
-import { extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
+import { buildReviewPacketFromReviewData, extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
 import type { UploadedContextFile } from '../types/intake';
+import type { ReviewPacket, ReviewState } from '../types/skillDocument';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
 
 const Dashboard = lazy(() => import('./Dashboard').then((module) => ({ default: module.Dashboard })));
@@ -64,6 +65,12 @@ export function ReviewWorkspace({
   const [isDerivedWorkflowOpen, setIsDerivedWorkflowOpen] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [editorConfig, setEditorConfig] = useState<EditorConfig>(null);
+  const [reviewStatus, setReviewStatus] = useState<ReviewState['reviewStatus']>(
+    data?.reviewerSummary?.reviewStatus
+      || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
+  );
+  const [reviewerName, setReviewerName] = useState(data?.reviewerSummary?.reviewerName || '');
+  const [reviewerNotes, setReviewerNotes] = useState(data?.reviewerSummary?.reviewerNotes || '');
 
   const parserActions = data?.parserResult?.decomposition?.actions ?? [];
   const parserRules = data?.parserResult?.decomposition?.rules ?? [];
@@ -155,6 +162,13 @@ export function ReviewWorkspace({
     : bridgeStatus?.mode === 'standalone'
       ? 'border-amber-500/20 bg-amber-500/10 text-amber-900'
       : 'border-border/50 bg-background/70 text-foreground';
+  const reviewStatusLabel = reviewStatus === 'approved'
+    ? t('app.reviewStatusApproved')
+    : reviewStatus === 'changes_requested'
+      ? t('app.reviewStatusChangesRequested')
+      : reviewStatus === 'in_review'
+        ? t('app.reviewStatusInReview')
+        : t('app.reviewStatusDraft');
 
   const openDerivedWorkflow = () => {
     setActiveTab('pipeline');
@@ -164,7 +178,43 @@ export function ReviewWorkspace({
     }, 80);
   };
 
+  const buildReviewStateSnapshot = (): ReviewState => {
+    const timestamp = new Date().toISOString();
+    const normalizedReviewerName = reviewerName.trim();
+    const normalizedNotes = reviewerNotes.trim();
+    const decisionAction = reviewStatus === 'approved'
+      ? 'approved'
+      : reviewStatus === 'changes_requested'
+        ? 'requested_changes'
+        : 'validated';
+
+    return {
+      decisionLog: [
+        {
+          action: decisionAction,
+          id: `decision-${timestamp}`,
+          summary: `${reviewStatusLabel} · ${reviewDecisionGuidance}`,
+          timestamp,
+        },
+      ],
+      elementNotes: [],
+      globalNotes: normalizedNotes ? [
+        {
+          author: normalizedReviewerName || 'reviewer',
+          content: normalizedNotes,
+          createdAt: timestamp,
+          id: `note-${timestamp}`,
+          severity: reviewStatus === 'changes_requested' ? 'warning' : 'info',
+        },
+      ] : [],
+      reviewStatus,
+      reviewerName: normalizedReviewerName || undefined,
+      updatedAt: timestamp,
+    };
+  };
+
   const convertSkillToMarkdown = (skillData: any) => {
+    const reviewState = buildReviewStateSnapshot();
     const parserResult = skillData?.parserResult;
     if (parserResult?.decomposition) {
       const meta = parserResult.meta ?? {};
@@ -184,9 +234,16 @@ export function ReviewWorkspace({
         `- review_mode: ${reviewMode}`,
         `- equivalence_status: ${reviewEquivalenceStatus}`,
         `- review_decision_guidance: ${reviewDecisionGuidance}`,
+        `- review_status: ${reviewStatus}`,
+        `- reviewer: ${reviewerName.trim() || 'unassigned'}`,
         `- source: ${original.source || 'uploaded skill'}`,
         '',
       ];
+
+      if (reviewerNotes.trim()) {
+        lines.push(`> Reviewer notes: ${reviewerNotes.trim()}`);
+        lines.push('');
+      }
 
       if (reviewEquivalenceStatus !== 'implementation_identity') {
         lines.push(`> Review note: ${reviewDecisionGuidance}`);
@@ -244,8 +301,15 @@ export function ReviewWorkspace({
       `- review_mode: ${reviewMode}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
       `- review_decision_guidance: ${reviewDecisionGuidance}`,
+      `- review_status: ${reviewStatus}`,
+      `- reviewer: ${reviewerName.trim() || 'unassigned'}`,
       '',
     ];
+
+    if (reviewerNotes.trim()) {
+      lines.push(`> Reviewer notes: ${reviewerNotes.trim()}`);
+      lines.push('');
+    }
 
     if (reviewEquivalenceStatus !== 'implementation_identity') {
       lines.push(`> Review note: ${reviewDecisionGuidance}`);
@@ -301,6 +365,29 @@ export function ReviewWorkspace({
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = `${data.projectId}-${exportModeSuffix}.skill.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportReviewPacket = () => {
+    const reviewPacket = buildReviewPacketFromReviewData(data, {
+      bridgeMode: (bridgeStatus?.mode ?? 'unknown') as ReviewPacket['parserMode'],
+      bridgeModeSource: bridgeModeDetail,
+      equivalenceStatus: reviewEquivalenceStatus,
+      reviewDecisionGuidance,
+      reviewMode,
+      reviewState: buildReviewStateSnapshot(),
+      skillDocument,
+    });
+    if (!reviewPacket) {
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(reviewPacket, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${data.projectId}-${exportModeSuffix}.review-packet.json`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -388,6 +475,13 @@ export function ReviewWorkspace({
                           <Download size={14} className="text-muted-foreground" />
                         </button>
                       )}
+                      <button
+                        onClick={exportReviewPacket}
+                        className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                      >
+                        <span>{t('app.exportReviewPacket')}</span>
+                        <Download size={14} className="text-muted-foreground" />
+                      </button>
                       <button
                         onClick={onResetWorkspace}
                         className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
@@ -537,6 +631,78 @@ export function ReviewWorkspace({
               <p className="mt-2 text-xs leading-5 text-current/75">
                 {t('app.bridgeSource')}: {bridgeModeDetail}
               </p>
+            </div>
+
+            <div data-testid="review-decision-panel" className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]">
+              <div className="rounded-[1.1rem] border border-border/55 bg-background/75 px-4 py-4 backdrop-blur-xl">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="editorial-kicker">{t('app.reviewDecisionPanel')}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('app.reviewPacketHint')}</p>
+                  </div>
+                  <span className="rounded-full border border-border/55 bg-white/70 px-3 py-1 text-[11px] font-medium text-foreground">
+                    {reviewStatusLabel}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-1.5 text-sm text-foreground" htmlFor="reviewer-name">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewerName')}</span>
+                    <input
+                      id="reviewer-name"
+                      value={reviewerName}
+                      onChange={(event) => setReviewerName(event.target.value)}
+                      placeholder={t('app.reviewerNamePlaceholder')}
+                      className="rounded-xl border border-border/60 bg-white/70 px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
+                    />
+                  </label>
+
+                  <label className="grid gap-1.5 text-sm text-foreground" htmlFor="review-status">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewDecision')}</span>
+                    <select
+                      id="review-status"
+                      value={reviewStatus}
+                      onChange={(event) => setReviewStatus(event.target.value as ReviewState['reviewStatus'])}
+                      className="rounded-xl border border-border/60 bg-white/70 px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
+                    >
+                      <option value="draft">{t('app.reviewStatusDraft')}</option>
+                      <option value="in_review">{t('app.reviewStatusInReview')}</option>
+                      <option value="changes_requested">{t('app.reviewStatusChangesRequested')}</option>
+                      <option value="approved">{t('app.reviewStatusApproved')}</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label className="mt-3 grid gap-1.5 text-sm text-foreground" htmlFor="review-notes">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewNotes')}</span>
+                  <textarea
+                    id="review-notes"
+                    value={reviewerNotes}
+                    onChange={(event) => setReviewerNotes(event.target.value)}
+                    placeholder={t('app.reviewNotesPlaceholder')}
+                    className="min-h-28 rounded-[1.15rem] border border-border/60 bg-white/70 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
+                  />
+                </label>
+              </div>
+
+              <div className="rounded-[1.1rem] border border-border/55 bg-background/75 px-4 py-4 backdrop-blur-xl">
+                <p className="editorial-kicker">{t('app.reviewPacketSummary')}</p>
+                <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.reviewDecision')}:</span> {reviewStatusLabel}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.reviewerName')}:</span> {reviewerName.trim() || t('app.reviewerUnassigned')}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.bridgeMode')}:</span> {bridgeModeLabel}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.equivalenceStatus')}:</span> {reviewEquivalenceLabel}
+                  </p>
+                  <p className="text-xs leading-5">{reviewerNotes.trim() || t('app.reviewNotesEmpty')}</p>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-4">

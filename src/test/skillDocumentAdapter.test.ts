@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildReviewPacketFromReviewData,
   buildReviewDataFromSkillDocument,
   extractSkillDocumentFromReviewData,
   parseSkillDocumentJson,
@@ -76,5 +77,45 @@ describe('skillDocumentAdapter', () => {
     });
 
     expect(extractSkillDocumentFromReviewData(imported)).toEqual(imported.parserResult);
+  });
+
+  it('builds a review packet from review workspace data', () => {
+    const imported = buildReviewDataFromSkillDocument(skillDocument, {
+      fileName: 'imported-skill.json',
+      sourceLabel: 'json/test',
+    });
+
+    const reviewPacket = buildReviewPacketFromReviewData(imported, {
+      bridgeMode: 'unknown',
+      bridgeModeSource: 'json/test',
+      equivalenceStatus: 'equivalence_unverified',
+      reviewDecisionGuidance: 'Re-run the canonical bridge before final approval.',
+      reviewMode: 'unknown',
+      reviewState: {
+        decisionLog: [{
+          action: 'requested_changes',
+          id: 'decision-001',
+          summary: 'Need canonical bridge rerun.',
+          timestamp: '2026-03-28T00:00:00.000Z',
+        }],
+        elementNotes: [],
+        globalNotes: [{
+          author: 'Miles',
+          content: 'Need a canonical rerun and schema validation evidence.',
+          createdAt: '2026-03-28T00:00:00.000Z',
+          id: 'note-001',
+        }],
+        reviewStatus: 'changes_requested',
+        reviewerName: 'Miles',
+        updatedAt: '2026-03-28T00:00:00.000Z',
+      },
+    });
+
+    expect(reviewPacket).not.toBeNull();
+    expect(reviewPacket?.projectId).toBe('claude__imported-skill');
+    expect(reviewPacket?.skillDocument?.meta.skill_id).toBe('claude__imported-skill');
+    expect(reviewPacket?.reviewState.reviewStatus).toBe('changes_requested');
+    expect(reviewPacket?.operatorReminders).toHaveLength(1);
+    expect(reviewPacket?.reviewDecisionGuidance).toContain('canonical bridge');
   });
 });
