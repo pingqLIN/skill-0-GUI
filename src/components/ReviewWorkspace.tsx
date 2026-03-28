@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
 import { extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
+import { validateSkillDocument } from '../services/skillDocumentValidation';
 import type { UploadedContextFile } from '../types/intake';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
 
@@ -115,6 +116,10 @@ export function ReviewWorkspace({
       ? t('app.bridgeGuidanceStandalone')
       : t('app.bridgeGuidanceUnavailable');
   const skillDocument = extractSkillDocumentFromReviewData(data);
+  const validationResult = skillDocument ? validateSkillDocument(skillDocument) : null;
+  const validationIssues = validationResult?.issues ?? [];
+  const validationErrors = validationIssues.filter((issue) => issue.severity === 'error');
+  const validationWarnings = validationIssues.filter((issue) => issue.severity === 'warning');
   const reviewMode = data?.reviewerSummary?.mode
     || (bridgeStatus?.mode === 'skill-0'
       ? 'canonical'
@@ -622,6 +627,59 @@ export function ReviewWorkspace({
 
         <aside className="xl:sticky xl:top-28 xl:self-start">
           <div className="space-y-5">
+            <InsightBlock
+              kicker={t('app.detailsPanel')}
+              title={t('app.schemaValidation')}
+              summary={validationResult
+                ? validationErrors.length > 0
+                  ? `${t('app.validationInvalid')} · ${validationErrors.length} ${t('app.validationErrors')}`
+                  : validationWarnings.length > 0
+                    ? `${t('app.validationValid')} · ${validationWarnings.length} ${t('app.validationWarnings')}`
+                    : t('app.validationValid')
+                : t('app.validationUnavailable')}
+              accent={validationErrors.length > 0 ? 'rose' : validationWarnings.length > 0 ? 'default' : 'emerald'}
+              defaultOpen
+            >
+              {validationResult ? (
+                <div className="space-y-3">
+                  <div className="grid gap-2">
+                    <MiniMetric label={t('app.validationStatus')} value={validationResult.valid ? t('app.validationValid') : t('app.validationInvalid')} />
+                    <MiniMetric label={t('app.validationSchema')} value={validationResult.schemaLabel} />
+                    <MiniMetric label={t('app.validationErrors')} value={String(validationErrors.length)} highlight={validationErrors.length > 0} />
+                    <MiniMetric label={t('app.validationWarnings')} value={String(validationWarnings.length)} highlight={validationWarnings.length > 0} />
+                  </div>
+                  {validationIssues.length > 0 ? (
+                    <div className="space-y-2">
+                      {validationIssues.slice(0, 5).map((issue) => (
+                        <div key={`${issue.code}-${issue.path}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-medium text-foreground">{issue.code}</span>
+                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                              issue.severity === 'error'
+                                ? 'bg-destructive/12 text-destructive'
+                                : 'bg-amber-500/12 text-amber-700'
+                            }`}>
+                              {issue.severity}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.path}</p>
+                          <p className="mt-2">{issue.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
+                      {t('app.validationNoIssues')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                  {t('app.validationUnavailable')}
+                </div>
+              )}
+            </InsightBlock>
+
             <InsightBlock
               kicker={t('app.detailsPanel')}
               title={t('dashboard.riskAssessment')}

@@ -73,4 +73,27 @@ describe('ReviewWorkspace', () => {
 
     expect(screen.getByTestId('vector-space')).toBeInTheDocument();
   });
+
+  it('renders schema validation warnings for the current SkillDocument projection', async () => {
+    const props = {
+      darkMode: false,
+      modifiedPaths: new Set<string>(),
+      supportFiles: [],
+      selectedContextPath: null,
+      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
+      bridgeStatusError: null,
+      guiRepoUrl: 'https://example.com/gui',
+      engineRepoUrl: 'https://example.com/engine',
+      onSelectContextPath: vi.fn(),
+      onSaveEdit: vi.fn(),
+      onUndo: vi.fn(),
+      onResetWorkspace: vi.fn(),
+    };
+
+    render(<ReviewWorkspace data={sampleData} {...props} />);
+
+    expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
+    expect(screen.getByText('app.validationValid')).toBeInTheDocument();
+    expect(screen.getByText('SCHEMA_ORIGINAL_DEFINITION_RECOMMENDED')).toBeInTheDocument();
+  });
 });
