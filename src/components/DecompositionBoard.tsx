@@ -8,12 +8,14 @@ import {
   FileCode2,
   FileText,
   GitBranch,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
+  TerminalSquare,
 } from 'lucide-react';
 import type { UploadedContextFile } from '../types/intake';
 
-type SectionId = 'source' | 'actions' | 'rules' | 'directives' | 'paths' | 'json';
+type SectionId = 'source' | 'manifest' | 'actions' | 'rules' | 'directives' | 'commands' | 'findings' | 'paths' | 'json';
 
 const SCHEMA_URL = 'https://github.com/pingqLIN/skill-0/blob/main/schema/skill-decomposition.schema.json';
 const PARSER_URL = 'https://github.com/pingqLIN/skill-0/blob/main/scripts/auto_parse.py';
@@ -39,13 +41,20 @@ export function DecompositionBoard({
   const rules = decomposition.rules ?? [];
   const directives = decomposition.directives ?? [];
   const executionPaths = parserResult?.execution_paths ?? [];
+  const manifest = parserResult?.manifest ?? null;
+  const manifestFiles = parserResult?.supporting_files ?? [];
+  const commandReferences = parserResult?.command_references ?? [];
+  const analysisFindings = parserResult?.analysis_findings ?? [];
+  const delegationNodes = parserResult?.delegation_nodes ?? [];
 
   const summaryCards = useMemo(() => ([
     { label: t('app.totalActions'), value: actions.length, icon: <Sparkles size={14} className="text-primary/70" /> },
     { label: t('app.totalRules'), value: rules.length, icon: <ShieldCheck size={14} className="text-primary/70" /> },
     { label: t('app.totalDirectives'), value: directives.length, icon: <GitBranch size={14} className="text-primary/70" /> },
     { label: t('app.executionPaths'), value: executionPaths.length, icon: <FileCode2 size={14} className="text-primary/70" /> },
-  ]), [actions.length, directives.length, executionPaths.length, rules.length, t]);
+    { label: t('app.supportingFiles'), value: manifestFiles.length, icon: <FileText size={14} className="text-primary/70" /> },
+    { label: t('app.analysisFindings'), value: analysisFindings.length, icon: <ShieldAlert size={14} className="text-primary/70" /> },
+  ]), [actions.length, analysisFindings.length, directives.length, executionPaths.length, manifestFiles.length, rules.length, t]);
 
   const traceMap = useMemo(() => {
     const rankMatches = (entity: { id?: string; name?: string; description?: string; condition_expression?: string }) => {
@@ -200,6 +209,59 @@ export function DecompositionBoard({
         </BoardSection>
 
         <BoardSection
+          title={t('app.manifestSummary')}
+          summary={manifest?.analysis_level || t('app.analysisResult')}
+          isOpen={openSection === 'manifest'}
+          onToggle={() => setOpenSection(openSection === 'manifest' ? 'actions' : 'manifest')}
+        >
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <div className="rounded-[1.35rem] border border-border/55 bg-white/48 p-4 backdrop-blur-2xl">
+              <div className="text-sm font-medium text-foreground">
+                {manifest?.entry_skill?.path || original.source || meta.skill_layer || 'SKILL.md'}
+              </div>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                {manifest
+                  ? `${manifest.supporting_files_count || 0} supporting references, ${manifest.command_references_count || 0} command references, ${manifest.delegation_nodes_count || 0} delegation signals.`
+                  : t('app.noManifestSummary')}
+              </p>
+              {delegationNodes.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {delegationNodes.map((node: any) => (
+                    <span key={node.id} className="rounded-full border border-border/55 bg-background/72 px-3 py-1.5 text-[11px] font-medium text-foreground">
+                      {node.kind}{node.agent ? ` · ${node.agent}` : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="grid gap-3">
+              <InfoCell label={t('app.analysisLevel')} value={manifest?.analysis_level || parserResult?.parser_meta?.analysis_level || 'single_file'} />
+              <InfoCell label={t('app.supportingFiles')} value={String(manifest?.supporting_files_count || manifestFiles.length)} />
+              <InfoCell label={t('app.commandReferences')} value={String(manifest?.command_references_count || commandReferences.length)} />
+              <InfoCell label={t('app.unresolvedReferences')} value={String(manifest?.unresolved_references_count || 0)} />
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {manifestFiles.length > 0 ? manifestFiles.map((file: any) => (
+              <div key={file.id} className="rounded-[1.2rem] border border-border/55 bg-background/72 px-4 py-3 shadow-[0_14px_30px_-28px_hsl(var(--foreground)/0.4)] backdrop-blur-xl">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">{file.path}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{file.kind} · {file.resolved ? t('app.resolved') : t('app.unresolved')}</div>
+                  </div>
+                  <div className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${file.resolved ? 'bg-emerald-500/12 text-emerald-700' : 'bg-amber-500/12 text-amber-700'}`}>
+                    {file.resolved ? t('app.resolved') : t('app.unresolved')}
+                  </div>
+                </div>
+                <p className="mt-2 text-xs leading-6 text-muted-foreground">{file.summary}</p>
+              </div>
+            )) : (
+              <EmptyState label={t('app.noSupportingFiles')} />
+            )}
+          </div>
+        </BoardSection>
+
+        <BoardSection
           title={t('app.totalActions')}
           summary={`${actions.length} items`}
           isOpen={openSection === 'actions'}
@@ -281,6 +343,84 @@ export function DecompositionBoard({
                 />
               </div>
             ))}
+          </div>
+        </BoardSection>
+
+        <BoardSection
+          title={t('app.commandReferences')}
+          summary={`${commandReferences.length} items`}
+          isOpen={openSection === 'commands'}
+          onToggle={() => setOpenSection(openSection === 'commands' ? 'findings' : 'commands')}
+        >
+          <div className="grid gap-3">
+            {commandReferences.length > 0 ? commandReferences.map((command: any) => (
+              <div key={command.id} className="rounded-[1.35rem] border border-border/55 bg-white/48 p-4 backdrop-blur-2xl">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
+                    <TerminalSquare size={16} className="text-primary/70" />
+                    {command.id}
+                  </div>
+                  <div className="rounded-full border border-border/55 bg-background/72 px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
+                    {command.risk_grade} · {command.authority_profile}
+                  </div>
+                </div>
+                <pre className="mt-3 overflow-x-auto rounded-[1rem] border border-border/45 bg-slate-950/88 px-3 py-2 text-xs leading-6 text-slate-100">
+                  {command.command}
+                </pre>
+                <div className="mt-3 grid gap-2 md:grid-cols-3">
+                  <InfoCell label={t('app.source')} value={command.source_path} />
+                  <InfoCell label={t('app.shellFamily')} value={command.shell_family} />
+                  <InfoCell label={t('app.riskGrade')} value={command.risk_grade} />
+                </div>
+              </div>
+            )) : (
+              <EmptyState label={t('app.noCommandReferences')} />
+            )}
+          </div>
+        </BoardSection>
+
+        <BoardSection
+          title={t('app.analysisFindings')}
+          summary={`${analysisFindings.length} items`}
+          isOpen={openSection === 'findings'}
+          onToggle={() => setOpenSection(openSection === 'findings' ? 'paths' : 'findings')}
+        >
+          <div className="grid gap-3">
+            {analysisFindings.length > 0 ? analysisFindings.map((finding: any) => (
+              <div key={finding.finding_id} className="rounded-[1.35rem] border border-border/55 bg-white/48 p-4 backdrop-blur-2xl">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold tracking-tight text-foreground">{finding.title}</div>
+                  <div className="rounded-full border border-border/55 bg-background/72 px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
+                    {finding.severity} · {finding.confidence}
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {finding.category} · {finding.recommended_action}
+                </div>
+                {finding.affected_paths?.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {finding.affected_paths.map((item: string) => (
+                      <span key={item} className="rounded-full border border-border/55 bg-background/72 px-2.5 py-1 text-[11px] font-medium text-foreground">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {finding.evidence?.length > 0 && (
+                  <div className="mt-3 grid gap-2">
+                    {finding.evidence.map((evidence: any, index: number) => (
+                      <div key={`${finding.finding_id}-${index}`} className="rounded-[1rem] border border-border/45 bg-background/72 px-3 py-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{evidence.kind}</div>
+                        <div className="mt-1 text-xs text-foreground">{evidence.excerpt}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{evidence.explanation}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )) : (
+              <EmptyState label={t('app.noAnalysisFindings')} />
+            )}
           </div>
         </BoardSection>
 

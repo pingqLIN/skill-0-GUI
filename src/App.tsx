@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import {
   UploadCloud,
   Activity,
@@ -18,16 +18,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import JSZip from 'jszip';
 import { Flowchart } from './components/Flowchart';
-import { PhaseDetails } from './components/PhaseDetails';
-import { Dashboard } from './components/Dashboard';
-import { VectorSpace } from './components/VectorSpace';
-import { SecurityMatrix } from './components/SecurityMatrix';
-import { SideEditor } from './components/SideEditor';
-import { DecompositionBoard } from './components/DecompositionBoard';
-import { analyzeSkillText } from './services/geminiService';
+import { analyzeSkillText } from './services/parserBridgeService';
+import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
 import type { PreparedUploadFile, UploadedContextFile } from './types/intake';
 
-const GUI_REPO_URL = 'https://github.com/pingqLIN/skill-0-GUI';
+const Dashboard = lazy(() => import('./components/Dashboard').then((module) => ({ default: module.Dashboard })));
+const PhaseDetails = lazy(() => import('./components/PhaseDetails').then((module) => ({ default: module.PhaseDetails })));
+const VectorSpace = lazy(() => import('./components/VectorSpace').then((module) => ({ default: module.VectorSpace })));
+const SecurityMatrix = lazy(() => import('./components/SecurityMatrix').then((module) => ({ default: module.SecurityMatrix })));
+const SideEditor = lazy(() => import('./components/SideEditor').then((module) => ({ default: module.SideEditor })));
+const DecompositionBoard = lazy(() => import('./components/DecompositionBoard').then((module) => ({ default: module.DecompositionBoard })));
+
+const GUI_REPO_URL = 'https://github.com/pingqLIN/skill-0-review-studio';
 const ENGINE_REPO_URL = 'https://github.com/pingqLIN/skill-0';
 const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
 const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
@@ -57,6 +59,8 @@ export default function App() {
   const [supportFiles, setSupportFiles] = useState<UploadedContextFile[]>([]);
   const [selectedContextPath, setSelectedContextPath] = useState<string | null>(null);
   const [editorConfig, setEditorConfig] = useState<{ type: 'global' | 'phase' | 'decision'; payload: any; phaseId?: string } | null>(null);
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
+  const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
 
   useEffect(() => {
     const preventWindowDrop = (event: DragEvent) => {
@@ -79,6 +83,31 @@ export default function App() {
       folderInputRef.current.setAttribute('webkitdirectory', '');
       folderInputRef.current.setAttribute('directory', '');
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBridgeStatus = async () => {
+      try {
+        const status = await fetchBridgeStatus();
+        if (!cancelled) {
+          setBridgeStatus(status);
+          setBridgeStatusError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setBridgeStatus(null);
+          setBridgeStatusError(err instanceof Error ? err.message : 'Unknown bridge status error');
+        }
+      }
+    };
+
+    void loadBridgeStatus();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const toggleLanguage = () => {
@@ -276,19 +305,26 @@ export default function App() {
 
     const contextEntries = pendingUploadFiles
       .filter((file) => file.path !== primaryFile.path)
-      .map(({ text, isPrimaryCandidate, ...rest }) => rest);
+      .map(({ isPrimaryCandidate, ...rest }) => rest);
 
     setSupportFiles(contextEntries);
     setSelectedContextPath(contextEntries[0]?.path ?? null);
     setInputText(primaryFile.text);
-    void processSkill(primaryFile.text, primaryFile.name);
+    void processSkill(primaryFile.text, primaryFile.name, {
+      contextFiles: contextEntries,
+      primaryPath: primaryFile.path,
+    });
   };
 
-  const processSkill = async (text: string, skillName = 'uploaded-skill') => {
+  const processSkill = async (
+    text: string,
+    skillName = 'uploaded-skill',
+    options: { contextFiles?: UploadedContextFile[]; primaryPath?: string | null } = {},
+  ) => {
     setIsExtracting(true);
     setError(null);
     try {
-      const result = await analyzeSkillText(text, skillName);
+      const result = await analyzeSkillText(text, skillName, options);
       setData(result);
       setOriginalData(JSON.parse(JSON.stringify(result)));
       setModifiedPaths(new Set());
@@ -391,11 +427,18 @@ export default function App() {
         `- skill_id: ${meta.skill_id || skillData.projectId}`,
         `- schema_version: ${meta.schema_version || 'unknown'}`,
         `- parser_version: ${meta.parser_version || 'unknown'}`,
+        `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
+        `- parser_mode_source: ${bridgeModeDetail}`,
         `- source: ${original.source || 'uploaded skill'}`,
         '',
-        '## Actions',
-        '',
       ];
+
+      if (bridgeStatus?.mode === 'standalone') {
+        lines.push('> Review note: generated in standalone fallback mode. Re-run with the canonical skill-0 bridge before making a final equivalence decision.');
+        lines.push('');
+      }
+
+      lines.push('## Actions', '');
 
       actions.forEach((action: any) => {
         lines.push(`### ${action.id} ${action.name}`);
@@ -441,10 +484,17 @@ export default function App() {
       `- granularity: ${skillData.threeClassification.granularity}`,
       `- operability: ${skillData.threeClassification.operability}`,
       `- risk_level: ${skillData.riskAssessment.level}`,
-      '',
-      '## Phase Flow',
+      `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
+      `- parser_mode_source: ${bridgeModeDetail}`,
       '',
     ];
+
+    if (bridgeStatus?.mode === 'standalone') {
+      lines.push('> Review note: generated in standalone fallback mode. Re-run with the canonical skill-0 bridge before making a final equivalence decision.');
+      lines.push('');
+    }
+
+    lines.push('## Phase Flow', '');
 
     skillData.phases.forEach((phase: any) => {
       lines.push(`### Phase ${phase.id}: ${phase.name}`);
@@ -523,10 +573,15 @@ export default function App() {
   const decisionCount = data ? data.phases.reduce((sum: number, phase: any) => sum + (phase.decisionNodes?.length ?? 0), 0) : 0;
   const scanScore = data?.securityScan?.riskScore ?? data?.riskAssessment?.negativeIntent ?? 0;
   const firstFinding = data?.securityScan?.findings?.[0] ?? null;
+  const operatorReminders = data?.reviewerSummary?.operatorReminders ?? [];
   const parserActions = data?.parserResult?.decomposition?.actions ?? [];
   const parserRules = data?.parserResult?.decomposition?.rules ?? [];
   const parserDirectives = data?.parserResult?.decomposition?.directives ?? [];
   const executionPaths = data?.parserResult?.execution_paths ?? [];
+  const parserManifest = data?.parserResult?.manifest ?? null;
+  const parserSupportingFiles = data?.parserResult?.supporting_files ?? [];
+  const parserCommandReferences = data?.parserResult?.command_references ?? [];
+  const parserAnalysisFindings = data?.parserResult?.analysis_findings ?? [];
 
   const workspaceTabs = data
     ? [
@@ -547,6 +602,26 @@ export default function App() {
         },
       ]
     : [];
+
+  const bridgeModeLabel = bridgeStatus?.mode === 'skill-0'
+    ? t('app.bridgeModeCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.bridgeModeStandalone')
+      : t('app.bridgeModeUnavailable');
+  const bridgeModeDetail = bridgeStatus?.skill0Root
+    || (bridgeStatus?.mode === 'standalone'
+      ? t('app.bridgeModeBundled')
+      : bridgeStatusError || t('app.bridgeModeChecking'));
+  const bridgeModeSummary = bridgeStatus?.mode === 'skill-0'
+    ? t('app.bridgeModeCanonicalShort')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.bridgeModeStandaloneShort')
+      : t('app.bridgeModeUnavailableShort');
+  const bridgeReviewGuidance = bridgeStatus?.mode === 'skill-0'
+    ? t('app.bridgeGuidanceCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.bridgeGuidanceStandalone')
+      : t('app.bridgeGuidanceUnavailable');
 
   const openDerivedWorkflow = () => {
     setActiveTab('pipeline');
@@ -574,6 +649,19 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className={`hidden rounded-[1rem] border px-3 py-2 text-left backdrop-blur-xl sm:block ${
+              bridgeStatus?.mode === 'skill-0'
+                ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+                : bridgeStatus?.mode === 'standalone'
+                  ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
+                  : 'border-border/50 bg-card/60 text-muted-foreground'
+            }`}>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.bridgeMode')}</div>
+              <div className="mt-1 text-xs font-medium">{bridgeModeLabel}</div>
+              <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={bridgeModeDetail}>
+                {bridgeModeDetail}
+              </div>
+            </div>
             <a
               href={GUI_REPO_URL}
               target="_blank"
@@ -920,12 +1008,30 @@ export default function App() {
                   </div>
                   <p className="text-pretty-wrap mt-2 text-xs leading-5 text-muted-foreground">{t('app.parserBoardHint')}</p>
                 </div>
+
+                <div className="rounded-[1.35rem] border border-border/50 bg-white/42 p-4 backdrop-blur-2xl sm:hidden">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="editorial-kicker">{t('app.bridgeMode')}</p>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                      bridgeStatus?.mode === 'skill-0'
+                        ? 'bg-emerald-500/10 text-emerald-700'
+                        : bridgeStatus?.mode === 'standalone'
+                          ? 'bg-amber-500/10 text-amber-700'
+                          : 'bg-background/70 text-muted-foreground'
+                    }`}>
+                      {bridgeModeLabel}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">{bridgeModeDetail}</p>
+                </div>
               </div>
             </aside>
 
             <section className="min-w-0 space-y-7">
               {!isWorkspaceFocusMode && (
-                <Dashboard data={data} onNavigatePhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} modifiedPaths={modifiedPaths} />
+                <Suspense fallback={<PanelFallback heightClassName="min-h-[220px]" />}>
+                  <Dashboard data={data} onNavigatePhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} modifiedPaths={modifiedPaths} />
+                </Suspense>
               )}
 
               <div className="glass-panel-strong relative overflow-hidden px-5 py-5 sm:px-6">
@@ -942,6 +1048,11 @@ export default function App() {
                           <span className="rounded-full border border-border/55 bg-background/70 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-lg">
                             {t('app.parserVersion')}: {data?.parserResult?.meta?.parser_version || '--'}
                           </span>
+                          {parserManifest && (
+                            <span className="rounded-full border border-border/55 bg-background/70 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-lg">
+                              {t('app.analysisLevel')}: {parserManifest.analysis_level}
+                            </span>
+                          )}
                           {modifiedPaths.size > 0 && (
                             <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-700">
                               {modifiedPaths.size} {t('app.modifiedCount')}
@@ -962,10 +1073,13 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
                     <StatPill label={t('app.totalActions')} value={String(parserActions.length)} />
                     <StatPill label={t('app.totalRules')} value={String(parserRules.length)} />
                     <StatPill label={t('app.totalDirectives')} value={String(parserDirectives.length)} accent={parserDirectives.length > 8 ? 'warn' : 'default'} />
+                    <StatPill label={t('app.supportingFiles')} value={String(parserSupportingFiles.length)} />
+                    <StatPill label={t('app.commandReferences')} value={String(parserCommandReferences.length)} accent={parserCommandReferences.length > 0 ? 'warn' : 'default'} />
+                    <StatPill label={t('app.analysisFindings')} value={String(parserAnalysisFindings.length)} accent={parserAnalysisFindings.length > 0 ? 'danger' : 'default'} />
                   </div>
                 </div>
               </div>
@@ -1007,12 +1121,14 @@ export default function App() {
                     exit={{ opacity: 0, y: -10 }}
                     className="space-y-7"
                   >
-                    <DecompositionBoard
-                      parserResult={data.parserResult}
-                      supportFiles={supportFiles}
-                      selectedContextPath={selectedContextPath}
-                      onSelectContext={setSelectedContextPath}
-                    />
+                    <Suspense fallback={<PanelFallback heightClassName="min-h-[240px]" />}>
+                      <DecompositionBoard
+                        parserResult={data.parserResult}
+                        supportFiles={supportFiles}
+                        selectedContextPath={selectedContextPath}
+                        onSelectContext={setSelectedContextPath}
+                      />
+                    </Suspense>
 
                     <InsightBlock
                       id="derived-workflow-panel"
@@ -1043,15 +1159,17 @@ export default function App() {
 
                           <div className="min-h-[640px]">
                             {activePhaseData ? (
-                              <PhaseDetails
-                                phase={activePhaseData}
-                                allPhases={data.phases}
-                                onNavigatePhase={setActivePhase}
-                                onClose={() => setActivePhase(null)}
-                                onEditPhase={(phaseData) => setEditorConfig({ type: 'phase', payload: phaseData, phaseId: phaseData.id })}
-                                onEditDecision={(node) => setEditorConfig({ type: 'decision', payload: node, phaseId: activePhaseData.id })}
-                                modifiedPaths={modifiedPaths}
-                              />
+                              <Suspense fallback={<PanelFallback heightClassName="min-h-[640px]" />}>
+                                <PhaseDetails
+                                  phase={activePhaseData}
+                                  allPhases={data.phases}
+                                  onNavigatePhase={setActivePhase}
+                                  onClose={() => setActivePhase(null)}
+                                  onEditPhase={(phaseData) => setEditorConfig({ type: 'phase', payload: phaseData, phaseId: phaseData.id })}
+                                  onEditDecision={(node) => setEditorConfig({ type: 'decision', payload: node, phaseId: activePhaseData.id })}
+                                  modifiedPaths={modifiedPaths}
+                                />
+                              </Suspense>
                             ) : (
                               <div className="glass-panel flex min-h-[640px] items-center justify-center p-10 text-center">
                                 <div className="max-w-sm space-y-3">
@@ -1071,7 +1189,9 @@ export default function App() {
                 {activeTab === 'vector' && (
                   <motion.div key="vector" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                     <div className="glass-panel overflow-hidden p-3 sm:p-4">
-                      <VectorSpace data={data} darkMode={darkMode} />
+                      <Suspense fallback={<PanelFallback heightClassName="min-h-[420px]" />}>
+                        <VectorSpace data={data} darkMode={darkMode} />
+                      </Suspense>
                     </div>
                   </motion.div>
                 )}
@@ -1079,7 +1199,9 @@ export default function App() {
                 {activeTab === 'matrix' && (
                   <motion.div key="matrix" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                     <div className="glass-panel overflow-hidden p-3 sm:p-4">
-                      <SecurityMatrix data={data} />
+                      <Suspense fallback={<PanelFallback heightClassName="min-h-[420px]" />}>
+                        <SecurityMatrix data={data} />
+                      </Suspense>
                     </div>
                   </motion.div>
                 )}
@@ -1111,25 +1233,71 @@ export default function App() {
                   </div>
                 </InsightBlock>
                 <InsightBlock
+                  kicker={t('app.bridgeMode')}
+                  title={bridgeModeLabel}
+                  summary={bridgeModeSummary}
+                  accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : 'default'}
+                >
+                  <div className="grid gap-3">
+                    <MiniMetric label={t('app.bridgeMode')} value={bridgeModeLabel} />
+                    <MiniMetric label={t('app.bridgeSource')} value={bridgeModeDetail} />
+                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      {bridgeReviewGuidance}
+                    </div>
+                  </div>
+                </InsightBlock>
+
+                <InsightBlock
                   kicker={t('app.projectSummary')}
                   title={t('app.securityScan')}
                   summary={firstFinding ? firstFinding.ruleName : t('securityMatrix.auditLogSummary')}
                 >
-                  {firstFinding ? (
+                  {firstFinding || operatorReminders.length > 0 ? (
                     <div className="space-y-3">
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium text-foreground">{firstFinding.ruleName}</p>
-                          <span className="rounded-full bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive">
-                            {firstFinding.adjustedSeverity}
-                          </span>
+                      {firstFinding && (
+                        <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-medium text-foreground">{firstFinding.ruleName}</p>
+                            <span className="rounded-full bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive">
+                              {firstFinding.adjustedSeverity}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{firstFinding.description}</p>
                         </div>
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{firstFinding.description}</p>
-                      </div>
+                      )}
                       <div className="grid gap-2">
-                        <MiniMetric label={t('app.firstFinding')} value={`${firstFinding.ruleId} · L${firstFinding.lineNumber}`} />
+                        {firstFinding && (
+                          <MiniMetric label={t('app.firstFinding')} value={`${firstFinding.ruleId} · L${firstFinding.lineNumber}`} />
+                        )}
                         <MiniMetric label={t('app.scanScore')} value={String(scanScore)} />
                       </div>
+                      {operatorReminders.length > 0 && (
+                        <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                            {t('app.operatorReminders')}
+                          </div>
+                          <div className="mt-3 space-y-3">
+                            {operatorReminders.map((reminder: any) => (
+                              <div key={reminder.id} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="text-sm font-medium text-foreground">{reminder.label}</div>
+                                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                    reminder.level === 'high'
+                                      ? 'bg-destructive/12 text-destructive'
+                                      : reminder.level === 'medium'
+                                        ? 'bg-amber-500/12 text-amber-700'
+                                        : 'bg-background/70 text-muted-foreground'
+                                  }`}>
+                                    {reminder.level}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-xs leading-6 text-muted-foreground">{reminder.detail}</p>
+                                <p className="mt-2 text-xs font-medium leading-6 text-foreground">{reminder.action}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
@@ -1154,9 +1322,22 @@ export default function App() {
                 <InsightBlock
                   kicker={t('app.collaborationContext')}
                   title={t('app.sourceDefinition')}
-                  summary={supportFiles.length > 0 ? `${supportFiles.length} ${t('app.contextFiles')}` : t('app.noContextFiles')}
+                  summary={parserManifest
+                    ? `${parserSupportingFiles.length} ${t('app.supportingFiles')} · ${parserManifest.unresolved_references_count || 0} ${t('app.unresolvedReferences')}`
+                    : supportFiles.length > 0
+                      ? `${supportFiles.length} ${t('app.contextFiles')}`
+                      : t('app.noContextFiles')}
                 >
                   <div className="space-y-2">
+                    {parserManifest && (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.analysisLevel')}: <span className="font-medium text-foreground">{parserManifest.analysis_level}</span>
+                        {' · '}
+                        {t('app.resolved')}: <span className="font-medium text-foreground">{parserSupportingFiles.filter((file: any) => file.resolved).length}</span>
+                        {' · '}
+                        {t('app.unresolved')}: <span className="font-medium text-foreground">{parserManifest.unresolved_references_count || 0}</span>
+                      </div>
+                    )}
                     {supportFiles.length > 0 ? supportFiles.map((file) => (
                       <button
                         key={`${file.path}-${file.size}`}
@@ -1209,7 +1390,9 @@ export default function App() {
         )}
       </main>
 
-      <SideEditor config={editorConfig} onClose={() => setEditorConfig(null)} onSave={handleSaveEdit} />
+      <Suspense fallback={null}>
+        <SideEditor config={editorConfig} onClose={() => setEditorConfig(null)} onSave={handleSaveEdit} />
+      </Suspense>
     </div>
   );
 }
@@ -1219,6 +1402,16 @@ function EmptyFeatureCard({ title, description }: { title: string; description: 
     <div className="rounded-[1.4rem] border border-border/50 bg-white/46 p-4 shadow-[0_18px_42px_-32px_hsl(var(--foreground)/0.35)] backdrop-blur-2xl">
       <h3 className="text-sm font-medium text-foreground">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function PanelFallback({ heightClassName = 'min-h-[200px]' }: { heightClassName?: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className={`flex items-center justify-center rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-6 text-sm text-muted-foreground backdrop-blur-xl ${heightClassName}`}>
+      {t('app.loadingWorkspaceModule')}
     </div>
   );
 }
@@ -1351,16 +1544,3 @@ function InsightBlock({
     </section>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

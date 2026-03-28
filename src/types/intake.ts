@@ -6,6 +6,7 @@ export type UploadedContextFile = {
   role: 'primary' | 'context';
   source: 'upload' | 'zip';
   preview?: string;
+  text?: string;
 };
 
 export type PreparedUploadFile = UploadedContextFile & {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowDown, CheckCircle2, GitMerge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +12,7 @@ type FlowRelationship = {
 
 export function Flowchart({ phases, activePhase, onSelectPhase }: { phases: any[], activePhase: string | null, onSelectPhase: (id: string) => void }) {
   const { t } = useTranslation();
+  const prefersReducedMotion = useReducedMotion();
 
   const getTargetPhases = (artifact: string) =>
     phases.filter((candidate) => candidate.input.includes(artifact)).map((candidate) => candidate.id);
@@ -100,13 +101,13 @@ export function Flowchart({ phases, activePhase, onSelectPhase }: { phases: any[
                 <div className="w-[2px] h-4 bg-border/80 relative overflow-hidden ml-4">
                   <motion.div
                     className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-primary/70 to-transparent opacity-70"
-                    animate={{ y: ['-120%', '120%'] }}
-                    transition={{ repeat: Infinity, duration: isFlowActive ? 1.25 : 1.7, ease: 'linear' }}
+                    animate={prefersReducedMotion ? undefined : { y: ['-120%', '120%'] }}
+                    transition={prefersReducedMotion ? undefined : { repeat: Infinity, duration: isFlowActive ? 1.25 : 1.7, ease: 'linear' }}
                   />
                   <motion.div
                     className="absolute left-1/2 top-0 h-3 w-1.5 -translate-x-1/2 rounded-full bg-primary/60 blur-[1px]"
-                    animate={{ y: ['-20%', '140%'], opacity: [0, 1, 0], scale: [0.8, 1.15, 0.8] }}
-                    transition={{ repeat: Infinity, duration: isFlowActive ? 1.35 : 1.8, ease: 'easeInOut' }}
+                    animate={prefersReducedMotion ? undefined : { y: ['-20%', '140%'], opacity: [0, 1, 0], scale: [0.8, 1.15, 0.8] }}
+                    transition={prefersReducedMotion ? undefined : { repeat: Infinity, duration: isFlowActive ? 1.35 : 1.8, ease: 'easeInOut' }}
                   />
                 </div>
 
@@ -117,8 +118,8 @@ export function Flowchart({ phases, activePhase, onSelectPhase }: { phases: any[
                 }`}>
                   <motion.div
                     className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-                    animate={{ x: ['-20%', '20%'], opacity: [0.35, 0.85, 0.35] }}
-                    transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+                    animate={prefersReducedMotion ? undefined : { x: ['-20%', '20%'], opacity: [0.35, 0.85, 0.35] }}
+                    transition={prefersReducedMotion ? undefined : { repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
                   />
 
                   <div className="mb-2 flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-primary/80">
@@ -155,8 +156,8 @@ export function Flowchart({ phases, activePhase, onSelectPhase }: { phases: any[
                                 ? 'bg-sky-500/80'
                                 : 'bg-muted-foreground/50'
                           }`}
-                          animate={{ scale: [1, 1.45, 1], opacity: [0.65, 1, 0.65] }}
-                          transition={{ repeat: Infinity, duration: 1.4, delay: flowIndex * 0.12, ease: 'easeInOut' }}
+                          animate={prefersReducedMotion ? undefined : { scale: [1, 1.45, 1], opacity: [0.65, 1, 0.65] }}
+                          transition={prefersReducedMotion ? undefined : { repeat: Infinity, duration: 1.4, delay: flowIndex * 0.12, ease: 'easeInOut' }}
                         />
                         <span className="relative z-10 truncate">{flow.label}</span>
                         <motion.div
@@ -167,8 +168,8 @@ export function Flowchart({ phases, activePhase, onSelectPhase }: { phases: any[
                                 ? 'bg-gradient-to-r from-transparent via-sky-400/20 to-transparent'
                                 : 'bg-gradient-to-r from-transparent via-white/10 to-transparent'
                           }`}
-                          animate={{ x: ['0%', '440%'] }}
-                          transition={{ repeat: Infinity, duration: 2.8, delay: flowIndex * 0.18, ease: 'easeInOut' }}
+                          animate={prefersReducedMotion ? undefined : { x: ['0%', '440%'] }}
+                          transition={prefersReducedMotion ? undefined : { repeat: Infinity, duration: 2.8, delay: flowIndex * 0.18, ease: 'easeInOut' }}
                         />
                       </motion.div>
                     ))}
@@ -178,13 +179,13 @@ export function Flowchart({ phases, activePhase, onSelectPhase }: { phases: any[
                 <div className="w-[2px] h-4 bg-border/80 relative overflow-hidden ml-4">
                   <motion.div
                     className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-primary/70 to-transparent opacity-70"
-                    animate={{ y: ['-120%', '120%'] }}
-                    transition={{ repeat: Infinity, duration: isFlowActive ? 1.25 : 1.7, ease: 'linear', delay: 0.45 }}
+                    animate={prefersReducedMotion ? undefined : { y: ['-120%', '120%'] }}
+                    transition={prefersReducedMotion ? undefined : { repeat: Infinity, duration: isFlowActive ? 1.25 : 1.7, ease: 'linear', delay: 0.45 }}
                   />
                   <motion.div
                     className="absolute left-1/2 top-0 h-3 w-1.5 -translate-x-1/2 rounded-full bg-primary/60 blur-[1px]"
-                    animate={{ y: ['-20%', '140%'], opacity: [0, 1, 0], scale: [0.8, 1.15, 0.8] }}
-                    transition={{ repeat: Infinity, duration: isFlowActive ? 1.35 : 1.8, ease: 'easeInOut', delay: 0.3 }}
+                    animate={prefersReducedMotion ? undefined : { y: ['-20%', '140%'], opacity: [0, 1, 0], scale: [0.8, 1.15, 0.8] }}
+                    transition={prefersReducedMotion ? undefined : { repeat: Infinity, duration: isFlowActive ? 1.35 : 1.8, ease: 'easeInOut', delay: 0.3 }}
                   />
                 </div>
               </div>
@@ -195,4 +196,3 @@ export function Flowchart({ phases, activePhase, onSelectPhase }: { phases: any[
     </div>
   );
 }
-

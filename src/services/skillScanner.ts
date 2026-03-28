@@ -1,5 +1,3 @@
-import { Type } from "@google/genai";
-
 export enum Severity {
   INFO = "info",
   LOW = "low",

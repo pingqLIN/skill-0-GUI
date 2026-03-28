@@ -184,10 +184,10 @@ export function SecurityMatrix({ data }: { data: any }) {
                 <div>
                   <h3 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
                     <AlertOctagon size={14} className="text-destructive/70" />
-                    Security Findings
+                    {t('securityMatrix.findingsPanelTitle')}
                   </h3>
                   <p className="mt-1 text-xs text-muted-foreground/80">
-                    Vulnerabilities detected by the context-aware security scanner
+                    {t('securityMatrix.findingsPanelDesc')}
                   </p>
                 </div>
                 <div className="flex items-center gap-4 text-[10px] font-mono uppercase tracking-widest">

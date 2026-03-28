@@ -20,6 +20,8 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
   const { globalMetrics, riskAssessment, threeClassification, phases } = data;
+  const manifest = data?.parserResult?.manifest ?? null;
+  const parserFindings = data?.parserResult?.analysis_findings ?? [];
 
   const radarData = [
     { subject: t('dashboard.radar.operability'), A: threeClassification.operability, fullMark: 100 },
@@ -90,6 +92,11 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
                     </div>
                     <span className="rounded-full border border-border/50 bg-background/70 px-2 py-1 text-[10px] font-mono text-muted-foreground backdrop-blur-lg">{riskAssessment.negativeIntent}</span>
                   </div>
+                  {manifest && (
+                    <p className="mt-3 text-xs leading-6 text-muted-foreground">
+                      {t('dashboard.parserSignals')}: {manifest.unresolved_references_count || 0} {t('dashboard.unresolved')} · {manifest.command_references_count || 0} {t('dashboard.commands')} · {parserFindings.length} {t('dashboard.findings')}
+                    </p>
+                  )}
                   <button onClick={() => onNavigatePhase(riskPhase)} className="mt-4 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground transition hover:text-primary">
                     {t('dashboard.phase')} {riskPhase} <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
                   </button>
@@ -106,6 +113,18 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
                       <span className="flex items-center gap-1.5 text-muted-foreground"><Zap size={12} /> {t('dashboard.granularity')}</span>
                       <span className="font-medium text-foreground">{threeClassification.granularity}</span>
                     </div>
+                    {manifest && (
+                      <>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-1.5 text-muted-foreground"><Layers size={12} /> {t('dashboard.analysisLevel')}</span>
+                          <span className="font-medium text-foreground">{manifest.analysis_level}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-1.5 text-muted-foreground"><Zap size={12} /> {t('dashboard.supportingRefs')}</span>
+                          <span className="font-medium text-foreground">{manifest.supporting_files_count || 0}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <button onClick={() => onNavigatePhase(classPhase)} className="mt-4 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground transition hover:text-primary">
                     {t('dashboard.phase')} {classPhase} <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
@@ -131,4 +150,3 @@ function MetricCard({ icon, label, value, isModified }: { icon: React.ReactNode;
     </div>
   );
 }
-

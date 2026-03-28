@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { X, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -6,12 +6,67 @@ import { useTranslation } from 'react-i18next';
 export function SideEditor({ config, onClose, onSave }: { config: any, onClose: () => void, onSave: (data: any) => void }) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<any>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const initialFieldRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
 
   useEffect(() => {
     if (config) {
       setFormData(JSON.parse(JSON.stringify(config.payload)));
     }
   }, [config]);
+
+  useEffect(() => {
+    if (!config) {
+      return;
+    }
+
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      initialFieldRef.current?.focus();
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !panelRef.current) {
+        return;
+      }
+
+      const focusableElements = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+
+      if (focusableElements.length === 0) {
+        return;
+      }
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey && activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', handleKeyDown);
+      previouslyFocusedRef.current?.focus();
+    };
+  }, [config, onClose]);
 
   if (!config || !formData) return null;
 
@@ -35,25 +90,34 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
+            aria-hidden="true"
             className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
           />
           <motion.div
+            ref={panelRef}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[400px] bg-card border-l border-border/60 shadow-2xl z-50 flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            className="fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[400px] flex-col border-l border-border/60 bg-card shadow-2xl"
           >
             <div className="flex items-center justify-between p-5 border-b border-border/50 bg-muted/10">
               <div>
-                <h2 className="font-semibold tracking-tight text-sm text-foreground">
+                <h2 id={titleId} className="font-semibold tracking-tight text-sm text-foreground">
                   {config.type === 'global' ? t('editor.editGlobal') : t('editor.editDecision')}
                 </h2>
                 <p className="text-[10px] text-muted-foreground/80 mt-1 uppercase tracking-widest">
                   {config.type === 'global' ? t('editor.globalDesc') : t('editor.decisionDesc')}
                 </p>
               </div>
-              <button onClick={onClose} className="p-1.5 hover:bg-muted/50 rounded-full text-muted-foreground/70 hover:text-foreground transition-colors">
+              <button
+                onClick={onClose}
+                aria-label={t('editor.close')}
+                className="p-1.5 hover:bg-muted/50 rounded-full text-muted-foreground/70 hover:text-foreground transition-colors"
+              >
                 <X size={16} />
               </button>
             </div>
@@ -64,6 +128,7 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
                   <div className="space-y-2">
                     <label className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">{t('editor.projectName')}</label>
                     <input 
+                      ref={initialFieldRef}
                       type="text" 
                       value={formData.projectName} 
                       onChange={(e) => handleChange('projectName', e.target.value)}
@@ -101,6 +166,7 @@ export function SideEditor({ config, onClose, onSave }: { config: any, onClose: 
                   <div className="space-y-2">
                     <label className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">{t('editor.question')}</label>
                     <input 
+                      ref={initialFieldRef}
                       type="text" 
                       value={formData.question} 
                       onChange={(e) => handleChange('question', e.target.value)}
