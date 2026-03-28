@@ -2,287 +2,316 @@
 
 Back to index: [README.md](./README.md)
 
-Related sources:
+Related chapters:
+- [08-development-status-risks-and-roadmap.md](./08-development-status-risks-and-roadmap.md)
 - [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 - [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
 - [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
-- `../skill-0-review-studio-mvp-plan.md`
-- `../skill-0-review-studio-mvp-plan2.md`
+
+Raw planning inputs reviewed for this chapter:
+- [../skill-0-review-studio-mvp-plan.md](../skill-0-review-studio-mvp-plan.md)
+- [../skill-0-review-studio-mvp-plan2.md](../skill-0-review-studio-mvp-plan2.md)
 
 ## 17.1 Purpose
 
-This document is the late-stage development plan for `skill-0-GUI` after reconciling:
+This chapter replaces ad hoc MVP notes with a realistic late-stage plan grounded in:
 
-- the original Review Studio MVP proposal
-- the second-round architectural review suggestions
-- the current execution baseline already recorded in Chapter 16
-- the still-open or recently remediated gaps in the main `skill-0` repository
+1. the current `skill-0-review-studio` implementation
+2. the current `skill-0` mainline state and open post-audit fixes
+3. the remaining gaps that still block a trustworthy review product
 
-The goal is not to reopen already-finished restoration work.
-The goal is to decide what should actually be built next so the GUI becomes a trustworthy reviewer-facing product.
+The key correction is strategic:
 
-## 17.2 What From The MVP Plans Is Still Valid
+- `Review Studio` should continue as a **review-first workbench**
+- it should **not** expand into a second independent parser product
+- late-stage work should prioritize **trust, reviewer workflow completion, and cross-repo contract clarity**
 
-The following ideas remain high-value and should still shape the product:
+## 17.2 Current Baseline
 
-1. `skill-0-GUI` should be a **review/edit/validation workstation**, not another parser.
-2. The MVP still needs a reviewer to answer five operational questions:
-   - can I open a skill?
-   - can I edit it?
-   - can I tell whether it broke?
-   - can I understand its structure?
-   - can I export the result?
-3. The best long-term product surface is still a **Review Workspace** with:
-   - source/context view
-   - structured editor
-   - raw JSON editor
-   - graph/flow view
-   - validation/test panel
-   - notes/diff/export surfaces
-4. Review intelligence should remain evidence-backed, not cosmetic telemetry.
-5. Parser mode clarity remains essential: canonical vs standalone behaviour must stay visible.
+What is already true in the working tree today:
 
-## 17.3 What Is Stale Or Already Closed
+- source-driven React/Vite authoring is restored
+- the parser bridge works in both canonical and standalone modes
+- the deployable runtime (`server.mjs`) exists and is test-backed
+- the main workspace, derived workflow, vector view, and security/review surfaces render from live parser output
+- export of a regenerated `.skill.md` exists
+- `npm run lint`, `npm test`, `npm run build`, `npm run docs:check`, `npm run verify:build-size`, and `npm run verify:public-build` are currently green
 
-The older MVP and review documents contain assumptions that are no longer current:
+What is also now true in `skill-0`:
 
-1. Source restoration is no longer the primary blocker.
-   - Chapter 16 already records that source-driven React/Vite authoring, Vitest setup, and runtime parity coverage are in place.
+- review attribution can no longer be forged from the dashboard client
+- scan HTML export now returns real HTML
+- production API bootstrap is being hardened so first-boot indexing is trustworthy
+- parsed corpus schema validation is now part of CI
 
-2. The schema baseline described in `skill-0-review-studio-mvp-plan2.md` is stale.
-   - It still references `schema/skill-decomposition.schema.json (v2.0.0)`.
-   - The active `skill-0` contract baseline is already `v2.4.0`.
+This matters because `Review Studio` should build on the newly hardened `skill-0` baseline, not on older assumptions from March 23-24 planning documents.
 
-3. “CI/CD pipeline missing” is no longer a correct top-level diagnosis.
-   - `skill-0` mainline already has CI, frontend build checks, Docker builds, rate limiting/auth tests, and parsed corpus validation work in flight or merged.
+## 17.3 What In The Raw MVP Plans Is Still Valid
 
-4. Rebuilding the UI from scratch is no longer the right default framing.
-   - The product now has a restored authoring surface.
-   - Remaining work is about reviewer trust, mode clarity, export quality, and targeted workflow completion.
+The strongest ideas from the raw MVP planning documents remain valid:
 
-## 17.4 External Dependency Reality
+1. load a skill and its source side-by-side
+2. edit both structured fields and raw JSON
+3. validate and test changes without leaving the workspace
+4. visualize structure and execution paths
+5. export reviewer-facing results
 
-`skill-0-GUI` is not fully independent. Its later phases depend on the health of `skill-0`.
+The architecture recommendations that still hold:
 
-Current upstream realities that matter:
+- keep Python/canonical parser concerns separated from the TypeScript review surface
+- use schema/shared contracts as the data boundary
+- treat complex-skill review as a staged capability, not a day-one assumption
+- keep standalone mode as a deployment and demo resilience layer
 
-1. `skill-0` has just completed a remediation batch for:
-   - reviewer attribution integrity
-   - scan HTML export correctness
-   - production API first-boot DB seeding
-   - parsed corpus validation in CI
-   - contributor/deployment document repair
+## 17.4 What Is Now Stale
 
-2. The highest remaining upstream improvement areas are:
-   - dashboard error states that still degrade into empty/zero-value success UI
-   - portable docs instead of absolute `/home/...` links
-   - cleanup of ambiguous dependency authority (`requirements.lock`)
-   - cleanup of tracked runtime artifacts / backup DB residue
+The older plans contain assumptions that are no longer the right near-term priorities:
 
-3. `skill-0-GUI` should avoid inventing parallel contracts.
-   - It should consume the live schema/governance/parser-mode semantics from `skill-0`, not restate or fork them casually.
+### No longer phase-gating
 
-## 17.5 Current Verified GUI Baseline
+- source restoration
+- initial Vitest setup
+- bridge-status basics
+- deployable server runtime existence
+- public-build profile existence
 
-The current repository state is already beyond “MVP bootstrap”:
+These are already complete enough to stop treating them as the main roadmap.
 
-- `npm run lint` passes
-- `npm test` passes with `14` test files and `31` tests
-- `npm run build` passes
-- `npm run docs:check` passes
-- `npm run verify:build-size` passes
-- `npm run verify:public-build` passes
+### Outdated technical assumptions
 
-Implication:
+- `skill-0-review-studio-mvp-plan2.md` still references schema `v2.0.0`
+- CI absence is no longer the primary issue
+- the next value is not “add any frontend visualizer”; the project already has a substantial workbench
 
-- later-phase planning must assume a working source-driven baseline already exists
-- the roadmap should optimize for reviewer trust and workflow completion, not source restoration
+### Not late-stage priorities
 
-## 17.6 Product Positioning For The Late Stage
+- building a new parser inside this repo
+- AI auto-rewrite
+- multi-user collaboration
+- PR automation
+- enterprise permissions
+- cloud sync
 
-The correct late-stage positioning is:
+Those remain deferred unless the product objective changes.
 
-**Skill-0 Review Studio = a reviewer-facing, evidence-aware workstation for validating, editing, testing, and exporting skill decomposition artifacts produced by the Skill-0 ecosystem.**
+## 17.5 Highest-Signal Remaining Gaps
 
-This implies:
+### A. Trustworthiness Of The Review Surface
 
-- not a replacement parser
-- not a pure visual demo shell
-- not an AI-autofix product in the current phase
-- not a full collaboration platform yet
+The main remaining product risk is not “missing UI”, but UI that can look more authoritative than the underlying evidence.
 
-## 17.7 Late-Stage Workstreams
+Concrete signs:
 
-### Workstream A. Trustworthy Review Surfaces
+- [../src/components/PhaseDetails.tsx](../src/components/PhaseDetails.tsx) still renders telemetry/reference sections that are explicitly described elsewhere as placeholder or not yet captured
+- [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md) already calls this out as the top unfinished priority
+
+Required outcome:
+
+- no panel, metric, or reference block should look like real evidence unless it is actually backed by parser output or runtime data
+
+### B. Reviewer Workflow Completion
+
+The workspace is strong as an analysis shell, but still incomplete as a full reviewer tool.
+
+Current strengths:
+
+- session-local editing exists
+- parser-mode/equivalence metadata is included in exported markdown
+- context files and bundles can be analyzed
+
+Remaining gaps:
+
+- no durable draft persistence
+- no explicit review report export separate from `.skill.md`
+- no element-level reviewer notes system
+- no robust before/after diff workflow for reviewer sign-off
+
+Primary files:
+
+- [../src/components/ReviewWorkspace.tsx](../src/components/ReviewWorkspace.tsx)
+- [../src/components/SideEditor.tsx](../src/components/SideEditor.tsx)
+- [../src/App.tsx](../src/App.tsx)
+
+### C. Cross-Repo Contract Clarity
+
+`Review Studio` is only trustworthy if its user-facing language stays aligned with `skill-0`.
+
+Required alignment areas:
+
+- parser mode
+- canonical vs standalone status
+- equivalence/fidelity wording
+- export/report disclaimers
+- schema/shared-doc versioning
+
+Primary files:
+
+- [../src/components/ReviewWorkspace.tsx](../src/components/ReviewWorkspace.tsx)
+- [./shared/02-mode-and-equivalence-contract.md](./shared/02-mode-and-equivalence-contract.md)
+- [./shared/03-shared-terminology.md](./shared/03-shared-terminology.md)
+
+### D. Performance And Product Profile Discipline
+
+The current build is acceptable, but the product still has an explicit split personality:
+
+- internal/full build with optional 3D workspace
+- public build without 3D
+
+This is workable, but it needs a firm product decision instead of drifting indefinitely.
+
+Observed baseline:
+
+- standard build passes, but still emits a very large async 3D vendor chunk
+- public build correctly excludes the 3D path
+
+Required decision:
+
+- either accept 3D as internal-only tooling
+- or spend a dedicated optimization pass to make it a mainstream product surface
+
+### E. Repo Hygiene And Planning Hygiene
+
+The GUI repo root still contains raw planning notes and backup-like files outside the curated docs set:
+
+- `skill-0-review-studio-mvp-plan.md`
+- `skill-0-review-studio-mvp-plan2.md`
+- `skill-0-review-studio-mvp-plan2.md.bak`
+- `Technical review and improvement suggestions.txt`
+
+These are useful inputs, but they should not remain as ambiguous top-level planning authorities once this chapter exists.
+
+## 17.6 Late-Stage Workstreams
+
+### Workstream 1: Trustworthy Review Surface
 
 Goal:
-- eliminate misleading or placeholder signals
-- make every visible conclusion traceable to parser mode and evidence
+
+- remove misleading authority signals from the UI
 
 Scope:
-- remove or relabel placeholder telemetry
-- expose parser mode, mode source, and fallback status in all review/export surfaces
-- require exported artifacts to state whether findings are canonical, standalone, compatible, or degraded
-- align warning copy with the evidence-based warning templates already present in the repo
 
-Why now:
-- this is the shortest path from “interesting UI” to “operator-trustworthy tool”
+- relabel or remove placeholder telemetry in `PhaseDetails`
+- ensure references are evidence-backed or explicitly marked as pending
+- tighten “review guidance” language wherever standalone mode is involved
 
-### Workstream B. Review Studio MVP Completion
+Acceptance:
+
+- no placeholder block remains visually equivalent to a real captured measurement
+- reviewer-facing evidence state is explicit everywhere
+
+### Workstream 2: Reviewer Workflow Completion
 
 Goal:
-- finish the minimum real reviewer workflow promised by the original MVP
+
+- turn the current analysis shell into a reviewer-complete MVP
 
 Scope:
-- source + parsed pair loading
-- structured editor + raw JSON editor coexistence
-- reviewer notes
-- JSON diff
-- validation panel
-- test panel
-- exportable review summary
 
-Clarification:
-- do not attempt PR automation, AI rewriting, or multi-user collaboration in this phase
+- export a dedicated review report, not only `.skill.md`
+- add reviewer notes model (global + element-level)
+- add meaningful diff presentation for sign-off
+- choose and implement one persistence mode:
+  - local draft persistence
+  - export/import draft bundle
+  - lightweight server-backed draft state
 
-### Workstream C. Parser Confidence And Contract Sync
+Acceptance:
+
+- a reviewer can annotate, compare, and export a review package without relying on memory or screenshots
+
+### Workstream 3: Skill-0 Contract Synchronization
 
 Goal:
-- make GUI outputs trustworthy across canonical and standalone paths
+
+- keep `Review Studio` semantically aligned with the engine repo
 
 Scope:
-- canonical vs standalone fixture comparison for representative skills
-- parser-mode visibility in UI and exports
-- documented divergence tolerance for standalone mode
-- schema/version sync against `skill-0` `v2.4.x`
-- shared type generation only if it reduces drift instead of creating a new maintenance burden
 
-### Workstream D. UI Reliability And Reviewer Ergonomics
+- consume the latest shared-doc contract after `skill-0` post-audit changes land
+- validate parser-mode and equivalence/fidelity language in exports
+- add fixture-based canonical vs standalone regression checks for representative skills
+
+Acceptance:
+
+- UI/export wording matches the shared contract
+- parity boundaries are test-backed and user-visible
+
+### Workstream 4: Product Profile Consolidation
 
 Goal:
-- complete the unfinished quality work that most directly affects reviewer confidence
+
+- formalize internal vs public deployment profiles
 
 Scope:
-- explicit loading / empty / error states
-- keyboard-safe navigation and focus handling
-- responsive safety for dense review surfaces
-- controlled visual token cleanup where it improves clarity
-- component tests for critical interactions
 
-Note:
-- this is not a full design-system rewrite
-- it is the minimum product-quality pass needed for daily reviewer use
+- keep public build no-3D by default
+- decide whether 3D remains internal-only or gets its own optimization budget
+- document the intended deployment matrix clearly in README and docs
 
-### Workstream E. Delivery, Docs, And Release Trust
+Acceptance:
+
+- there is no ambiguity about which build is supported for public review use
+
+### Workstream 5: Repo And Documentation Hygiene
 
 Goal:
-- make shipping and handoff predictable
+
+- reduce planning drift and root-level clutter
 
 Scope:
-- ensure current docs reflect the active execution baseline
-- keep verification commands authoritative and minimal
-- maintain build-size/public-build guarantees
-- document manual release and deployment steps clearly if CI automation is not the whole answer
 
-## 17.8 Recommended Execution Order
+- move raw MVP notes into an archive or reference folder
+- update the docs index to treat this chapter as the strategic plan
+- keep Chapter 16 as the shorter active execution brief
 
-Use this order for the next development cycle:
+Acceptance:
 
-1. **A1. Review-surface truthfulness**
-   - remove misleading placeholder telemetry
-   - annotate parser mode everywhere it matters
+- contributors see one clear strategic plan and one clear execution brief
 
-2. **C1. Parser confidence**
-   - add canonical vs standalone fixture comparisons
-   - define acceptable standalone divergence
+## 17.7 Execution Order
 
-3. **B1. MVP completion for reviewer workflow**
-   - notes, diff, validation/test surfaces, export summary
+Use this order for the next cycle:
 
-4. **D1. UI reliability**
-   - error states, keyboard/focus behaviour, responsive safety
+1. Trustworthy review surface
+2. Reviewer workflow completion
+3. Skill-0 contract synchronization
+4. Product profile consolidation
+5. Repo and planning hygiene
 
-5. **E1. Delivery/documentation cleanup**
-   - only after the reviewer workflow is stable
+## 17.8 Explicit Deferred Scope
 
-## 17.9 Issues That Should Not Be Reopened As Major Phases
+Do not expand into these areas during the late-stage cycle unless the product mandate changes:
 
-These were important earlier, but should no longer dominate planning:
+- new parser implementation in this repo
+- multi-user collaboration
+- PR automation
+- AI auto-editing
+- enterprise auth/permissions
+- cloud persistence platform work
 
-- “restore source-driven UI”
-- “introduce Vitest”
-- “make build source-derived”
-- “prove runtime parity exists at all”
+## 17.9 Verification Standard
 
-They are now maintenance concerns, not the main roadmap.
+Every substantial late-stage change should be checked with:
 
-## 17.10 Suggested Milestone Reframe
+```bash
+npm run lint
+npm test
+npm run build
+npm run verify:build-size
+npm run verify:public-build
+npm run docs:check
+node --check server.mjs
+node --check bridge/skill0Bridge.mjs
+```
 
-Reframe the next milestones as:
+If the change touches cross-repo mode contracts, also validate against the current `skill-0` shared docs and representative canonical fixtures.
 
-### M6. Review Truthfulness
+## 17.10 Strategic Conclusion
 
-Deliverables:
-- no fake telemetry
-- parser-mode labeling in live UI
-- parser-mode labeling in exports
+`Review Studio` is no longer in the phase where “restore the app” is the main question.
 
-### M7. Parser Confidence
+The late-stage question is now:
 
-Deliverables:
-- canonical vs standalone comparison fixtures
-- explicit fallback/degradation policy
+> Can this workspace become a trustworthy, reviewer-complete front-end for `skill-0`, without pretending to be a second parser or a prematurely overbuilt collaboration platform?
 
-### M8. Reviewer Workflow Completion
-
-Deliverables:
-- notes
-- diff
-- validation/test summary
-- exportable review packet
-
-### M9. Reliability Baseline
-
-Deliverables:
-- real error states
-- keyboard/focus safety
-- responsive protection
-- interaction tests
-
-### M10. Release Readiness
-
-Deliverables:
-- docs match implementation
-- verification checklist is authoritative
-- deployment/release path is explicit
-
-## 17.11 Immediate Backlog To Carry Forward
-
-The most actionable near-term backlog is:
-
-1. remove misleading placeholder telemetry from the current review workspace
-2. add parser-mode annotations to exports and summaries
-3. build canonical vs standalone fixture-comparison tests
-4. finish the notes/diff/export review packet flow
-5. add explicit query-error states across the review surfaces
-
-## 17.12 Stop-Loss Rules
-
-To prevent another over-broad planning cycle:
-
-1. do not open a “full rewrite” track unless current source architecture demonstrably blocks progress
-2. do not add collaboration/AI-autofix/cloud-sync scope before reviewer workflow completion
-3. do not fork schema or parser semantics away from `skill-0`
-4. if graph-first review intelligence proves too expensive, ship list-based evidence views first
-
-## 17.13 Definition Of Success
-
-This late-stage plan is successful when:
-
-- a reviewer can ingest a skill artifact pair
-- inspect it structurally
-- see trustworthy validation and parser-mode evidence
-- leave notes
-- compare changes
-- export a review packet
-- and do all of that without needing to guess whether the system is showing real or placeholder results
+This chapter sets the answer path: yes, but only if the project now prioritizes trust, workflow completion, and contract clarity over new breadth.
