@@ -130,6 +130,7 @@ describe('ReviewWorkspace', () => {
       <ReviewWorkspace
         data={sampleData}
         {...baseProps}
+        modifiedPaths={new Set(['projectName', 'riskAssessment.level', 'metrics'])}
         bridgeStatus={{ mode: 'skill-0', skill0Root: '/home/miles/dev2/skill-0' }}
         bridgeStatusError={null}
       />,
@@ -153,6 +154,11 @@ describe('ReviewWorkspace', () => {
     expect(packet.parserMode).toBe('skill-0');
     expect(packet.reviewState.reviewerName).toBe('Miles');
     expect(packet.reviewState.reviewStatus).toBe('approved');
+    expect(packet.reviewState.diffSummary.changed).toEqual(['projectName', 'riskAssessment.level']);
+    expect(packet.reviewState.diffSummary.stats.fieldsChanged).toBe(2);
+    expect(packet.validationEvidence.provenance.parserVersion).toBe('v1');
+    expect(packet.reviewChecklist.find((item: any) => item.id === 'bridge-mode')?.status).toBe('complete');
+    expect(packet.reviewChecklist.find((item: any) => item.id === 'schema-validation')?.status).toBe('blocked');
     expect(packet.reviewState.globalNotes[0].content).toContain('Ready for merge');
     expect(packet.reviewState.decisionLog[0].action).toBe('approved');
     expect(packet.reviewDecisionGuidance).toContain('canonical skill-0 bridge');

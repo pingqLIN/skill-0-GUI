@@ -397,10 +397,12 @@ export function ReviewWorkspace({
       bridgeMode: (bridgeStatus?.mode ?? 'unknown') as ReviewPacket['parserMode'],
       bridgeModeSource: bridgeModeDetail,
       equivalenceStatus: reviewEquivalenceStatus,
+      modifiedPaths,
       reviewDecisionGuidance,
       reviewMode,
       reviewState: buildReviewStateSnapshot(),
       skillDocument,
+      validationEvidence,
     });
     if (!reviewPacket) {
       return;
@@ -721,7 +723,13 @@ export function ReviewWorkspace({
                     <span className="font-medium text-foreground">{t('app.bridgeMode')}:</span> {bridgeModeLabel}
                   </p>
                   <p>
+                    <span className="font-medium text-foreground">{t('app.validationEvidence')}:</span> {validationStatusLabel}
+                  </p>
+                  <p>
                     <span className="font-medium text-foreground">{t('app.equivalenceStatus')}:</span> {reviewEquivalenceLabel}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.modifiedCount')}:</span> {modifiedPaths.size}
                   </p>
                   <p className="text-xs leading-5">{reviewerNotes.trim() || t('app.reviewNotesEmpty')}</p>
                 </div>

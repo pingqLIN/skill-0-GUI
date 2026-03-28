@@ -163,7 +163,16 @@ export type ReviewPacket = {
   reviewDecisionGuidance: string;
   operatorReminders: Array<Record<string, unknown>>;
   reviewState: ReviewState;
+  reviewChecklist: ReviewChecklistItem[];
+  validationEvidence: ValidationEvidence | null;
   skillDocument: SkillDocument | null;
+};
+
+export type ReviewChecklistItem = {
+  id: string;
+  label: string;
+  status: 'complete' | 'attention' | 'blocked';
+  detail: string;
 };
 
 export type ValidationIssue = {

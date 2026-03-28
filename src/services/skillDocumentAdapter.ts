@@ -3,7 +3,9 @@ import type {
   ConsistencyRun,
   DirectiveNode,
   ExecutionPath,
+  DiffSummary,
   ReviewPacket,
+  ReviewChecklistItem,
   ReviewState,
   RuleNode,
   SkillDocument,
@@ -94,6 +96,93 @@ function buildRuleDecisionNodes(rules: RuleNode[]) {
     rules: [rule.condition_expression || rule.description || 'evaluate condition'],
     threshold: rule.condition_expression || rule.returns || 'boolean',
   }));
+}
+
+function buildDiffSummaryFromModifiedPaths(modifiedPaths: Iterable<string> | undefined): DiffSummary | undefined {
+  if (!modifiedPaths) {
+    return undefined;
+  }
+
+  const changed = Array.from(modifiedPaths)
+    .filter((path): path is string => typeof path === 'string' && path !== 'metrics')
+    .sort();
+  if (changed.length === 0) {
+    return undefined;
+  }
+
+  return {
+    added: [],
+    changed,
+    removed: [],
+    stats: {
+      actionsAdded: 0,
+      actionsRemoved: 0,
+      directivesAdded: 0,
+      directivesRemoved: 0,
+      fieldsChanged: changed.length,
+      rulesAdded: 0,
+      rulesRemoved: 0,
+    },
+  };
+}
+
+function buildReviewChecklist(
+  bridgeMode: ReviewPacket['parserMode'],
+  bridgeModeSource: string,
+  reviewState: ReviewState,
+  validationEvidence: ValidationEvidence | null,
+): ReviewChecklistItem[] {
+  const validationErrors = validationEvidence?.validationRun.errors.filter((issue) => issue.severity === 'error').length ?? 0;
+  const validationWarnings = (validationEvidence?.validationRun.errors.filter((issue) => issue.severity === 'warning').length ?? 0)
+    + (validationEvidence?.evidenceWarnings.length ?? 0);
+  const consistencyErrors = validationEvidence?.consistencyRun.issues.filter((issue) => issue.severity === 'error').length ?? 0;
+  const consistencyWarnings = validationEvidence?.consistencyRun.issues.filter((issue) => issue.severity === 'warning').length ?? 0;
+  const notesCount = reviewState.globalNotes.length + reviewState.elementNotes.length;
+
+  return [
+    {
+      detail: bridgeMode === 'skill-0'
+        ? `Canonical skill-0 bridge confirmed via ${bridgeModeSource}.`
+        : bridgeMode === 'standalone'
+          ? `Standalone bridge active via ${bridgeModeSource}. Canonical rerun still recommended before final parity claims.`
+          : `Bridge mode is unverified. Source: ${bridgeModeSource}.`,
+      id: 'bridge-mode',
+      label: 'Bridge mode verified',
+      status: bridgeMode === 'skill-0' ? 'complete' : bridgeMode === 'standalone' ? 'attention' : 'blocked',
+    },
+    {
+      detail: !validationEvidence
+        ? 'No validation evidence was attached to this review packet.'
+        : validationErrors > 0
+          ? `${validationErrors} schema validation errors remain open.`
+          : validationWarnings > 0
+            ? `${validationWarnings} validation warnings require reviewer acknowledgement.`
+            : 'Schema validation signals are clean.',
+      id: 'schema-validation',
+      label: 'Schema validation reviewed',
+      status: !validationEvidence ? 'blocked' : validationErrors > 0 ? 'blocked' : validationWarnings > 0 ? 'attention' : 'complete',
+    },
+    {
+      detail: !validationEvidence
+        ? 'No consistency evidence was attached to this review packet.'
+        : consistencyErrors > 0
+          ? `${consistencyErrors} execution consistency errors remain open.`
+          : consistencyWarnings > 0
+            ? `${consistencyWarnings} consistency warnings require reviewer acknowledgement.`
+            : 'Execution-path and reference consistency checks are clean.',
+      id: 'consistency-review',
+      label: 'Consistency review completed',
+      status: !validationEvidence ? 'blocked' : consistencyErrors > 0 ? 'blocked' : consistencyWarnings > 0 ? 'attention' : 'complete',
+    },
+    {
+      detail: reviewState.reviewStatus === 'draft'
+        ? 'Reviewer decision is still draft.'
+        : `${reviewState.reviewStatus} recorded with ${notesCount} notes attached.`,
+      id: 'review-decision',
+      label: 'Reviewer decision recorded',
+      status: reviewState.reviewStatus === 'draft' ? 'attention' : 'complete',
+    },
+  ];
 }
 
 export function buildReviewDataFromSkillDocument(
@@ -308,6 +397,8 @@ export function buildReviewPacketFromReviewData(
     reviewMode: string;
     reviewState: ReviewState;
     skillDocument?: SkillDocument | null;
+    modifiedPaths?: Iterable<string>;
+    validationEvidence?: ValidationEvidence | null;
   },
 ): ReviewPacket | null {
   if (!isRecord(data)) {
@@ -325,6 +416,13 @@ export function buildReviewPacketFromReviewData(
   const operatorReminders = Array.isArray(reviewerSummary?.operatorReminders)
     ? reviewerSummary.operatorReminders.filter((item): item is Record<string, unknown> => isRecord(item))
     : [];
+  const validationEvidence = options.validationEvidence ?? buildValidationEvidenceFromReviewData(data, {
+    reviewMode: options.reviewMode,
+  });
+  const diffSummary = options.reviewState.diffSummary ?? buildDiffSummaryFromModifiedPaths(options.modifiedPaths);
+  const reviewState = diffSummary
+    ? { ...options.reviewState, diffSummary }
+    : options.reviewState;
 
   return {
     equivalenceStatus: options.equivalenceStatus,
@@ -335,8 +433,10 @@ export function buildReviewPacketFromReviewData(
     projectId,
     projectName,
     reviewDecisionGuidance: options.reviewDecisionGuidance,
+    reviewChecklist: buildReviewChecklist(options.bridgeMode, options.bridgeModeSource, reviewState, validationEvidence),
     reviewMode: options.reviewMode,
-    reviewState: options.reviewState,
+    reviewState,
+    validationEvidence,
     skillDocument,
   };
 }
