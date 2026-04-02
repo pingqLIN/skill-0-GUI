@@ -1,6 +1,6 @@
 # 18. MVP Execution Plan (2026-03-28)
 
-This note converts the local planning draft `../skill-0-review-studio-mvp-plan.md` into a repository-grounded execution order for `skill-0-GUI`.
+This note converts the archived planning draft `./archive/local-planning/skill-0-review-studio-mvp-plan.md` into a repository-grounded execution order for `skill-0-GUI`.
 
 ## 18.1 Positioning
 

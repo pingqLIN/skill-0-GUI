@@ -10,8 +10,8 @@ Related chapters:
 
 Raw planning inputs reviewed for this chapter:
 
-- local MVP planning note: `skill-0-review-studio-mvp-plan.md`
-- local technical review note: `skill-0-review-studio-mvp-plan2.md`
+- archived MVP planning note: `docs/archive/local-planning/skill-0-review-studio-mvp-plan.md`
+- archived technical review note: `docs/archive/local-planning/skill-0-review-studio-mvp-plan2.md`
 
 ## 17.1 Purpose
 
@@ -172,14 +172,13 @@ Required decision:
 
 ### E. Repo Hygiene And Planning Hygiene
 
-The GUI repo root still contains raw planning notes and backup-like files outside the curated docs set:
+The raw planning notes remain useful reference material, but they should live under a curated archive instead of the repo root:
 
-- `skill-0-review-studio-mvp-plan.md`
-- `skill-0-review-studio-mvp-plan2.md`
-- `skill-0-review-studio-mvp-plan2.md.bak`
-- `Technical review and improvement suggestions.txt`
+- `docs/archive/local-planning/skill-0-review-studio-mvp-plan.md`
+- `docs/archive/local-planning/skill-0-review-studio-mvp-plan2.md`
+- `docs/archive/local-planning/Technical review and improvement suggestions.txt`
 
-These are useful inputs, but they should not remain as ambiguous top-level planning authorities once this chapter exists.
+Backup-like files and Windows metadata artifacts should stay out of the working tree or be archived outside the repository.
 
 ## 17.6 Late-Stage Workstreams
 

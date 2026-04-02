@@ -1,0 +1,59 @@
+### 1. 技術架構深度審查版 (Deep Technical Architecture Review)
+
+**架構亮點：**
+
+- **三元分類系統 (Ternary Classification System)：** 將 LLM 任務拆解為 `Action`（操作）、`Rule`（驗證）、`Directive`（指引）是非常優雅的設計。這為非確定性的 LLM 輸出帶來了確定性的控制框架。
+- **Schema 驅動設計：** 依賴 `schema/skill-decomposition.schema.json` (v2.0.0) 能有效確保資料的結構化，這對於後續的向量搜尋（Vector Search）與自動化解析至關重要。
+- **語言技術棧合理性：** Python (83.4%) 處理 LLM 推理、向量檢索與資料解析 (`tools/batch_parse.py`)；TypeScript (15%) 處理前端視覺化或強型別的 API 服務，符合主流 AI Agent 開發架構。
+
+**潛在架構隱患與建議：**
+
+- **狀態與副作用管理 (Side-effects Management)：** 文件中提到 Actions 具有 `side_effects` 和 `mutable_elements`。在複雜的 `execution_paths` 中，若某一環節失敗，缺乏整體的「狀態回滾 (Rollback)」或「補償機制 (Compensation)」架構定義。
+- **Context Window 瓶頸：** 雖然文件提到了 Token Budget 管理，但架構層面應引入更動態的 Context 裁剪機制（如 RAG 排序截斷），而非僅依賴手動的精簡描述。
+- **執行引擎耦合度：** `execution_paths` 採用陣列循序定義，這限制了「平行執行 (Parallel Execution)」與「條件分支 (Conditional Branching)」的能力。建議架構上引入 DAG (有向無環圖) 任務調度引擎。
+
+* * *
+
+### 2. 程式碼品質/測試品質審查版 (Code & Test Quality Review)
+
+**針對 Python & TypeScript 混合專案的品質建議：**
+
+- **型別安全同步 (Type Safety Sync)：** 專案核心是 JSON Schema，強烈建議在 CI 階段加入工具（如 `datamodel-code-generator` 對 Python，`json-schema-to-typescript` 對 TS），自動從 JSON Schema 產生 Pydantic 模型��� TS Interfaces，避免兩端資料結構脫勾。
+- **非確定性測試 (Testing Non-deterministic LLM Actions)：**
+    - 對於 `deterministic: true` 的操作，必須達到 90%+ 的單元測試覆蓋率。
+    - 對於 `llm_inference` 操作，應建立「評估資料集 (Evaluation Dataset)」，使用斷言其輸出格式（Schema 驗證）與語意相似度，而非單純的字串比對。
+- **錯誤處理與合規性檢驗：** Rule 元件 (`condition_type`) 若驗證失敗，目前的設計文件未明確定義 Error Bubble-up 機制。程式碼中應有統一的 Exception 繼承體系，區分 `ValidationFailed`、`LLMTimeout`、`ParsingError` 等。
+
+* * *
+
+### 3. 產品定位與 roadmap 建議版 (Product Positioning & Roadmap)
+
+**產品定位：** `skill-0` 不僅是一個「General classification program」，它本質上是一個 **「LLM 技能編排與微觀控制引擎 (LLM Skill Orchestration & Micro-control Engine)」**。它的價值在於讓大語言模型的行為具備高度的「可解釋性」與「可測試性」。
+
+**Roadmap 建議 (三階段)：**
+
+- **Phase 1: 穩定基盤與標準化 (Q2-Q3)**
+    - 完善 Python 核心引擎，支援完整的 Action/Rule/Directive 解析與執行。
+    - 建立標準庫：內建常用的 `io_read`、`existence_check` 等泛用元件，減少重複造輪子。
+- **Phase 2: 視覺化與除錯體驗 (Q4)**
+    - 利用 TypeScript (15%) 開發一個視覺化介面（VS Code Extension 或 Web UI），允許開發者以拖拉節點的方式組合 `execution_paths`。
+    - 實作 Token 消耗與執行路徑的 Trace Dashboard。
+- **Phase 3: 向量檢索與自動編排 (Next Year)**
+    - 深化與 Vector Search 的整合，實現 **Auto-Routing**：當使用者給出模糊指令時，系統能透過向量檢索自動動態組裝最佳的 `execution_paths`。
+
+* * *
+
+### 4. 用 Maintainer 視角列出 10 個最該改進的點
+
+���果我是這個專案的 Maintainer，為確保專案能長期維護並接受開源貢獻，我會優先解決以下 10 個痛點：
+
+1. **缺乏自動化的 Schema 驗證 CI：** 必須在 GitHub Actions 加上 PR 檢查，任何對 JSON skill 定義的修改都必須通過 `schema/skill-decomposition.schema.json` 驗證。
+2. **型別定義冗餘：** Python 和 TypeScript 兩邊不要手寫型別，改為「Schema Driven Development」，由單一來源自動生成兩端的 Type/Interface。
+3. **LLM 呼叫缺乏統一的 Mock 框架：** 貢獻者在本地跑測試時不應該真實消耗 API Token，需要實作一個易用的 VCR (記錄與重播) 或 Mock 攔截機制。
+4. **`execution_paths` 表達力不足：** 目前只是單純的序列 (`sequence: ["a_001", "r_001"]`)，如果 `r_001` (Rule) 驗證失敗怎麼辦？需要支援簡單的控制流（如 `on_failure`, `retry_count`）。
+5. **文件與範例庫 (Examples) 不足：** 提供一個 `/examples` 資料夾，放置從簡單到複雜的完整業務情境（例如：發票解析、程式碼審查），幫助新手快速理解三元系統的威力。
+6. **`side_effects` 只有文字描述：** 目前 `["memory_allocation"]` 只是字串，難以被程式化追蹤。應考慮將副作用定義為列舉值 (Enum) 以便引擎進行資源回收或狀態清理。
+7. **Token Budget 缺乏動態監控：** `tools/batch_parse.py` 等批次工具執行時，如果遇到過大的文件容易 OOM 或超出 Rate Limit，需要加入動態的 Token 攔截與 Backoff (退避) 演算法。
+8. **Directive 的邊界過於模糊：** `Directive` 很容易淪為垃圾桶，把所有無法分類的 Prompt 都丟進去。需要制定更嚴格的 Linter 規則來限制其長度與格式。
+9. **Python 依賴管理未見標準化：** 確認專案是使用 Poetry, uv 還是 pipenv？身為底層引擎工具，依賴管理必須極度嚴謹以避免衝突。
+10. **Vector Search 的 Indexing 策略未明確：** 說明文件中提到了向量搜尋，但在 codebase 變更時，如何確保 JSON 的語意與 Vector DB 中的 Embedding 保持同步？需要一個專門的 Migration 工具。

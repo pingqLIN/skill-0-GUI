@@ -4,6 +4,8 @@ dist/
 coverage/
 .DS_Store
 *.log
+.codex
+*.bak
 .env*
 !.env.example
 *:Zone.Identifier
