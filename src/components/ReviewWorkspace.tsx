@@ -16,12 +16,26 @@ import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
 import { extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
 import { checkSkillDocumentConsistency } from '../services/skillDocumentConsistency';
+import { buildSkillDocumentDiffSummary } from '../services/reviewDiffService';
+import {
+  createConsistencyRun,
+  createPathTestRun,
+  createValidationRun,
+} from '../services/skillDocumentTestRunner';
 import {
   resolveConsistencyIssueFieldPath,
   resolveValidationIssueFieldPath,
 } from '../services/skillDocumentIssueNavigation';
 import { validateSkillDocument } from '../services/skillDocumentValidation';
 import type { UploadedContextFile } from '../types/intake';
+import type {
+  ConsistencyRun,
+  DiffSummary,
+  ElementReviewNote,
+  PathTestRun,
+  ReviewNote,
+  ValidationRun,
+} from '../types/skillDocument';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
 
 const Dashboard = lazy(() => import('./Dashboard').then((module) => ({ default: module.Dashboard })));
@@ -33,6 +47,7 @@ const DecompositionBoard = lazy(() => import('./DecompositionBoard').then((modul
 
 type ReviewWorkspaceProps = {
   data: any;
+  originalData: any | null;
   darkMode: boolean;
   modifiedPaths: Set<string>;
   supportFiles: UploadedContextFile[];
@@ -49,6 +64,7 @@ type ReviewWorkspaceProps = {
 
 export function ReviewWorkspace({
   data,
+  originalData,
   darkMode,
   modifiedPaths,
   supportFiles,
@@ -69,6 +85,13 @@ export function ReviewWorkspace({
   const [isDerivedWorkflowOpen, setIsDerivedWorkflowOpen] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [editorConfig, setEditorConfig] = useState<EditorConfig>(null);
+  const [validationRuns, setValidationRuns] = useState<ValidationRun[]>([]);
+  const [consistencyRuns, setConsistencyRuns] = useState<ConsistencyRun[]>([]);
+  const [pathTestRuns, setPathTestRuns] = useState<PathTestRun[]>([]);
+  const [globalNotes, setGlobalNotes] = useState<ReviewNote[]>([]);
+  const [elementNotes, setElementNotes] = useState<ElementReviewNote[]>([]);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [noteTarget, setNoteTarget] = useState('global');
 
   const parserActions = data?.parserResult?.decomposition?.actions ?? [];
   const parserRules = data?.parserResult?.decomposition?.rules ?? [];
@@ -121,6 +144,10 @@ export function ReviewWorkspace({
       ? t('app.bridgeGuidanceStandalone')
       : t('app.bridgeGuidanceUnavailable');
   const skillDocument = extractSkillDocumentFromReviewData(data);
+  const originalSkillDocument = originalData ? extractSkillDocumentFromReviewData(originalData) : null;
+  const diffSummary: DiffSummary | null = skillDocument && originalSkillDocument
+    ? buildSkillDocumentDiffSummary(originalSkillDocument, skillDocument)
+    : null;
   const validationResult = skillDocument ? validateSkillDocument(skillDocument) : null;
   const validationIssues = validationResult?.issues ?? [];
   const validationErrors = validationIssues.filter((issue) => issue.severity === 'error');
@@ -129,6 +156,83 @@ export function ReviewWorkspace({
   const consistencyIssues = consistencyResult?.issues ?? [];
   const consistencyErrors = consistencyIssues.filter((issue) => issue.severity === 'error');
   const consistencyWarnings = consistencyIssues.filter((issue) => issue.severity === 'warning');
+  const noteTargets = [
+    { label: t('app.noteTargetGlobal'), value: 'global' },
+    ...skillDocument.decomposition.actions.map((action) => ({
+      label: `${t('app.noteTargetAction')} · ${action.id} · ${action.name}`,
+      value: `action:${action.id}`,
+    })),
+    ...skillDocument.decomposition.rules.map((rule) => ({
+      label: `${t('app.noteTargetRule')} · ${rule.id} · ${rule.name}`,
+      value: `rule:${rule.id}`,
+    })),
+    ...skillDocument.decomposition.directives.map((directive) => ({
+      label: `${t('app.noteTargetDirective')} · ${directive.id} · ${directive.name}`,
+      value: `directive:${directive.id}`,
+    })),
+  ];
+  const latestValidationRun = validationRuns[0] ?? null;
+  const latestConsistencyRun = consistencyRuns[0] ?? null;
+  const latestPathTestRun = pathTestRuns[0] ?? null;
+  const addValidationRun = () => {
+    if (!skillDocument) {
+      return;
+    }
+
+    setValidationRuns((current) => [createValidationRun(skillDocument), ...current].slice(0, 6));
+  };
+  const addConsistencyRun = () => {
+    if (!skillDocument) {
+      return;
+    }
+
+    setConsistencyRuns((current) => [createConsistencyRun(skillDocument), ...current].slice(0, 6));
+  };
+  const addPathTestRun = () => {
+    if (!skillDocument) {
+      return;
+    }
+
+    setPathTestRuns((current) => [createPathTestRun(skillDocument), ...current].slice(0, 6));
+  };
+  const addReviewNote = () => {
+    const content = noteDraft.trim();
+    if (!content) {
+      return;
+    }
+
+    const createdAt = new Date().toISOString();
+    if (noteTarget === 'global') {
+      setGlobalNotes((current) => [
+        {
+          author: 'Reviewer',
+          content,
+          createdAt,
+          id: `note-${createdAt}`,
+          severity: 'info',
+        },
+        ...current,
+      ]);
+    } else {
+      const [elementType, elementId] = noteTarget.split(':');
+      if (elementType && elementId && (elementType === 'action' || elementType === 'rule' || elementType === 'directive')) {
+        setElementNotes((current) => [
+          {
+            author: 'Reviewer',
+            content,
+            createdAt,
+            elementId,
+            elementType,
+            id: `element-note-${createdAt}`,
+            status: 'open',
+          },
+          ...current,
+        ]);
+      }
+    }
+
+    setNoteDraft('');
+  };
   const openSkillDocumentEditor = (focusPath?: string) => {
     if (!skillDocument) {
       return;
@@ -431,15 +535,6 @@ export function ReviewWorkspace({
                       )}
                       {skillDocument && (
                         <button
-                          onClick={() => setEditorConfig({ type: 'skillDocument', payload: skillDocument })}
-                          className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
-                        >
-                          <span>{t('app.openStructuredEditor')}</span>
-                          <Edit2 size={14} className="text-muted-foreground" />
-                        </button>
-                      )}
-                      {skillDocument && (
-                        <button
                           onClick={() => setEditorConfig({ type: 'json', payload: skillDocument })}
                           className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
                         >
@@ -640,8 +735,8 @@ export function ReviewWorkspace({
                   <div className="space-y-6">
                     <FlowStepper phases={data.phases} activePhase={activePhase} onSelectPhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} />
 
-                    <div className="grid gap-6 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]">
-                      <div className="glass-panel min-h-[640px] px-3 py-4 sm:px-4">
+	                    <div className="grid gap-6 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]">
+	                      <div className="glass-panel px-3 py-4 sm:px-4 xl:min-h-[640px]">
                         <div className="flex items-center justify-between px-3 pb-2">
                           <div>
                             <p className="editorial-kicker">{t('flowchart.pipeline')}</p>
@@ -651,29 +746,29 @@ export function ReviewWorkspace({
                             {activePhase ?? '--'}
                           </span>
                         </div>
-                        <div className="custom-scrollbar max-h-[70vh] overflow-y-auto pr-1">
-                          <Flowchart phases={data.phases} activePhase={activePhase} onSelectPhase={setActivePhase} />
-                        </div>
-                      </div>
+	                        <div className="custom-scrollbar pr-1 xl:max-h-[70vh] xl:overflow-y-auto">
+	                          <Flowchart phases={data.phases} activePhase={activePhase} onSelectPhase={setActivePhase} />
+	                        </div>
+	                      </div>
 
-                      <div className="min-h-[640px]">
-                        {activePhaseData ? (
-                          <Suspense fallback={<PanelFallback heightClassName="min-h-[640px]" />}>
-                            <PhaseDetails
-                              phase={activePhaseData}
-                              allPhases={data.phases}
+	                      <div className="xl:min-h-[640px]">
+	                        {activePhaseData ? (
+	                          <Suspense fallback={<PanelFallback heightClassName="xl:min-h-[640px]" />}>
+	                            <PhaseDetails
+	                              phase={activePhaseData}
+	                              allPhases={data.phases}
                               onNavigatePhase={setActivePhase}
                               onClose={() => setActivePhase(null)}
                               onEditPhase={(phaseData) => setEditorConfig({ type: 'phase', payload: phaseData, phaseId: phaseData.id })}
                               onEditDecision={(node) => setEditorConfig({ type: 'decision', payload: node, phaseId: activePhaseData.id })}
                               modifiedPaths={modifiedPaths}
-                            />
-                          </Suspense>
-                        ) : (
-                          <div className="glass-panel flex min-h-[640px] items-center justify-center p-10 text-center">
-                            <div className="max-w-sm space-y-3">
-                              <p className="editorial-kicker">{t('app.detailsPanel')}</p>
-                              <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('app.noActivePhase')}</h3>
+	                            />
+	                          </Suspense>
+	                        ) : (
+	                          <div className="glass-panel flex items-center justify-center p-10 text-center xl:min-h-[640px]">
+	                            <div className="max-w-sm space-y-3">
+	                              <p className="editorial-kicker">{t('app.detailsPanel')}</p>
+	                              <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('app.noActivePhase')}</h3>
                               <p className="text-sm leading-6 text-muted-foreground">{t('app.selectPhaseHint')}</p>
                             </div>
                           </div>
@@ -838,6 +933,178 @@ export function ReviewWorkspace({
                   {t('app.consistencyUnavailable')}
                 </div>
               )}
+            </InsightBlock>
+
+            <InsightBlock
+              kicker={t('app.detailsPanel')}
+              title={t('app.reviewerNotes')}
+              summary={globalNotes.length + elementNotes.length > 0 ? `${globalNotes.length + elementNotes.length} ${t('app.notesCount')}` : t('app.reviewerNotesIdleShort')}
+              defaultOpen
+            >
+              <div className="space-y-3">
+                <select
+                  value={noteTarget}
+                  onChange={(event) => setNoteTarget(event.target.value)}
+                  className="w-full rounded-[1.1rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                >
+                  {noteTargets.map((target) => (
+                    <option key={target.value} value={target.value}>
+                      {target.label}
+                    </option>
+                  ))}
+                </select>
+                <textarea
+                  value={noteDraft}
+                  onChange={(event) => setNoteDraft(event.target.value)}
+                  placeholder={t('app.reviewerNotesPlaceholder')}
+                  className="min-h-28 w-full resize-none rounded-[1.2rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
+                />
+                <button
+                  type="button"
+                  onClick={addReviewNote}
+                  disabled={!noteDraft.trim()}
+                  className="w-full rounded-[1.1rem] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/92 disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  {t('app.addReviewerNote')}
+                </button>
+
+                {(globalNotes.length > 0 || elementNotes.length > 0) ? (
+                  <div className="space-y-2">
+                    {globalNotes.map((note) => (
+                      <div key={note.id}>
+                        <NoteCard
+                          label={t('app.noteTargetGlobal')}
+                          timestamp={note.createdAt}
+                          content={note.content}
+                        />
+                      </div>
+                    ))}
+                    {elementNotes.map((note) => (
+                      <div key={note.id}>
+                        <NoteCard
+                          label={`${t(`app.noteTarget${capitalizeNoteType(note.elementType)}`)} · ${note.elementId}`}
+                          timestamp={note.createdAt}
+                          content={note.content}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    {t('app.reviewerNotesIdle')}
+                  </div>
+                )}
+              </div>
+            </InsightBlock>
+
+            <InsightBlock
+              kicker={t('app.detailsPanel')}
+              title={t('app.diffSummary')}
+              summary={diffSummary ? summarizeDiffSummary(t, diffSummary) : t('app.diffSummaryUnavailable')}
+              defaultOpen
+            >
+              {diffSummary ? (
+                <div className="space-y-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <MiniMetric label={t('app.diffAdded')} value={String(diffSummary.added.length)} highlight={diffSummary.added.length > 0} />
+                    <MiniMetric label={t('app.diffRemoved')} value={String(diffSummary.removed.length)} highlight={diffSummary.removed.length > 0} />
+                    <MiniMetric label={t('app.diffChanged')} value={String(diffSummary.changed.length)} highlight={diffSummary.changed.length > 0} />
+                    <MiniMetric label={t('app.diffFieldsChanged')} value={String(diffSummary.stats.fieldsChanged)} highlight={diffSummary.stats.fieldsChanged > 0} />
+                  </div>
+                  <DiffList title={t('app.diffAdded')} items={diffSummary.added} emptyLabel={t('app.diffNone')} />
+                  <DiffList title={t('app.diffRemoved')} items={diffSummary.removed} emptyLabel={t('app.diffNone')} />
+                  <DiffList title={t('app.diffChanged')} items={diffSummary.changed} emptyLabel={t('app.diffNone')} />
+                </div>
+              ) : (
+                <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                  {t('app.diffSummaryUnavailable')}
+                </div>
+              )}
+            </InsightBlock>
+
+            <InsightBlock
+              kicker={t('app.detailsPanel')}
+              title={t('app.reviewerTests')}
+              summary={summarizeTestPanel(t, latestValidationRun, latestConsistencyRun, latestPathTestRun)}
+              accent={
+                latestValidationRun?.status === 'failed' || latestConsistencyRun?.status === 'failed' || latestPathTestRun?.status === 'failed'
+                  ? 'rose'
+                  : latestValidationRun || latestConsistencyRun || latestPathTestRun
+                    ? 'emerald'
+                    : 'default'
+              }
+              defaultOpen
+            >
+              <div className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={addValidationRun}
+                    disabled={!skillDocument}
+                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                      {t('app.reviewerTests')}
+                    </div>
+                    <div className="mt-2 font-medium">{t('app.runValidation')}</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addConsistencyRun}
+                    disabled={!skillDocument}
+                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                      {t('app.reviewerTests')}
+                    </div>
+                    <div className="mt-2 font-medium">{t('app.runConsistency')}</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addPathTestRun}
+                    disabled={!skillDocument}
+                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                      {t('app.reviewerTests')}
+                    </div>
+                    <div className="mt-2 font-medium">{t('app.runPathWalk')}</div>
+                  </button>
+                </div>
+
+                {(latestValidationRun || latestConsistencyRun || latestPathTestRun) ? (
+                  <div className="space-y-2">
+                    {latestValidationRun && (
+                      <RunCard
+                        label={t('app.runValidation')}
+                        status={latestValidationRun.status}
+                        timestamp={latestValidationRun.finishedAt || latestValidationRun.startedAt}
+                        summary={`${latestValidationRun.errors.length} ${t('app.validationErrors')} · ${(latestValidationRun.warnings ?? []).length} ${t('app.validationWarnings')}`}
+                      />
+                    )}
+                    {latestConsistencyRun && (
+                      <RunCard
+                        label={t('app.runConsistency')}
+                        status={latestConsistencyRun.status}
+                        timestamp={latestConsistencyRun.finishedAt || latestConsistencyRun.startedAt}
+                        summary={`${latestConsistencyRun.issues.length} ${t('app.consistencyErrors')} · ${(latestConsistencyRun.warnings ?? []).length} ${t('app.consistencyWarnings')}`}
+                      />
+                    )}
+                    {latestPathTestRun && (
+                      <RunCard
+                        label={t('app.runPathWalk')}
+                        status={latestPathTestRun.status}
+                        timestamp={latestPathTestRun.finishedAt || latestPathTestRun.startedAt}
+                        summary={latestPathTestRun.message || ((latestPathTestRun.actualPath ?? []).join(' -> ') || t('app.pathWalkIdle'))}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    {t('app.reviewerTestsIdle')}
+                  </div>
+                )}
+              </div>
             </InsightBlock>
 
             <InsightBlock
@@ -1069,12 +1336,136 @@ function MiniMetric({ label, value, highlight = false }: { label: string; value:
   );
 }
 
+function RunCard({
+  label,
+  status,
+  timestamp,
+  summary,
+}: {
+  label: string;
+  status: 'running' | 'passed' | 'failed';
+  timestamp: string;
+  summary: string;
+}) {
+  return (
+    <div className={`rounded-[1.25rem] border px-4 py-3 backdrop-blur-xl ${runStatusClassName(status)}`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${runStatusBadgeClassName(status)}`}>
+          {status}
+        </span>
+      </div>
+      <p className="mt-2 text-xs font-mono text-muted-foreground">{formatRunTimestamp(timestamp)}</p>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{summary}</p>
+    </div>
+  );
+}
+
+function NoteCard({
+  label,
+  timestamp,
+  content,
+}: {
+  label: string;
+  timestamp: string;
+  content: string;
+}) {
+  return (
+    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className="text-[11px] font-mono text-muted-foreground">{formatRunTimestamp(timestamp)}</span>
+      </div>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{content}</p>
+    </div>
+  );
+}
+
+function DiffList({ title, items, emptyLabel }: { title: string; items: string[]; emptyLabel: string }) {
+  return (
+    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 backdrop-blur-xl">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{title}</div>
+      {items.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {items.map((item) => (
+            <span key={`${title}-${item}`} className="rounded-full border border-border/50 bg-white/70 px-3 py-1 text-[11px] text-foreground">
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{emptyLabel}</p>
+      )}
+    </div>
+  );
+}
+
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB'];
   const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / (1024 ** exponent);
   return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
+function formatRunTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
+}
+
+function runStatusClassName(status: 'running' | 'passed' | 'failed') {
+  if (status === 'failed') {
+    return 'border-destructive/20 bg-destructive/8';
+  }
+  if (status === 'passed') {
+    return 'border-emerald-500/20 bg-emerald-500/8';
+  }
+  return 'border-border/55 bg-background/72';
+}
+
+function runStatusBadgeClassName(status: 'running' | 'passed' | 'failed') {
+  if (status === 'failed') {
+    return 'bg-destructive/12 text-destructive';
+  }
+  if (status === 'passed') {
+    return 'bg-emerald-500/12 text-emerald-700';
+  }
+  return 'bg-background/70 text-muted-foreground';
+}
+
+function summarizeTestPanel(
+  t: (key: string) => string,
+  validationRun: ValidationRun | null,
+  consistencyRun: ConsistencyRun | null,
+  pathRun: PathTestRun | null,
+) {
+  const statuses = [validationRun?.status, consistencyRun?.status, pathRun?.status].filter(Boolean);
+  if (statuses.length === 0) {
+    return t('app.reviewerTestsIdleShort');
+  }
+
+  if (statuses.includes('failed')) {
+    return t('app.reviewerTestsFailed');
+  }
+
+  if (statuses.every((status) => status === 'passed')) {
+    return t('app.reviewerTestsPassed');
+  }
+
+  return t('app.reviewerTestsMixed');
+}
+
+function summarizeDiffSummary(t: (key: string) => string, diffSummary: DiffSummary) {
+  const totalChanges = diffSummary.added.length + diffSummary.removed.length + diffSummary.changed.length;
+  return totalChanges > 0 ? `${totalChanges} ${t('app.diffEntries')}` : t('app.diffNone');
+}
+
+function capitalizeNoteType(value: 'action' | 'rule' | 'directive') {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function FlowStepper({ phases, activePhase, onSelectPhase }: { phases: any[]; activePhase: string | null; onSelectPhase: (phaseId: string) => void }) {

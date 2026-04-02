@@ -788,6 +788,7 @@ export default function App() {
             <ReviewWorkspace
               key={analysisSessionId}
               data={data}
+              originalData={originalData}
               darkMode={darkMode}
               modifiedPaths={modifiedPaths}
               supportFiles={supportFiles}

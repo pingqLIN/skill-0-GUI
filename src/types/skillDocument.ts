@@ -165,6 +165,7 @@ export type ValidationRun = {
   finishedAt?: string;
   status: 'running' | 'passed' | 'failed';
   errors: ValidationIssue[];
+  warnings?: ValidationIssue[];
 };
 
 export type ConsistencyIssue = {
@@ -180,6 +181,7 @@ export type ConsistencyRun = {
   finishedAt?: string;
   status: 'running' | 'passed' | 'failed';
   issues: ConsistencyIssue[];
+  warnings?: ConsistencyIssue[];
 };
 
 export type PathTestRun = {

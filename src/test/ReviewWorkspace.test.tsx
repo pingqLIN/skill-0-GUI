@@ -50,22 +50,27 @@ const sampleData = {
   globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
 };
 
+function createProps() {
+  return {
+    originalData: sampleData,
+    darkMode: false,
+    modifiedPaths: new Set<string>(),
+    supportFiles: [],
+    selectedContextPath: null,
+    bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
+    bridgeStatusError: null,
+    guiRepoUrl: 'https://example.com/gui',
+    engineRepoUrl: 'https://example.com/engine',
+    onSelectContextPath: vi.fn(),
+    onSaveEdit: vi.fn(),
+    onUndo: vi.fn(),
+    onResetWorkspace: vi.fn(),
+  };
+}
+
 describe('ReviewWorkspace', () => {
   it('preserves the active tab when parent data rerenders after an edit', async () => {
-    const props = {
-      darkMode: false,
-      modifiedPaths: new Set<string>(),
-      supportFiles: [],
-      selectedContextPath: null,
-      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
-      bridgeStatusError: null,
-      guiRepoUrl: 'https://example.com/gui',
-      engineRepoUrl: 'https://example.com/engine',
-      onSelectContextPath: vi.fn(),
-      onSaveEdit: vi.fn(),
-      onUndo: vi.fn(),
-      onResetWorkspace: vi.fn(),
-    };
+    const props = createProps();
 
     const { rerender } = render(<ReviewWorkspace data={sampleData} {...props} />);
     expect(await screen.findByTestId('dashboard')).toBeInTheDocument();
@@ -79,20 +84,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('renders schema validation warnings for the current SkillDocument projection', async () => {
-    const props = {
-      darkMode: false,
-      modifiedPaths: new Set<string>(),
-      supportFiles: [],
-      selectedContextPath: null,
-      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
-      bridgeStatusError: null,
-      guiRepoUrl: 'https://example.com/gui',
-      engineRepoUrl: 'https://example.com/engine',
-      onSelectContextPath: vi.fn(),
-      onSaveEdit: vi.fn(),
-      onUndo: vi.fn(),
-      onResetWorkspace: vi.fn(),
-    };
+    const props = createProps();
 
     render(<ReviewWorkspace data={sampleData} {...props} />);
 
@@ -102,20 +94,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('renders consistency issues for invalid execution path references', async () => {
-    const props = {
-      darkMode: false,
-      modifiedPaths: new Set<string>(),
-      supportFiles: [],
-      selectedContextPath: null,
-      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
-      bridgeStatusError: null,
-      guiRepoUrl: 'https://example.com/gui',
-      engineRepoUrl: 'https://example.com/engine',
-      onSelectContextPath: vi.fn(),
-      onSaveEdit: vi.fn(),
-      onUndo: vi.fn(),
-      onResetWorkspace: vi.fn(),
-    };
+    const props = createProps();
 
     const inconsistentData = {
       ...sampleData,
@@ -139,20 +118,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('surfaces malformed execution paths in the validation panel', async () => {
-    const props = {
-      darkMode: false,
-      modifiedPaths: new Set<string>(),
-      supportFiles: [],
-      selectedContextPath: null,
-      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
-      bridgeStatusError: null,
-      guiRepoUrl: 'https://example.com/gui',
-      engineRepoUrl: 'https://example.com/engine',
-      onSelectContextPath: vi.fn(),
-      onSaveEdit: vi.fn(),
-      onUndo: vi.fn(),
-      onResetWorkspace: vi.fn(),
-    };
+    const props = createProps();
 
     const malformedData = {
       ...sampleData,
@@ -171,20 +137,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('opens the structured editor at the validation issue field path', async () => {
-    const props = {
-      darkMode: false,
-      modifiedPaths: new Set<string>(),
-      supportFiles: [],
-      selectedContextPath: null,
-      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
-      bridgeStatusError: null,
-      guiRepoUrl: 'https://example.com/gui',
-      engineRepoUrl: 'https://example.com/engine',
-      onSelectContextPath: vi.fn(),
-      onSaveEdit: vi.fn(),
-      onUndo: vi.fn(),
-      onResetWorkspace: vi.fn(),
-    };
+    const props = createProps();
 
     const malformedData = {
       ...sampleData,
@@ -203,20 +156,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('opens the structured editor at the consistency issue field path', async () => {
-    const props = {
-      darkMode: false,
-      modifiedPaths: new Set<string>(),
-      supportFiles: [],
-      selectedContextPath: null,
-      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
-      bridgeStatusError: null,
-      guiRepoUrl: 'https://example.com/gui',
-      engineRepoUrl: 'https://example.com/engine',
-      onSelectContextPath: vi.fn(),
-      onSaveEdit: vi.fn(),
-      onUndo: vi.fn(),
-      onResetWorkspace: vi.fn(),
-    };
+    const props = createProps();
 
     const inconsistentData = {
       ...sampleData,
@@ -241,20 +181,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('exposes the structured SkillDocument editor from the action tray', async () => {
-    const props = {
-      darkMode: false,
-      modifiedPaths: new Set<string>(),
-      supportFiles: [],
-      selectedContextPath: null,
-      bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
-      bridgeStatusError: null,
-      guiRepoUrl: 'https://example.com/gui',
-      engineRepoUrl: 'https://example.com/engine',
-      onSelectContextPath: vi.fn(),
-      onSaveEdit: vi.fn(),
-      onUndo: vi.fn(),
-      onResetWorkspace: vi.fn(),
-    };
+    const props = createProps();
 
     render(<ReviewWorkspace data={sampleData} {...props} />);
 
@@ -262,5 +189,54 @@ describe('ReviewWorkspace', () => {
 
     expect(screen.getAllByText('app.openStructuredEditor').length).toBeGreaterThan(0);
     expect(screen.getAllByText('app.openJsonEditor').length).toBeGreaterThan(0);
+  });
+
+  it('records a reviewer-facing validation run from the test panel', async () => {
+    const props = createProps();
+
+    render(<ReviewWorkspace data={sampleData} {...props} />);
+
+    fireEvent.click(await screen.findByText('app.runValidation'));
+
+    expect(screen.getByText('0 app.validationErrors · 1 app.validationWarnings')).toBeInTheDocument();
+    expect(screen.getByText('app.reviewerTestsPassed')).toBeInTheDocument();
+  });
+
+  it('captures a session reviewer note', async () => {
+    const props = createProps();
+
+    render(<ReviewWorkspace data={sampleData} {...props} />);
+
+    fireEvent.change(await screen.findByPlaceholderText('app.reviewerNotesPlaceholder'), {
+      target: { value: 'Need canonical rerun before approval.' },
+    });
+    fireEvent.click(screen.getByText('app.addReviewerNote'));
+
+    expect(screen.getByText('Need canonical rerun before approval.')).toBeInTheDocument();
+    expect(screen.getByText('1 app.notesCount')).toBeInTheDocument();
+  });
+
+  it('shows a diff summary against the original review data', async () => {
+    const props = createProps();
+    const changedData = {
+      ...sampleData,
+      parserResult: {
+        ...sampleData.parserResult,
+        meta: { ...sampleData.parserResult.meta, title: 'Demo Skill Updated' },
+        decomposition: {
+          actions: [{ id: 'a_001', name: 'Read files', action_type: 'io_read' }],
+          directives: [],
+          rules: [],
+        },
+        original_definition: { source: 'json/test' },
+      },
+    };
+
+    render(<ReviewWorkspace data={changedData} {...props} />);
+
+    expect(await screen.findByText('app.diffSummary')).toBeInTheDocument();
+    expect(screen.getByText('3 app.diffEntries')).toBeInTheDocument();
+    expect(screen.getByText('action:a_001')).toBeInTheDocument();
+    expect(screen.getByText('meta')).toBeInTheDocument();
   });
 });
