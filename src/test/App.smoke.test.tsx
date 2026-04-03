@@ -59,6 +59,8 @@ describe('App smoke test', () => {
     expect(await screen.findByText('app.demoTitle')).toBeInTheDocument();
     expect(await screen.findByText('app.demoPathTitle')).toBeInTheDocument();
     expect(await screen.findByText('app.demoDocsTitle')).toBeInTheDocument();
+    expect(await screen.findByText('app.demoTrustTitle')).toBeInTheDocument();
+    expect(await screen.findByText('app.demoArtifactsTitle')).toBeInTheDocument();
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect(await screen.findAllByText('app.bridgeModeCanonical')).not.toHaveLength(0);
   });

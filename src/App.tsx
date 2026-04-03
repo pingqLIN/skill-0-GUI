@@ -22,9 +22,11 @@ const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((
 
 const GUI_REPO_URL = 'https://github.com/pingqLIN/skill-0-review-studio';
 const ENGINE_REPO_URL = 'https://github.com/pingqLIN/skill-0';
+const README_URL = `${GUI_REPO_URL}/blob/main/README.md`;
 const DOCS_INDEX_URL = `${GUI_REPO_URL}/blob/main/docs/README.md`;
 const DEMO_PLAN_URL = `${GUI_REPO_URL}/blob/main/docs/20-online-demo-plan-2026-04-03.md`;
 const DEPLOYMENT_GUIDE_URL = `${GUI_REPO_URL}/blob/main/docs/06-deployment-operations-and-configuration.md`;
+const MODE_CONTRACT_URL = `${GUI_REPO_URL}/blob/main/docs/shared/02-mode-and-equivalence-contract.md`;
 const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
 const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
 const WORKSPACE_DRAFT_STORAGE_KEY = 'skill-0-review-studio.workspace-draft.v1';
@@ -740,6 +742,48 @@ export default function App() {
       href: DEMO_PLAN_URL,
     },
   ];
+  const landingWhy = [
+    {
+      title: t('app.demoWhyParserTitle'),
+      body: t('app.demoWhyParserBody'),
+    },
+    {
+      title: t('app.demoWhyEvidenceTitle'),
+      body: t('app.demoWhyEvidenceBody'),
+    },
+    {
+      title: t('app.demoWhyDocsTitle'),
+      body: t('app.demoWhyDocsBody'),
+    },
+  ];
+  const landingTrust = [
+    {
+      title: t('app.demoTrustModeTitle'),
+      body: t('app.demoTrustModeBody'),
+    },
+    {
+      title: t('app.demoTrustEquivalenceTitle'),
+      body: t('app.demoTrustEquivalenceBody'),
+    },
+    {
+      title: t('app.demoTrustDraftTitle'),
+      body: t('app.demoTrustDraftBody'),
+    },
+  ];
+  const landingArtifacts = [
+    {
+      title: t('app.demoArtifactReportTitle'),
+      body: t('app.demoArtifactReportBody'),
+    },
+    {
+      title: t('app.demoArtifactJsonTitle'),
+      body: t('app.demoArtifactJsonBody'),
+    },
+    {
+      title: t('app.demoArtifactSkillTitle'),
+      body: t('app.demoArtifactSkillBody'),
+    },
+  ];
 
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
@@ -1104,6 +1148,100 @@ export default function App() {
                     </a>
                   ))}
                 </div>
+              </div>
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="editorial-kicker">{t('app.demoWhyKicker')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoWhyTitle')}</h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoWhyLead')}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
+                    <Activity size={22} />
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {landingWhy.map((item) => (
+                    <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
+                      <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="editorial-kicker">{t('app.demoTrustKicker')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoTrustTitle')}</h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoTrustLead')}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
+                    <ShieldCheck size={22} />
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {landingTrust.map((item) => (
+                    <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
+                      <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                    </div>
+                  ))}
+                </div>
+                <a
+                  href={MODE_CONTRACT_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                >
+                  <BookOpen size={14} />
+                  {t('app.demoTrustLinkLabel')}
+                </a>
+              </div>
+            </section>
+
+            <section className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="editorial-kicker">{t('app.demoArtifactsKicker')}</p>
+                  <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoArtifactsTitle')}</h3>
+                  <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">{t('app.demoArtifactsLead')}</p>
+                </div>
+                <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
+                  <FileText size={22} />
+                </div>
+              </div>
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                {landingArtifacts.map((item) => (
+                  <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
+                    <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  href={README_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                >
+                  <BookOpen size={14} />
+                  {t('app.demoArtifactsReadmeCta')}
+                </a>
+                <a
+                  href={MODE_CONTRACT_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                >
+                  <ShieldCheck size={14} />
+                  {t('app.demoArtifactsContractCta')}
+                </a>
               </div>
             </section>
           </div>
