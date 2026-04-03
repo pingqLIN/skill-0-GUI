@@ -91,6 +91,46 @@ describe('App smoke test', () => {
     expect(analyzeSkillText).toHaveBeenCalledWith('# demo skill', 'uploaded-skill', {});
   });
 
+  it('launches the curated bundle review scenario with supporting files', async () => {
+    vi.mocked(analyzeSkillText).mockResolvedValue({
+      projectId: 'bundle-intake-review',
+      projectName: 'Bundle Intake Review',
+      phases: [],
+      riskAssessment: { level: 'MEDIUM', details: '' },
+      threeClassification: { category: 'demo', granularity: 'task', operability: 82 },
+      parserResult: { decomposition: { actions: [], rules: [], directives: [] } },
+      globalMetrics: { decisionConfidence: 84, reworkRate: 14 },
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    fireEvent.click(screen.getByText('app.demoScenario.bundle-review.cta'));
+
+    await waitFor(() => {
+      expect(analyzeSkillText).toHaveBeenCalledWith(
+        expect.stringContaining('# Bundle Intake Review'),
+        'bundle-intake-review',
+        {
+          primaryPath: 'demo/bundle-review/SKILL.md',
+          contextFiles: [
+            expect.objectContaining({
+              name: 'policy.md',
+              path: 'demo/bundle-review/docs/policy.md',
+              role: 'context',
+            }),
+            expect.objectContaining({
+              name: 'run.py',
+              path: 'demo/bundle-review/scripts/run.py',
+              role: 'context',
+            }),
+          ],
+        },
+      );
+    });
+  });
+
   it('loads an imported skill document JSON without calling the parser bridge', async () => {
     const importedSkillDocument = {
       decomposition: {

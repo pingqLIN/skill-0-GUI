@@ -60,6 +60,34 @@
     "demoDocsDeployBody": "Understand environment variables, runtime modes, hosting constraints, and the recommended standalone deployment profile.",
     "demoDocsPlanTitle": "Online demo plan",
     "demoDocsPlanBody": "Read the current demo brief for audience, narrative, page structure, and next implementation slices.",
+    "demoScenariosKicker": "Curated scenarios",
+    "demoScenariosTitle": "Open a demo flow that matches the review story you need",
+    "demoScenariosLead": "These sample scenarios are safe to share publicly and are designed to highlight different review surfaces without depending on private customer data.",
+    "demoScenarioFocusLabel": "Best for:",
+    "demoScenarioArtifactsLabel": "Artifacts:",
+    "demoScenario": {
+      "mode-aware": {
+        "title": "Mode-aware parser walkthrough",
+        "body": "Start with the built-in example to see the current parser mode, review status surfaces, and export path before bringing your own material.",
+        "focus": "first-time reviewers who need the full intake-to-export story",
+        "artifacts": "review report, SkillDocument JSON, `.skill.md` export",
+        "cta": "Open the mode-aware sample"
+      },
+      "bundle-review": {
+        "title": "Bundle intake review",
+        "body": "Review a demo-safe bundle with supporting docs and a helper script so the standalone manifest path can surface references and execution authority.",
+        "focus": "bundle review, supporting file resolution, and manifest-oriented findings",
+        "artifacts": "supporting files panel, diff summary, review report with bundle evidence",
+        "cta": "Open the bundle review sample"
+      },
+      "publish-gate": {
+        "title": "Publish approval gate",
+        "body": "Walk through a release approval scenario that emphasizes reviewer summary, sign-off gates, and evidence before allowing external publish commands.",
+        "focus": "release sign-off, reviewer checklist, and export readiness",
+        "artifacts": "sign-off checklist, release evidence, dedicated review report",
+        "cta": "Open the publish-gate sample"
+      }
+    },
     "demoWhyKicker": "Why it exists",
     "demoWhyTitle": "Parser output needs a reviewer workflow around it",
     "demoWhyLead": "The public demo should explain why this product exists, not just expose a parser result dump.",
@@ -90,6 +118,15 @@
     "demoArtifactSkillBody": "Bridge the structured review back to a shareable skill-style export so reviewers can compare human-readable output with the structured projection.",
     "demoArtifactsReadmeCta": "Open the project README",
     "demoArtifactsContractCta": "Open the fidelity contract",
+    "demoArtifactExampleReportTitle": "review-report.md",
+    "demoArtifactExampleReportBody": "A public-safe example of the reviewer-facing export: mode, status, gates, and summary are all visible before sign-off leaves the browser.",
+    "demoArtifactExampleReportSnippet": "## Review Summary\n- Parser mode: standalone\n- Review status: in_review\n- Validation gate: pass\n- Diff reviewed: yes\n\n## Reviewer Notes\n- Confirm bundle references before final approval.",
+    "demoArtifactExampleJsonTitle": "skill-document.json",
+    "demoArtifactExampleJsonBody": "A compact structured projection preview that makes downstream validation and consistency checks legible without exposing private source content.",
+    "demoArtifactExampleJsonSnippet": "{\n  \"meta\": {\n    \"skill_id\": \"claude__bundle-intake-review\",\n    \"schema_version\": \"2.5.0-draft\"\n  },\n  \"decomposition\": {\n    \"actions\": [\"read policy\", \"run helper review\"],\n    \"rules\": [\"sign-off required before export\"]\n  }\n}",
+    "demoArtifactExampleSkillTitle": "`.skill.md`",
+    "demoArtifactExampleSkillBody": "A skill-style export preview that helps reviewers compare the human-readable artifact against the structured SkillDocument projection.",
+    "demoArtifactExampleSkillSnippet": "# Demo-safe Export\n\n## Workflow\n- Review supporting files\n- Record reviewer notes\n- Export report after sign-off\n\n## Rules\n- Never approve unresolved references\n- Always capture reviewer summary",
     "emptyTitle": "A ternary classification system for parsing the internal structure of Claude Skills and MCP Tools",
     "emptyLead": "Upload a SKILL definition, paste a draft, or test a parser scenario. The workspace is designed to make flow, security posture, and execution trace feel legible at a glance.",
     "emptyFeatureFlowTitle": "Flow-first layout",

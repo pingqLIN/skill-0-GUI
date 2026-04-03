@@ -43,6 +43,15 @@ type WorkspaceDraftSnapshot = {
   updatedAt: string | null;
 };
 
+type DemoScenarioDefinition = {
+  id: string;
+  primaryPath?: string;
+  skillName?: string;
+  text?: string;
+  contextFiles?: UploadedContextFile[];
+  type: 'server-example' | 'local-bundle';
+};
+
 function readWorkspaceDraft(): WorkspaceDraftSnapshot | null {
   if (typeof window === 'undefined') {
     return null;
@@ -685,6 +694,26 @@ export default function App() {
     }
   };
 
+  const loadCuratedScenario = (scenario: DemoScenarioDefinition) => {
+    if (scenario.type === 'server-example') {
+      void loadExampleSkill();
+      return;
+    }
+
+    const text = scenario.text || '';
+    const contextFiles = scenario.contextFiles || [];
+    setSupportFiles(contextFiles);
+    setSelectedContextPath(contextFiles[0]?.path ?? null);
+    setInputText(text);
+    setPendingUploadFiles([]);
+    setPendingPrimaryPath(null);
+    setError(null);
+    void processSkill(text, scenario.skillName || 'demo-scenario', {
+      contextFiles,
+      primaryPath: scenario.primaryPath ?? null,
+    });
+  };
+
   const bridgeModeLabel = bridgeStatus?.mode === 'skill-0'
     ? t('app.bridgeModeCanonical')
     : bridgeStatus?.mode === 'standalone'
@@ -742,6 +771,127 @@ export default function App() {
       href: DEMO_PLAN_URL,
     },
   ];
+  const curatedScenarioDefinitions: DemoScenarioDefinition[] = [
+    {
+      id: 'mode-aware',
+      type: 'server-example',
+    },
+    {
+      id: 'bundle-review',
+      type: 'local-bundle',
+      skillName: 'bundle-intake-review',
+      primaryPath: 'demo/bundle-review/SKILL.md',
+      text: `---
+name: bundle-intake-review
+description: Demo-safe review bundle for manifest-oriented standalone analysis.
+---
+
+# Bundle Intake Review
+
+Review a demo-safe skill bundle before approving execution in a shared automation repo.
+
+## Workflow
+
+- Parse the primary skill and supporting references together.
+- Surface unresolved bundle references and authority-bearing commands.
+- Require reviewer notes and sign-off before export.
+
+## Rules
+
+- Always inspect referenced policy files before approval.
+- Never sign off on unresolved bundle references.
+- Verify helper scripts before allowing execution.
+
+## References
+
+Read [Policy](docs/policy.md).
+Inspect \`scripts/run.py\` before execution.
+
+\`\`\`bash
+python scripts/run.py
+\`\`\`
+`,
+      contextFiles: [
+        {
+          name: 'policy.md',
+          path: 'demo/bundle-review/docs/policy.md',
+          type: '.md',
+          size: 188,
+          role: 'context',
+          source: 'upload',
+          preview: '# Bundle Review Policy',
+          text: `# Bundle Review Policy
+
+- Confirm the bundle only references approved documentation.
+- Escalate any execution authority or missing reference before sign-off.
+`,
+        },
+        {
+          name: 'run.py',
+          path: 'demo/bundle-review/scripts/run.py',
+          type: '.py',
+          size: 149,
+          role: 'context',
+          source: 'upload',
+          preview: 'print("bundle review demo")',
+          text: `print("bundle review demo")
+print("verify policy before execution")
+`,
+        },
+      ],
+    },
+    {
+      id: 'publish-gate',
+      type: 'local-bundle',
+      skillName: 'publish-approval-gate',
+      primaryPath: 'demo/publish-approval/SKILL.md',
+      text: `---
+name: publish-approval-gate
+description: Demo-safe release review scenario focused on sign-off gates and exported evidence.
+---
+
+# Publish Approval Gate
+
+Use this scenario to review a release-oriented skill before allowing an external publish step.
+
+## Workflow
+
+- Parse the release procedure and approval checkpoints.
+- Check the release checklist before enabling publish commands.
+- Export a review report with final summary and sign-off notes.
+
+## Rules
+
+- Always confirm reviewer summary before publish approval.
+- Never approve missing release checklist evidence.
+- Restrict external publish commands until sign-off gates are complete.
+
+## Commands
+
+\`\`\`bash
+npm run build
+npm run release:preview
+\`\`\`
+`,
+      contextFiles: [
+        {
+          name: 'release-checklist.md',
+          path: 'demo/publish-approval/checklists/release-checklist.md',
+          type: '.md',
+          size: 186,
+          role: 'context',
+          source: 'upload',
+          preview: '# Release Checklist',
+          text: `# Release Checklist
+
+- Validation and consistency checks reviewed
+- Reviewer summary added
+- Sign-off gates confirmed before publish approval
+`,
+        },
+      ],
+    },
+  ];
   const landingWhy = [
     {
       title: t('app.demoWhyParserTitle'),
@@ -782,6 +932,31 @@ export default function App() {
     {
       title: t('app.demoArtifactSkillTitle'),
       body: t('app.demoArtifactSkillBody'),
+    },
+  ];
+  const curatedScenarios = curatedScenarioDefinitions.map((scenario) => ({
+    ...scenario,
+    title: t(`app.demoScenario.${scenario.id}.title`),
+    body: t(`app.demoScenario.${scenario.id}.body`),
+    focus: t(`app.demoScenario.${scenario.id}.focus`),
+    artifacts: t(`app.demoScenario.${scenario.id}.artifacts`),
+    cta: t(`app.demoScenario.${scenario.id}.cta`),
+  }));
+  const artifactExamples = [
+    {
+      title: t('app.demoArtifactExampleReportTitle'),
+      body: t('app.demoArtifactExampleReportBody'),
+      snippet: t('app.demoArtifactExampleReportSnippet'),
+    },
+    {
+      title: t('app.demoArtifactExampleJsonTitle'),
+      body: t('app.demoArtifactExampleJsonBody'),
+      snippet: t('app.demoArtifactExampleJsonSnippet'),
+    },
+    {
+      title: t('app.demoArtifactExampleSkillTitle'),
+      body: t('app.demoArtifactExampleSkillBody'),
+      snippet: t('app.demoArtifactExampleSkillSnippet'),
     },
   ];
 
@@ -1155,6 +1330,39 @@ export default function App() {
               <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
+                    <p className="editorial-kicker">{t('app.demoScenariosKicker')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoScenariosTitle')}</h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoScenariosLead')}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
+                    <PlayCircle size={22} />
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {curatedScenarios.map((scenario) => (
+                    <div key={scenario.id} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
+                      <div className="text-sm font-semibold text-foreground">{scenario.title}</div>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{scenario.body}</p>
+                      <div className="mt-3 space-y-2 text-xs leading-6 text-muted-foreground">
+                        <div><span className="font-semibold text-foreground">{t('app.demoScenarioFocusLabel')}</span> {scenario.focus}</div>
+                        <div><span className="font-semibold text-foreground">{t('app.demoScenarioArtifactsLabel')}</span> {scenario.artifacts}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => loadCuratedScenario(scenario)}
+                        className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                      >
+                        <PlayCircle size={14} />
+                        {scenario.cta}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
                     <p className="editorial-kicker">{t('app.demoWhyKicker')}</p>
                     <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoWhyTitle')}</h3>
                     <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoWhyLead')}</p>
@@ -1220,6 +1428,17 @@ export default function App() {
                   <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
                     <div className="text-sm font-semibold text-foreground">{item.title}</div>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                {artifactExamples.map((item) => (
+                  <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/80 px-4 py-4 backdrop-blur-xl">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{item.title}</div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                    <pre className="mt-3 overflow-x-auto rounded-[1rem] border border-border/50 bg-background/90 px-3 py-3 text-[11px] leading-5 text-foreground whitespace-pre-wrap">
+                      {item.snippet}
+                    </pre>
                   </div>
                 ))}
               </div>

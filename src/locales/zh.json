@@ -60,6 +60,34 @@
     "demoDocsDeployBody": "了解環境變數、runtime mode、hosting 限制，以及推薦的 standalone 部署設定。",
     "demoDocsPlanTitle": "線上 demo 規劃",
     "demoDocsPlanBody": "查看目前的 demo brief，包含受眾、敘事、頁面結構與下一個實作切片。",
+    "demoScenariosKicker": "精選情境",
+    "demoScenariosTitle": "直接打開符合審查故事的 demo flow",
+    "demoScenariosLead": "這些 sample scenario 都是可公開分享的 demo-safe 內容，目的是在不碰私有資料的前提下，讓不同審查面向都能被看懂。",
+    "demoScenarioFocusLabel": "適合用於：",
+    "demoScenarioArtifactsLabel": "可檢查產物：",
+    "demoScenario": {
+      "mode-aware": {
+        "title": "Mode-aware parser walkthrough",
+        "body": "先用內建範例看 parser mode、review status surface 與 export path，再決定是否帶入自己的材料。",
+        "focus": "第一次接觸產品、需要看完整 intake 到 export 故事的 reviewer",
+        "artifacts": "review report、SkillDocument JSON、`.skill.md` 匯出",
+        "cta": "打開 mode-aware sample"
+      },
+      "bundle-review": {
+        "title": "Bundle intake review",
+        "body": "用帶 supporting docs 與 helper script 的 demo-safe bundle，讓 standalone manifest 路徑能清楚顯示 references 與 execution authority。",
+        "focus": "bundle 審查、supporting file resolution、manifest-oriented findings",
+        "artifacts": "supporting files panel、diff summary、帶 bundle 證據的 review report",
+        "cta": "打開 bundle review sample"
+      },
+      "publish-gate": {
+        "title": "Publish approval gate",
+        "body": "走一個 release approval 情境，把 reviewer summary、sign-off gates 與 evidence 放在外部 publish command 之前。",
+        "focus": "release sign-off、reviewer checklist、export readiness",
+        "artifacts": "sign-off checklist、release evidence、dedicated review report",
+        "cta": "打開 publish-gate sample"
+      }
+    },
     "demoWhyKicker": "為什麼需要這個產品",
     "demoWhyTitle": "Parser 輸出外面，還需要一個 reviewer workflow",
     "demoWhyLead": "公開 demo 不該只是把 parser 結果丟出來，而是要先說清楚這個產品到底補了什麼空缺。",
@@ -90,6 +118,15 @@
     "demoArtifactSkillBody": "把結構化審查結果再接回可分享的 skill-style 匯出，讓 reviewer 能把人類可讀輸出與結構化投影對照起來。",
     "demoArtifactsReadmeCta": "開啟專案 README",
     "demoArtifactsContractCta": "開啟 fidelity contract",
+    "demoArtifactExampleReportTitle": "review-report.md",
+    "demoArtifactExampleReportBody": "這是一個可公開展示的 reviewer-facing export 範例；在 sign-off 離開瀏覽器前，mode、status、gates 與摘要都能先看清楚。",
+    "demoArtifactExampleReportSnippet": "## Review Summary\n- Parser mode: standalone\n- Review status: in_review\n- Validation gate: pass\n- Diff reviewed: yes\n\n## Reviewer Notes\n- Final approval 前先確認 bundle references。",
+    "demoArtifactExampleJsonTitle": "skill-document.json",
+    "demoArtifactExampleJsonBody": "這是縮減後的結構化投影預覽，讓 downstream validation 與 consistency check 可以被看懂，同時不暴露私有來源內容。",
+    "demoArtifactExampleJsonSnippet": "{\n  \"meta\": {\n    \"skill_id\": \"claude__bundle-intake-review\",\n    \"schema_version\": \"2.5.0-draft\"\n  },\n  \"decomposition\": {\n    \"actions\": [\"read policy\", \"run helper review\"],\n    \"rules\": [\"sign-off required before export\"]\n  }\n}",
+    "demoArtifactExampleSkillTitle": "`.skill.md`",
+    "demoArtifactExampleSkillBody": "這是 skill-style 匯出預覽，幫 reviewer 對照人類可讀產物與結構化 SkillDocument 投影。",
+    "demoArtifactExampleSkillSnippet": "# Demo-safe Export\n\n## Workflow\n- Review supporting files\n- Record reviewer notes\n- Export report after sign-off\n\n## Rules\n- Never approve unresolved references\n- Always capture reviewer summary",
     "emptyTitle": "A ternary classification system for parsing the internal structure of Claude Skills and MCP Tools",
     "emptyLead": "上傳 SKILL 定義、貼上草稿，或測試一段 parser 情境。這個工作區會把流程、風險與追溯線索整理成一眼可判讀的版面。",
     "emptyFeatureFlowTitle": "流程優先布局",
