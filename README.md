@@ -1,160 +1,247 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # Skill-0 Review Studio
 
-`Skill-0 Review Studio` is a review-first workspace for Skill-0 parser output. It supports two operating modes:
+Review-first tooling for inspecting, validating, annotating, and signing off on Skill-0 parser output.
 
-- Primary bridge mode: call the canonical parser from `/home/miles/dev2/skill-0`
-- Standalone mode: use the bundled fallback parser and example skill when the main repository is unavailable
+`Skill-0 Review Studio` sits between parser execution and final reviewer approval. It gives reviewers one place to:
 
-The project is prepared for public web deployment through `server.mjs`, instead of depending only on Vite dev middleware.
+- load a `SKILL.md`, SkillDocument JSON, or bundled review context
+- switch between canonical bridge mode and standalone fallback mode
+- inspect validation, consistency, and path-walk results
+- capture reviewer notes, review status, decision log, summary, and sign-off
+- complete explicit sign-off gates before external review
+- export a dedicated review report plus `.skill.md` / `.json`
 
-Current engineering baseline:
+## Why This Project Exists
 
-- source-driven Vite frontend restored
-- parser mode badge shown in the workspace
-- automated coverage for bridge services, bridge internals, Express routes, and live API integration
-- lazy-loaded workbench modules to reduce first-load bundle pressure
-- `VectorSpace` rebuilt into a map-first review surface with optional on-demand 3D loading
+Raw parser output is useful, but it is not the same thing as a review workflow.
 
-Current delivery status:
+This project focuses on the missing layer:
 
-- `npm run build` completes successfully for the main internal build
-- `npm test` passes across the current Vitest suite
-- `npm run build:public` remains the recommended public profile because it disables the optional 3D workspace
-- GitHub Actions CI is configured to run `node --check`, `npm run lint`, `npm run docs:check`, `npm test`, and `npm run build`
+- make parser mode visible
+- keep fidelity and equivalence wording honest
+- let reviewers record decisions instead of relying on screenshots or memory
+- produce exportable artifacts that are still understandable outside the UI
 
-Core release docs and translations:
+If you need the parser itself, see the upstream `skill-0` repository.
+If you need the reviewer-facing workspace around that parser output, this repository is the right entry point.
 
-- [docs/i18n/README.md](docs/i18n/README.md)
+## What You Can Do Today
 
-## Local Development
+### For first-time users
 
-Prerequisites: Node.js 20+.
+- paste a skill draft directly into the intake panel
+- import a SkillDocument JSON without calling the bridge
+- load a bundle with one primary skill file plus supporting context files
+- restore your last local draft automatically after reload
 
-1. Install dependencies with `npm install`
-2. Copy `.env.example` to `.env.local` if you want to override `SKILL0_PARSER_ROOT`, `PORT`, or `SKILL0_MODE`
-3. Optionally set `SKILL0_API_BODY_LIMIT` if your review flow needs to accept larger collaboration bundles than the default `10mb`
-4. Start the dev server with `npm run dev`
-5. Open `http://localhost:3000/`
+### For reviewers
 
-Useful frontend flag:
+- inspect parser mode and review guidance
+- run validation, consistency, and path-walk checks
+- add session notes and element-level notes
+- review the before/after diff summary
+- set review status: `draft`, `in review`, `changes requested`, `approved`
+- record reviewer summary and sign-off name
+- complete sign-off gates before external review
+- export a dedicated review report
 
-- `VITE_ENABLE_3D=true` keeps the optional 3D vector workspace available
-- `VITE_ENABLE_3D=false` removes the 3D entry and keeps only the lightweight review map
+### For operators
 
-## Public Web / Production Mode
+- run with the canonical local `skill-0` parser when available
+- run in standalone mode for self-contained demos or public deployment
+- disable the optional 3D surface for lighter public builds
 
-1. Run `npm run build` for a full internal build, or `npm run build:public` for the public no-3D build
-2. Run `npm start`
-3. Open `http://localhost:4173/` or the host/port provided by your deployment platform
+## Quick Start
 
-`server.mjs` serves the frontend and exposes the same API routes used during local development:
+Prerequisites:
 
-- `GET /api/bridge-status`
-- `GET /api/example-skill`
-- `POST /api/parse-skill`
+- Node.js 20+
 
-## Demo Strategy
+Install and run:
 
-Recommended public release profile:
+```bash
+npm install
+npm run dev
+```
 
-- `SKILL0_MODE=standalone`
-- `VITE_ENABLE_3D=false`
-- `npm run build:public`
+Then open:
 
-This is the preferred external-review profile when the goal is to demonstrate the parser workflow, review surface, and fallback behavior with the lowest operational cost.
+- `http://localhost:3000/`
 
-When a server-side online demo is not necessary:
+If you only want the deployable runtime:
 
-- the goal is UI and workflow review
-- standalone parser output is sufficient
-- no shared persistence is required
-- no canonical `skill-0` runtime proof is required
+```bash
+npm run build
+npm start
+```
 
-When a server-side online demo becomes necessary:
+## Two Runtime Modes
 
-- canonical parser behavior must be demonstrated live
-- multiple reviewers need a shared hosted environment
-- edits must be saved beyond the current browser session
-- uploads, drafts, or review history need persistent storage
+### Canonical mode
 
-Current recommendation:
+The app calls the real `skill-0` parser through the local bridge. Use this when you want the strongest review confidence.
 
-- do not prioritize a full product-style server demo yet
-- prioritize the lighter public demo profile first
-- only add a fuller server demo when review goals expand from presentation to real multi-user or persistent usage
+### Standalone mode
 
-## Bridge Resolution Order
+The app uses the bundled fallback parser. Use this for demos, lightweight review, or external hosting where the local `skill-0` repository is not available.
 
-The primary parser root is resolved in this order:
+Important: standalone mode is compatibility-oriented. It should not be presented as strict canonical equivalence unless separate evidence exists.
 
-1. `SKILL0_PARSER_ROOT`
-2. `SKILL0_ROOT` (backward-compatible alias)
-3. `/home/miles/dev2/skill-0`
-4. `/home/miles/dev/projects/skill-0`
+Advanced contract:
 
-If none of these locations contains `scripts/auto_parse.py`, the app switches to standalone mode automatically.
+- [Mode and equivalence contract](docs/shared/02-mode-and-equivalence-contract.md)
+- [Parser contract](docs/shared/01-parser-contract.md)
 
-For external deployments, set `SKILL0_MODE=standalone` so the website does not probe local filesystem paths and always uses the bundled parser.
+## New User Path
 
-For public builds, also set `VITE_ENABLE_3D=false` unless the deployment explicitly needs the interactive 3D workspace.
+If you are new to the project, read in this order:
 
-## Verification
+1. this README
+2. [Documentation index](docs/README.md)
+3. [Project overview](docs/01-project-overview.md)
+4. [Functional modules](docs/03-functional-modules.md)
+5. [Frontend workbench](docs/05-frontend-workbench.md)
 
-Use these commands to validate a change locally before pushing:
+If you want to understand deployment and hosting:
 
-- `npm run lint`
-- `npm test`
-- `npm run build`
-- `npm run verify:build-size`
-- `npm run build:public`
-- `npm run verify:public-build`
-- `npm run docs:check`
-- `node --check server.mjs`
-- `node --check bridge/skill0Bridge.mjs`
+1. [Deployment, operations, and configuration](docs/06-deployment-operations-and-configuration.md)
+2. [GitHub hosting strategy](docs/github-hosting-strategy-2026-03-23.md)
+3. [Online demo plan](docs/20-online-demo-plan-2026-04-03.md)
 
-Known limits to keep in mind:
+If you want the current execution status:
 
-- standalone mode is compatible with canonical output, but it is not identical to the canonical `skill-0` parser
-- standalone-generated exports and review summaries must be treated as compatibility-oriented artifacts, not final canonical-equivalence proof
-- the optional 3D workspace still creates a large secondary bundle, so public builds should keep `VITE_ENABLE_3D=false`
-- mirrored shared docs must stay in sync with `skill-0/docs/shared/` and are checked by CI
+1. [Late-stage development plan](docs/17-late-stage-development-plan-2026-03-28.md)
+2. [MVP execution plan](docs/18-mvp-execution-plan-2026-03-28.md)
+3. [MVP consistency and next execution brief](docs/19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
 
-## GitHub Strategy
+## Common Commands
 
-`Skill-0 Review Studio` should use GitHub as its source-control and CI control plane, not as the final full-runtime host.
+Development:
 
-- GitHub Actions: good fit for `lint`, `build`, and release automation
-- GitHub Pages: not suitable for the full app because this runtime requires Node/Express API routes
-- Recommended public deployment: external Node host running `npm start` with `SKILL0_MODE=standalone`
+```bash
+npm run dev
+```
 
-Recommended public-build profile:
+Verification:
 
-- `SKILL0_MODE=standalone`
-- `VITE_ENABLE_3D=false`
+```bash
+npm run lint
+npm test
+npm run docs:check
+```
 
-A dedicated hosting strategy note is available at [docs/github-hosting-strategy-2026-03-23.md](docs/github-hosting-strategy-2026-03-23.md).
+Builds:
 
-## Shared documentation with `skill-0`
+```bash
+npm run build
+npm run build:public
+npm run verify:build-size
+npm run verify:public-build
+```
 
-Shared contract documents should not be manually duplicated across repos.
+Shared docs:
 
-This repository mirrors stable shared docs from `skill-0/docs/shared/` into `docs/shared/`.
-Refresh them with:
+```bash
+npm run docs:sync
+npm run docs:check
+```
+
+## Environment Variables
+
+Most users can start with defaults. These are the main variables when you need more control:
+
+- `SKILL0_MODE`
+- `SKILL0_PARSER_ROOT`
+- `SKILL0_ROOT`
+- `SKILL0_API_BODY_LIMIT`
+- `PORT`
+- `VITE_ENABLE_3D`
+
+For detailed runtime behavior, see:
+
+- [Deployment, operations, and configuration](docs/06-deployment-operations-and-configuration.md)
+- [Bridge parser and analysis](docs/04-bridge-parser-and-analysis.md)
+
+## Documentation Map
+
+Beginner-friendly:
+
+- [docs/README.md](docs/README.md)
+- [docs/01-project-overview.md](docs/01-project-overview.md)
+- [docs/03-functional-modules.md](docs/03-functional-modules.md)
+- [docs/05-frontend-workbench.md](docs/05-frontend-workbench.md)
+
+Architecture and implementation:
+
+- [docs/02-runtime-and-system-architecture.md](docs/02-runtime-and-system-architecture.md)
+- [docs/04-bridge-parser-and-analysis.md](docs/04-bridge-parser-and-analysis.md)
+- [docs/07-technology-stack-and-implementation.md](docs/07-technology-stack-and-implementation.md)
+
+Planning and roadmap:
+
+- [docs/16-development-execution-brief-2026-03-28.md](docs/16-development-execution-brief-2026-03-28.md)
+- [docs/17-late-stage-development-plan-2026-03-28.md](docs/17-late-stage-development-plan-2026-03-28.md)
+- [docs/18-mvp-execution-plan-2026-03-28.md](docs/18-mvp-execution-plan-2026-03-28.md)
+- [docs/19-mvp-consistency-and-next-execution-brief-2026-03-28.md](docs/19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
+- [docs/20-online-demo-plan-2026-04-03.md](docs/20-online-demo-plan-2026-04-03.md)
+
+Shared contracts:
+
+- [docs/shared/README.md](docs/shared/README.md)
+- [docs/shared/02-mode-and-equivalence-contract.md](docs/shared/02-mode-and-equivalence-contract.md)
+- [docs/shared/03-shared-terminology.md](docs/shared/03-shared-terminology.md)
+
+## Online Demo Direction
+
+The project is ready for a standalone public demo profile, but the best demo surface still needs product decisions.
+
+The current recommendation is:
+
+- host a public standalone build
+- keep parser-mode wording explicit
+- disable 3D for the first external demo
+- optimize for clear review storytelling, not feature maximalism
+
+Detailed planning lives here:
+
+- [Online demo plan](docs/20-online-demo-plan-2026-04-03.md)
+
+## Current Status
+
+Implemented:
+
+- dedicated review report export
+- local draft persistence and reload recovery
+- reviewer notes, review status, and decision log
+- reviewer summary, sign-off, and explicit sign-off gates
+- i18n coverage for the reviewer workflow
+
+Not yet in scope:
+
+- multi-user collaboration
+- server-backed persistence
+- GitHub PR automation inside the product UI
+- strict canonical-equivalence claims without evidence fixtures and repeatable comparison rules
+
+## Security And Trust Notes
+
+- exported artifacts must preserve parser mode and review status context
+- standalone mode is useful, but it is not the same as canonical proof
+- shared contract docs must stay synchronized with `skill-0`
+- transitive dependency overrides in `package.json` are currently used to keep the dependency graph free of known audited vulnerabilities
+
+## Contributing
+
+Before pushing changes, run:
+
+```bash
+npm run lint
+npm test
+npm run docs:check
+```
+
+If you update shared contract-facing documentation, also run:
 
 ```bash
 npm run docs:sync
 ```
-
-Keep only cross-repository contracts shared. Product status, deployment notes, and roadmap documents remain repository-specific.
-
-## Notes
-
-- `vite.config.ts` handles development-time routing.
-- `server.mjs` provides the deployable runtime for external web hosting.
-- local development now runs from `src/main.tsx`; production runtime serves the built frontend from `dist/`.
-- current editing is session-local and export-based. The app can modify parsed data in memory and download a regenerated `.skill.md`, but it does not yet persist edits back to a server, database, or repository.
-- A detailed project introduction and development report is available at [docs/project-introduction-and-development-report-2026-03-23.md](docs/project-introduction-and-development-report-2026-03-23.md).

@@ -1,6 +1,6 @@
 # Skill-0 Review Studio Documentation Index
 
-Updated: `2026-03-28`
+Updated: `2026-04-03`
 
 This documentation set is the primary review package for `Skill-0 Review Studio`. It is organized as a main index plus chaptered companion documents so each functional area can be reviewed independently while still mapping back to one master table of contents.
 
@@ -54,6 +54,7 @@ This dossier documents both layers explicitly and distinguishes between:
 | 17 | [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md) | Reconciled late-stage roadmap after MVP-plan review and current upstream audit | Ch. 14, Ch. 15, Ch. 16 |
 | 18 | [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md) | Repository-grounded execution order derived from the local MVP planning draft | Ch. 17 |
 | 19 | [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md) | Current MVP completion boundary, consistency-check closure, and next execution order | Ch. 18 |
+| 20 | [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md) | First-pass plan for a standalone public demo, landing-page narrative, and deployment scope | Ch. 6, Ch. 8, Ch. 19 |
 
 ## Fast Reading Paths
 
@@ -77,6 +78,7 @@ Before trusting exported review artifacts, read [shared/02-mode-and-equivalence-
 12. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 13. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
 14. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
+15. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
 
 ### For engineers
 
@@ -96,6 +98,7 @@ Read in this order:
 12. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
 13. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
 14. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
+15. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
 
 ### For operators and deployers
 
@@ -109,6 +112,7 @@ Read in this order:
 6. [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md)
 7. [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
 8. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
+9. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
 
 Supplemental note:
 
@@ -187,5 +191,6 @@ The UI recovery set for the tracked workbench model is:
 5. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
 6. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 7. [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
+8. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
 
 These chapters distinguish historical design-model planning from the current runtime status. Use Chapter 16 for the broad execution baseline, Chapter 17 for the reconciled late-stage roadmap, and Chapter 19 for the current MVP handoff state; treat Chapters 14 and 15 as archived planning context.
