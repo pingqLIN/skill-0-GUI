@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import {
   ShieldAlert,
   Edit2,
@@ -33,6 +33,8 @@ import type {
   DiffSummary,
   ElementReviewNote,
   PathTestRun,
+  ReviewChecklist,
+  ReviewDecision,
   ReviewNote,
   ValidationRun,
 } from '../types/skillDocument';
@@ -44,6 +46,57 @@ const VectorSpace = lazy(() => import('./VectorSpace').then((module) => ({ defau
 const SecurityMatrix = lazy(() => import('./SecurityMatrix').then((module) => ({ default: module.SecurityMatrix })));
 const SideEditor = lazy(() => import('./SideEditor').then((module) => ({ default: module.SideEditor })));
 const DecompositionBoard = lazy(() => import('./DecompositionBoard').then((module) => ({ default: module.DecompositionBoard })));
+const REVIEW_DRAFT_STORAGE_PREFIX = 'skill-0-review-studio.review-draft.v1';
+const DEFAULT_REVIEW_CHECKLIST: ReviewChecklist = {
+  modeConfirmed: false,
+  validationReviewed: false,
+  diffReviewed: false,
+  evidenceReady: false,
+};
+
+function hasSameReviewDraftContent(left: Record<string, unknown>, right: Record<string, unknown>) {
+  return JSON.stringify({
+    validationRuns: left.validationRuns,
+    consistencyRuns: left.consistencyRuns,
+    pathTestRuns: left.pathTestRuns,
+    globalNotes: left.globalNotes,
+    elementNotes: left.elementNotes,
+    noteTarget: left.noteTarget,
+    reviewStatus: left.reviewStatus,
+    reviewSummaryDraft: left.reviewSummaryDraft,
+    reviewerSignoff: left.reviewerSignoff,
+    reviewChecklist: left.reviewChecklist,
+    decisionLog: left.decisionLog,
+    updatedAt: null,
+  }) === JSON.stringify({
+    validationRuns: right.validationRuns,
+    consistencyRuns: right.consistencyRuns,
+    pathTestRuns: right.pathTestRuns,
+    globalNotes: right.globalNotes,
+    elementNotes: right.elementNotes,
+    noteTarget: right.noteTarget,
+    reviewStatus: right.reviewStatus,
+    reviewSummaryDraft: right.reviewSummaryDraft,
+    reviewerSignoff: right.reviewerSignoff,
+    reviewChecklist: right.reviewChecklist,
+    decisionLog: right.decisionLog,
+    updatedAt: null,
+  });
+}
+
+function normalizeReviewChecklist(value: unknown): ReviewChecklist {
+  if (!value || typeof value !== 'object') {
+    return DEFAULT_REVIEW_CHECKLIST;
+  }
+
+  const candidate = value as Partial<ReviewChecklist>;
+  return {
+    modeConfirmed: Boolean(candidate.modeConfirmed),
+    validationReviewed: Boolean(candidate.validationReviewed),
+    diffReviewed: Boolean(candidate.diffReviewed),
+    evidenceReady: Boolean(candidate.evidenceReady),
+  };
+}
 
 type ReviewWorkspaceProps = {
   data: any;
@@ -90,8 +143,17 @@ export function ReviewWorkspace({
   const [pathTestRuns, setPathTestRuns] = useState<PathTestRun[]>([]);
   const [globalNotes, setGlobalNotes] = useState<ReviewNote[]>([]);
   const [elementNotes, setElementNotes] = useState<ElementReviewNote[]>([]);
+  const [reviewStatus, setReviewStatus] = useState<'draft' | 'in_review' | 'changes_requested' | 'approved'>('draft');
+  const [decisionLog, setDecisionLog] = useState<ReviewDecision[]>([]);
   const [noteDraft, setNoteDraft] = useState('');
   const [noteTarget, setNoteTarget] = useState('global');
+  const [reviewSummaryDraft, setReviewSummaryDraft] = useState('');
+  const [reviewerSignoff, setReviewerSignoff] = useState('');
+  const [reviewChecklist, setReviewChecklist] = useState<ReviewChecklist>(DEFAULT_REVIEW_CHECKLIST);
+  const [reviewDraftSavedAt, setReviewDraftSavedAt] = useState<string | null>(null);
+  const [reviewDraftRestored, setReviewDraftRestored] = useState(false);
+  const hasHydratedReviewDraftRef = useRef(false);
+  const skipNextReviewDraftPersistRef = useRef(false);
 
   const parserActions = data?.parserResult?.decomposition?.actions ?? [];
   const parserRules = data?.parserResult?.decomposition?.rules ?? [];
@@ -145,6 +207,7 @@ export function ReviewWorkspace({
       : t('app.bridgeGuidanceUnavailable');
   const skillDocument = extractSkillDocumentFromReviewData(data);
   const originalSkillDocument = originalData ? extractSkillDocumentFromReviewData(originalData) : null;
+  const reviewDraftStorageKey = data?.projectId ? `${REVIEW_DRAFT_STORAGE_PREFIX}:${data.projectId}` : null;
   const diffSummary: DiffSummary | null = skillDocument && originalSkillDocument
     ? buildSkillDocumentDiffSummary(originalSkillDocument, skillDocument)
     : null;
@@ -174,26 +237,174 @@ export function ReviewWorkspace({
   const latestValidationRun = validationRuns[0] ?? null;
   const latestConsistencyRun = consistencyRuns[0] ?? null;
   const latestPathTestRun = pathTestRuns[0] ?? null;
+  const checklistCompletedCount = Object.values(reviewChecklist).filter(Boolean).length;
+
+  useEffect(() => {
+    if (!reviewDraftStorageKey || typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(reviewDraftStorageKey);
+      if (!raw) {
+        setValidationRuns([]);
+        setConsistencyRuns([]);
+        setPathTestRuns([]);
+        setGlobalNotes([]);
+        setElementNotes([]);
+        setReviewStatus('draft');
+        setDecisionLog([]);
+        setNoteTarget('global');
+        setReviewSummaryDraft('');
+        setReviewerSignoff('');
+        setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
+        setReviewDraftSavedAt(null);
+        setReviewDraftRestored(false);
+        hasHydratedReviewDraftRef.current = true;
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      setValidationRuns(Array.isArray(parsed.validationRuns) ? parsed.validationRuns : []);
+      setConsistencyRuns(Array.isArray(parsed.consistencyRuns) ? parsed.consistencyRuns : []);
+      setPathTestRuns(Array.isArray(parsed.pathTestRuns) ? parsed.pathTestRuns : []);
+      setGlobalNotes(Array.isArray(parsed.globalNotes) ? parsed.globalNotes : []);
+      setElementNotes(Array.isArray(parsed.elementNotes) ? parsed.elementNotes : []);
+      setReviewStatus(isReviewStatus(parsed.reviewStatus) ? parsed.reviewStatus : 'draft');
+      setDecisionLog(Array.isArray(parsed.decisionLog) ? parsed.decisionLog : []);
+      setNoteTarget(typeof parsed.noteTarget === 'string' ? parsed.noteTarget : 'global');
+      setReviewSummaryDraft(typeof parsed.reviewSummaryDraft === 'string' ? parsed.reviewSummaryDraft : '');
+      setReviewerSignoff(typeof parsed.reviewerSignoff === 'string' ? parsed.reviewerSignoff : '');
+      setReviewChecklist(normalizeReviewChecklist(parsed.reviewChecklist));
+      setReviewDraftSavedAt(typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null);
+      setReviewDraftRestored(true);
+      skipNextReviewDraftPersistRef.current = true;
+    } catch {
+      setValidationRuns([]);
+      setConsistencyRuns([]);
+      setPathTestRuns([]);
+      setGlobalNotes([]);
+      setElementNotes([]);
+      setReviewStatus('draft');
+      setDecisionLog([]);
+      setNoteTarget('global');
+      setReviewSummaryDraft('');
+      setReviewerSignoff('');
+      setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
+      setReviewDraftSavedAt(null);
+      setReviewDraftRestored(false);
+    }
+
+    hasHydratedReviewDraftRef.current = true;
+  }, [reviewDraftStorageKey]);
+
+  useEffect(() => {
+    if (!reviewDraftStorageKey || typeof window === 'undefined') {
+      return;
+    }
+
+    if (!hasHydratedReviewDraftRef.current) {
+      return;
+    }
+
+    if (skipNextReviewDraftPersistRef.current) {
+      skipNextReviewDraftPersistRef.current = false;
+      return;
+    }
+
+    const hasPersistedState = validationRuns.length > 0
+      || consistencyRuns.length > 0
+      || pathTestRuns.length > 0
+      || globalNotes.length > 0
+      || elementNotes.length > 0
+      || decisionLog.length > 0
+      || reviewSummaryDraft.trim().length > 0
+      || reviewerSignoff.trim().length > 0
+      || Object.values(reviewChecklist).some(Boolean)
+      || reviewStatus !== 'draft';
+
+    if (!hasPersistedState && noteTarget === 'global') {
+      window.localStorage.removeItem(reviewDraftStorageKey);
+      setReviewDraftSavedAt(null);
+      setReviewDraftRestored(false);
+      return;
+    }
+
+    const nextDraftPayload = {
+      consistencyRuns,
+      elementNotes,
+      globalNotes,
+      noteTarget,
+      pathTestRuns,
+      reviewStatus,
+      reviewSummaryDraft,
+      reviewerSignoff,
+      reviewChecklist,
+      decisionLog,
+      validationRuns,
+      updatedAt: reviewDraftSavedAt,
+    };
+    try {
+      const raw = window.localStorage.getItem(reviewDraftStorageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && hasSameReviewDraftContent(parsed as Record<string, unknown>, nextDraftPayload)) {
+          if (reviewDraftRestored) {
+            return;
+          }
+        }
+      }
+    } catch {
+      // Ignore comparison failures and overwrite with the latest draft payload below.
+    }
+
+    const updatedAt = new Date().toISOString();
+    window.localStorage.setItem(reviewDraftStorageKey, JSON.stringify({
+      ...nextDraftPayload,
+      updatedAt,
+    }));
+    setReviewDraftSavedAt(updatedAt);
+    setReviewDraftRestored(false);
+  }, [reviewDraftStorageKey, validationRuns, consistencyRuns, pathTestRuns, globalNotes, elementNotes, noteTarget, reviewStatus, reviewSummaryDraft, reviewerSignoff, reviewChecklist, decisionLog]);
+  const appendDecision = (action: ReviewDecision['action'], summary: string, targetId?: string) => {
+    const timestamp = new Date().toISOString();
+    setDecisionLog((current) => [
+      {
+        action,
+        id: `decision-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+        summary,
+        targetId,
+        timestamp,
+      },
+      ...current,
+    ].slice(0, 12));
+  };
   const addValidationRun = () => {
     if (!skillDocument) {
       return;
     }
 
-    setValidationRuns((current) => [createValidationRun(skillDocument), ...current].slice(0, 6));
+    const run = createValidationRun(skillDocument);
+    setValidationRuns((current) => [run, ...current].slice(0, 6));
+    appendDecision('validated', `Validation run ${run.status}.`);
   };
   const addConsistencyRun = () => {
     if (!skillDocument) {
       return;
     }
 
-    setConsistencyRuns((current) => [createConsistencyRun(skillDocument), ...current].slice(0, 6));
+    const run = createConsistencyRun(skillDocument);
+    setConsistencyRuns((current) => [run, ...current].slice(0, 6));
+    appendDecision('tested', `Consistency run ${run.status}.`);
   };
   const addPathTestRun = () => {
     if (!skillDocument) {
       return;
     }
 
-    setPathTestRuns((current) => [createPathTestRun(skillDocument), ...current].slice(0, 6));
+    const run = createPathTestRun(skillDocument);
+    setPathTestRuns((current) => [run, ...current].slice(0, 6));
+    appendDecision('tested', `Path walk ${run.status}.`);
   };
   const addReviewNote = () => {
     const content = noteDraft.trim();
@@ -232,6 +443,46 @@ export function ReviewWorkspace({
     }
 
     setNoteDraft('');
+  };
+  const updateReviewStatus = (nextStatus: 'draft' | 'in_review' | 'changes_requested' | 'approved') => {
+    if (nextStatus === reviewStatus) {
+      return;
+    }
+
+    setReviewStatus(nextStatus);
+    appendDecision(
+      nextStatus === 'approved'
+        ? 'approved'
+        : nextStatus === 'changes_requested'
+          ? 'requested_changes'
+          : 'review_status_updated',
+      `Review status changed to ${nextStatus}.`,
+    );
+  };
+  const toggleReviewChecklist = (key: keyof ReviewChecklist) => {
+    setReviewChecklist((current) => {
+      const nextValue = !current[key];
+      appendDecision(
+        'review_status_updated',
+        `Sign-off gate ${key} ${nextValue ? 'completed' : 'reopened'}.`,
+      );
+      return {
+        ...current,
+        [key]: nextValue,
+      };
+    });
+  };
+  const handleResetWorkspace = () => {
+    if (reviewDraftStorageKey && typeof window !== 'undefined') {
+      window.localStorage.removeItem(reviewDraftStorageKey);
+    }
+
+    setReviewSummaryDraft('');
+    setReviewerSignoff('');
+    setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
+    setReviewDraftSavedAt(null);
+    setReviewDraftRestored(false);
+    onResetWorkspace();
   };
   const openSkillDocumentEditor = (focusPath?: string) => {
     if (!skillDocument) {
@@ -372,6 +623,7 @@ export function ReviewWorkspace({
       `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
       `- parser_mode_source: ${bridgeModeDetail}`,
       `- review_mode: ${reviewMode}`,
+      `- review_status: ${reviewStatus}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
       `- review_decision_guidance: ${reviewDecisionGuidance}`,
       `- schema_validation_status: ${validationResult?.valid ? 'valid' : 'invalid'}`,
@@ -434,13 +686,10 @@ export function ReviewWorkspace({
   };
 
   const exportSkill = () => {
-    const blob = new Blob([convertSkillToMarkdown(data)], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${data.projectId}-${exportModeSuffix}.skill.md`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(
+      new Blob([convertSkillToMarkdown(data)], { type: 'text/markdown;charset=utf-8' }),
+      `${data.projectId}-${exportModeSuffix}.skill.md`,
+    );
   };
 
   const exportSkillJson = () => {
@@ -448,13 +697,153 @@ export function ReviewWorkspace({
       return;
     }
 
-    const blob = new Blob([JSON.stringify(skillDocument, null, 2)], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${data.projectId}-${exportModeSuffix}.skill.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(
+      new Blob([JSON.stringify(skillDocument, null, 2)], { type: 'application/json;charset=utf-8' }),
+      `${data.projectId}-${exportModeSuffix}.skill.json`,
+    );
+  };
+
+  const exportReviewReport = () => {
+    if (!skillDocument) {
+      return;
+    }
+
+    const reportLines = [
+      `# Review Report: ${data.projectName}`,
+      '',
+      `- generated_at: ${new Date().toISOString()}`,
+      `- skill_id: ${data.projectId}`,
+      `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
+      `- parser_mode_source: ${bridgeModeDetail}`,
+      `- review_mode: ${reviewMode}`,
+      `- review_status: ${reviewStatus}`,
+      `- equivalence_status: ${reviewEquivalenceStatus}`,
+      `- schema_validation_status: ${validationResult?.valid ? 'valid' : 'invalid'}`,
+      `- consistency_status: ${consistencyResult?.valid ? 'consistent' : 'inconsistent'}`,
+      `- reviewer_signoff: ${reviewerSignoff || 'unassigned'}`,
+      `- signoff_gates_completed: ${checklistCompletedCount}/4`,
+      `- reviewer_note_count: ${globalNotes.length + elementNotes.length}`,
+      `- diff_entry_count: ${diffSummary ? diffSummary.added.length + diffSummary.removed.length + diffSummary.changed.length : 0}`,
+      `- reviewer_test_status: ${summarizeTestPanel(t, latestValidationRun, latestConsistencyRun, latestPathTestRun)}`,
+      '',
+      '## Review Decision Guidance',
+      '',
+      reviewDecisionGuidance,
+      '',
+      '## Reviewer Summary',
+      '',
+      reviewSummaryDraft.trim() || 'No reviewer summary captured.',
+      '',
+      '## Sign-off Gates',
+      '',
+      `- ${reviewChecklist.modeConfirmed ? '[x]' : '[ ]'} ${t('app.reviewChecklistModeConfirmed')}`,
+      `- ${reviewChecklist.validationReviewed ? '[x]' : '[ ]'} ${t('app.reviewChecklistValidationReviewed')}`,
+      `- ${reviewChecklist.diffReviewed ? '[x]' : '[ ]'} ${t('app.reviewChecklistDiffReviewed')}`,
+      `- ${reviewChecklist.evidenceReady ? '[x]' : '[ ]'} ${t('app.reviewChecklistEvidenceReady')}`,
+      '',
+      '## SkillDocument Snapshot',
+      '',
+      `- actions: ${skillDocument.decomposition.actions.length}`,
+      `- rules: ${skillDocument.decomposition.rules.length}`,
+      `- directives: ${skillDocument.decomposition.directives.length}`,
+      `- execution_paths: ${(skillDocument.execution_paths ?? []).length}`,
+      '',
+    ];
+
+    if (globalNotes.length > 0) {
+      reportLines.push('## Session Notes', '');
+      globalNotes.forEach((note) => {
+        reportLines.push(`- ${note.createdAt} :: ${note.content}`);
+      });
+      reportLines.push('');
+    }
+
+    if (elementNotes.length > 0) {
+      reportLines.push('## Element Notes', '');
+      elementNotes.forEach((note) => {
+        reportLines.push(`- ${note.createdAt} :: ${capitalizeNoteType(note.elementType)} ${note.elementId} :: ${note.content}`);
+      });
+      reportLines.push('');
+    }
+
+    reportLines.push('## Diff Summary', '');
+    if (diffSummary) {
+      reportLines.push(
+        `- added: ${diffSummary.added.length}`,
+        `- removed: ${diffSummary.removed.length}`,
+        `- changed: ${diffSummary.changed.length}`,
+        `- fields_changed: ${diffSummary.stats.fieldsChanged}`,
+      );
+      if (diffSummary.added.length > 0) {
+        reportLines.push('', '### Added', '');
+        diffSummary.added.forEach((entry) => reportLines.push(`- ${entry}`));
+      }
+      if (diffSummary.removed.length > 0) {
+        reportLines.push('', '### Removed', '');
+        diffSummary.removed.forEach((entry) => reportLines.push(`- ${entry}`));
+      }
+      if (diffSummary.changed.length > 0) {
+        reportLines.push('', '### Changed', '');
+        diffSummary.changed.forEach((entry) => reportLines.push(`- ${entry}`));
+      }
+      reportLines.push('');
+    } else {
+      reportLines.push('- Diff summary unavailable.', '');
+    }
+
+    reportLines.push('## Validation Snapshot', '');
+    if (validationIssues.length > 0) {
+      validationIssues.slice(0, 10).forEach((issue) => {
+        reportLines.push(`- [${issue.severity}] ${issue.code} @ ${issue.path}: ${issue.message}`);
+      });
+    } else {
+      reportLines.push('- No schema issues detected.');
+    }
+    reportLines.push('', '## Consistency Snapshot', '');
+    if (consistencyIssues.length > 0) {
+      consistencyIssues.slice(0, 10).forEach((issue) => {
+        reportLines.push(`- [${issue.severity}] ${issue.type}${issue.targetId ? ` @ ${issue.targetId}` : ''}: ${issue.message}`);
+      });
+    } else {
+      reportLines.push('- No consistency issues detected.');
+    }
+
+    reportLines.push('', '## Reviewer Test Runs', '');
+    if (!latestValidationRun && !latestConsistencyRun && !latestPathTestRun) {
+      reportLines.push('- No reviewer-facing runs captured.');
+    } else {
+      if (latestValidationRun) {
+        reportLines.push(
+          `- Validation [${latestValidationRun.status}] ${latestValidationRun.finishedAt || latestValidationRun.startedAt} :: ${latestValidationRun.errors.length} errors / ${(latestValidationRun.warnings ?? []).length} warnings`,
+        );
+      }
+      if (latestConsistencyRun) {
+        reportLines.push(
+          `- Consistency [${latestConsistencyRun.status}] ${latestConsistencyRun.finishedAt || latestConsistencyRun.startedAt} :: ${latestConsistencyRun.issues.length} errors / ${(latestConsistencyRun.warnings ?? []).length} warnings`,
+        );
+      }
+      if (latestPathTestRun) {
+        reportLines.push(
+          `- Path walk [${latestPathTestRun.status}] ${latestPathTestRun.finishedAt || latestPathTestRun.startedAt} :: ${latestPathTestRun.message || ((latestPathTestRun.actualPath ?? []).join(' -> ') || 'No path summary available.')}`,
+        );
+      }
+    }
+
+    reportLines.push('', '## Decision Log', '');
+    if (decisionLog.length === 0) {
+      reportLines.push('- No reviewer decisions captured.');
+    } else {
+      decisionLog.forEach((decision) => {
+        reportLines.push(`- ${decision.timestamp} :: ${decision.action}${decision.targetId ? ` @ ${decision.targetId}` : ''} :: ${decision.summary}`);
+      });
+    }
+
+    reportLines.push('');
+
+    downloadBlob(
+      new Blob([reportLines.join('\n')], { type: 'text/markdown;charset=utf-8' }),
+      `${data.projectId}-${exportModeSuffix}-review-report.md`,
+    );
   };
 
   return (
@@ -558,8 +947,17 @@ export function ReviewWorkspace({
                           <Download size={14} className="text-muted-foreground" />
                         </button>
                       )}
+                      {skillDocument && (
+                        <button
+                          onClick={exportReviewReport}
+                          className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        >
+                          <span>{t('app.exportReviewReport')}</span>
+                          <Download size={14} className="text-muted-foreground" />
+                        </button>
+                      )}
                       <button
-                        onClick={onResetWorkspace}
+                        onClick={handleResetWorkspace}
                         className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
                       >
                         <span>{t('app.resetWorkspace')}</span>
@@ -933,6 +1331,133 @@ export function ReviewWorkspace({
                   {t('app.consistencyUnavailable')}
                 </div>
               )}
+            </InsightBlock>
+
+            <InsightBlock
+              kicker={t('app.detailsPanel')}
+              title={t('app.reviewStatus')}
+              summary={t(reviewStatusLabelKey(reviewStatus))}
+              accent={reviewStatus === 'approved' ? 'emerald' : reviewStatus === 'changes_requested' ? 'rose' : 'default'}
+              defaultOpen
+            >
+              <div className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <MiniMetric label={t('app.reviewStatus')} value={t(reviewStatusLabelKey(reviewStatus))} highlight={reviewStatus !== 'draft'} />
+                  <MiniMetric label={t('app.reviewDecisionLog')} value={`${decisionLog.length} ${t('app.decisionCount')}`} highlight={decisionLog.length > 0} />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <MiniMetric
+                    label={t('app.reviewChecklist')}
+                    value={`${checklistCompletedCount}/4`}
+                    highlight={checklistCompletedCount === 4}
+                  />
+                  <MiniMetric
+                    label={t('app.reviewerSignoffLabel')}
+                    value={reviewerSignoff || t('app.reviewerSignoffPending')}
+                    highlight={Boolean(reviewerSignoff)}
+                  />
+                </div>
+                {reviewDraftSavedAt && (
+                  <div
+                    data-testid="review-draft-status"
+                    className="rounded-[1.05rem] border border-border/55 bg-background/68 px-3 py-3 text-sm text-foreground backdrop-blur-xl"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{t('app.localDraft')}</div>
+                        <div className="mt-1 font-medium">
+                          {reviewDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved')}
+                        </div>
+                      </div>
+                      <div className="text-xs font-mono text-muted-foreground">{formatDraftTimestamp(reviewDraftSavedAt)}</div>
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <textarea
+                    value={reviewSummaryDraft}
+                    onChange={(event) => setReviewSummaryDraft(event.target.value)}
+                    placeholder={t('app.reviewSummaryPlaceholder')}
+                    className="min-h-24 w-full resize-none rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
+                  />
+                  <input
+                    type="text"
+                    value={reviewerSignoff}
+                    onChange={(event) => setReviewerSignoff(event.target.value)}
+                    placeholder={t('app.reviewerSignoffPlaceholder')}
+                    className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                  />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <ChecklistToggle
+                    label={t('app.reviewChecklistModeConfirmed')}
+                    checked={reviewChecklist.modeConfirmed}
+                    onToggle={() => toggleReviewChecklist('modeConfirmed')}
+                  />
+                  <ChecklistToggle
+                    label={t('app.reviewChecklistValidationReviewed')}
+                    checked={reviewChecklist.validationReviewed}
+                    onToggle={() => toggleReviewChecklist('validationReviewed')}
+                  />
+                  <ChecklistToggle
+                    label={t('app.reviewChecklistDiffReviewed')}
+                    checked={reviewChecklist.diffReviewed}
+                    onToggle={() => toggleReviewChecklist('diffReviewed')}
+                  />
+                  <ChecklistToggle
+                    label={t('app.reviewChecklistEvidenceReady')}
+                    checked={reviewChecklist.evidenceReady}
+                    onToggle={() => toggleReviewChecklist('evidenceReady')}
+                  />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => updateReviewStatus('draft')}
+                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                  >
+                    {t('app.returnToDraft')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateReviewStatus('in_review')}
+                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                  >
+                    {t('app.markInReview')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateReviewStatus('approved')}
+                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                  >
+                    {t('app.markApproved')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateReviewStatus('changes_requested')}
+                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                  >
+                    {t('app.requestChanges')}
+                  </button>
+                </div>
+                {decisionLog.length > 0 ? (
+                  <div className="space-y-2">
+                    {decisionLog.map((decision) => (
+                      <div key={decision.id}>
+                        <DecisionCard
+                          action={decision.action}
+                          summary={decision.summary}
+                          timestamp={decision.timestamp}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    {t('app.reviewDecisionLogEmpty')}
+                  </div>
+                )}
+              </div>
             </InsightBlock>
 
             <InsightBlock
@@ -1381,6 +1906,26 @@ function NoteCard({
   );
 }
 
+function DecisionCard({
+  action,
+  summary,
+  timestamp,
+}: {
+  action: ReviewDecision['action'];
+  summary: string;
+  timestamp: string;
+}) {
+  return (
+    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-foreground">{action}</span>
+        <span className="text-[11px] font-mono text-muted-foreground">{formatRunTimestamp(timestamp)}</span>
+      </div>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{summary}</p>
+    </div>
+  );
+}
+
 function DiffList({ title, items, emptyLabel }: { title: string; items: string[]; emptyLabel: string }) {
   return (
     <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 backdrop-blur-xl">
@@ -1406,6 +1951,15 @@ function formatBytes(bytes: number) {
   const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / (1024 ** exponent);
   return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function formatRunTimestamp(value: string) {
@@ -1466,6 +2020,55 @@ function summarizeDiffSummary(t: (key: string) => string, diffSummary: DiffSumma
 
 function capitalizeNoteType(value: 'action' | 'rule' | 'directive') {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function isReviewStatus(value: unknown): value is 'draft' | 'in_review' | 'changes_requested' | 'approved' {
+  return value === 'draft' || value === 'in_review' || value === 'changes_requested' || value === 'approved';
+}
+
+function reviewStatusLabelKey(value: 'draft' | 'in_review' | 'changes_requested' | 'approved') {
+  if (value === 'in_review') {
+    return 'app.reviewStatusInReview';
+  }
+  if (value === 'changes_requested') {
+    return 'app.reviewStatusChangesRequested';
+  }
+  if (value === 'approved') {
+    return 'app.reviewStatusApproved';
+  }
+  return 'app.reviewStatusDraft';
+}
+
+function formatDraftTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
+}
+
+function ChecklistToggle({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`rounded-[1.05rem] border px-3 py-3 text-left text-sm transition ${
+        checked
+          ? 'border-emerald-500/30 bg-emerald-500/10 text-foreground'
+          : 'border-border/60 bg-background/76 text-foreground'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span>{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          {checked ? t('app.reviewChecklistDone') : t('app.reviewChecklistOpen')}
+        </span>
+      </div>
+    </button>
+  );
 }
 
 function FlowStepper({ phases, activePhase, onSelectPhase }: { phases: any[]; activePhase: string | null; onSelectPhase: (phaseId: string) => void }) {

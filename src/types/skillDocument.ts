@@ -120,10 +120,18 @@ export type ReviewDecision = {
     | 'deleted_element'
     | 'validated'
     | 'tested'
+    | 'review_status_updated'
     | 'approved'
     | 'requested_changes';
   targetId?: string;
   summary: string;
+};
+
+export type ReviewChecklist = {
+  modeConfirmed: boolean;
+  validationReviewed: boolean;
+  diffReviewed: boolean;
+  evidenceReady: boolean;
 };
 
 export type DiffSummary = {
@@ -146,6 +154,9 @@ export type ReviewState = {
   reviewStatus: 'draft' | 'in_review' | 'changes_requested' | 'approved';
   startedAt?: string;
   updatedAt?: string;
+  reviewSummary?: string;
+  reviewerSignoff?: string;
+  checklist?: ReviewChecklist;
   globalNotes: ReviewNote[];
   elementNotes: ElementReviewNote[];
   decisionLog: ReviewDecision[];

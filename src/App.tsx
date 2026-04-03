@@ -20,6 +20,91 @@ const GUI_REPO_URL = 'https://github.com/pingqLIN/skill-0-review-studio';
 const ENGINE_REPO_URL = 'https://github.com/pingqLIN/skill-0';
 const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
 const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
+const WORKSPACE_DRAFT_STORAGE_KEY = 'skill-0-review-studio.workspace-draft.v1';
+
+type WorkspaceDraftSnapshot = {
+  data: any | null;
+  originalData: any | null;
+  modifiedPaths: string[];
+  inputText: string;
+  pendingUploadFiles: PreparedUploadFile[];
+  pendingPrimaryPath: string | null;
+  supportFiles: UploadedContextFile[];
+  selectedContextPath: string | null;
+  updatedAt: string | null;
+};
+
+function readWorkspaceDraft(): WorkspaceDraftSnapshot | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(WORKSPACE_DRAFT_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    return {
+      data: 'data' in parsed ? parsed.data : null,
+      originalData: 'originalData' in parsed ? parsed.originalData : null,
+      modifiedPaths: Array.isArray(parsed.modifiedPaths) ? parsed.modifiedPaths.filter((item): item is string => typeof item === 'string') : [],
+      inputText: typeof parsed.inputText === 'string' ? parsed.inputText : '',
+      pendingUploadFiles: Array.isArray(parsed.pendingUploadFiles) ? parsed.pendingUploadFiles : [],
+      pendingPrimaryPath: typeof parsed.pendingPrimaryPath === 'string' ? parsed.pendingPrimaryPath : null,
+      supportFiles: Array.isArray(parsed.supportFiles) ? parsed.supportFiles : [],
+      selectedContextPath: typeof parsed.selectedContextPath === 'string' ? parsed.selectedContextPath : null,
+      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeWorkspaceDraft(snapshot: WorkspaceDraftSnapshot) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(WORKSPACE_DRAFT_STORAGE_KEY, JSON.stringify(snapshot));
+}
+
+function hasSameWorkspaceDraftContent(left: WorkspaceDraftSnapshot, right: WorkspaceDraftSnapshot) {
+  return JSON.stringify({
+    data: left.data,
+    originalData: left.originalData,
+    modifiedPaths: left.modifiedPaths,
+    inputText: left.inputText,
+    pendingUploadFiles: left.pendingUploadFiles,
+    pendingPrimaryPath: left.pendingPrimaryPath,
+    supportFiles: left.supportFiles,
+    selectedContextPath: left.selectedContextPath,
+    updatedAt: null,
+  }) === JSON.stringify({
+    data: right.data,
+    originalData: right.originalData,
+    modifiedPaths: right.modifiedPaths,
+    inputText: right.inputText,
+    pendingUploadFiles: right.pendingUploadFiles,
+    pendingPrimaryPath: right.pendingPrimaryPath,
+    supportFiles: right.supportFiles,
+    selectedContextPath: right.selectedContextPath,
+    updatedAt: null,
+  });
+}
+
+function clearWorkspaceDraft() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem(WORKSPACE_DRAFT_STORAGE_KEY);
+}
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -40,6 +125,10 @@ export default function App() {
   const [selectedContextPath, setSelectedContextPath] = useState<string | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
   const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
+  const [workspaceDraftSavedAt, setWorkspaceDraftSavedAt] = useState<string | null>(null);
+  const [workspaceDraftRestored, setWorkspaceDraftRestored] = useState(false);
+  const hasHydratedWorkspaceDraftRef = useRef(false);
+  const skipNextWorkspaceDraftPersistRef = useRef(false);
 
   useEffect(() => {
     const preventWindowDrop = (event: DragEvent) => {
@@ -88,6 +177,77 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const snapshot = readWorkspaceDraft();
+    if (snapshot) {
+      setData(snapshot.data);
+      setOriginalData(snapshot.originalData);
+      setModifiedPaths(new Set(snapshot.modifiedPaths));
+      setInputText(snapshot.inputText);
+      setPendingUploadFiles(snapshot.pendingUploadFiles);
+      setPendingPrimaryPath(snapshot.pendingPrimaryPath);
+      setSupportFiles(snapshot.supportFiles);
+      setSelectedContextPath(snapshot.selectedContextPath);
+      setWorkspaceDraftSavedAt(snapshot.updatedAt);
+      setWorkspaceDraftRestored(true);
+      skipNextWorkspaceDraftPersistRef.current = true;
+    }
+
+    hasHydratedWorkspaceDraftRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedWorkspaceDraftRef.current) {
+      return;
+    }
+
+    if (skipNextWorkspaceDraftPersistRef.current) {
+      skipNextWorkspaceDraftPersistRef.current = false;
+      return;
+    }
+
+    const hasDraftState = Boolean(
+      data
+      || originalData
+      || inputText.trim()
+      || pendingUploadFiles.length > 0
+      || supportFiles.length > 0,
+    );
+
+    if (!hasDraftState) {
+      clearWorkspaceDraft();
+      setWorkspaceDraftSavedAt(null);
+      setWorkspaceDraftRestored(false);
+      return;
+    }
+
+    const nextSnapshot: WorkspaceDraftSnapshot = {
+      data,
+      originalData,
+      modifiedPaths: Array.from(modifiedPaths),
+      inputText,
+      pendingUploadFiles,
+      pendingPrimaryPath,
+      supportFiles,
+      selectedContextPath,
+      updatedAt: workspaceDraftSavedAt,
+    };
+    const existingSnapshot = readWorkspaceDraft();
+    if (existingSnapshot && hasSameWorkspaceDraftContent(existingSnapshot, nextSnapshot)) {
+      if (workspaceDraftRestored) {
+        return;
+      }
+    }
+
+    const updatedAt = new Date().toISOString();
+    writeWorkspaceDraft({
+      ...nextSnapshot,
+      updatedAt,
+    });
+    setWorkspaceDraftSavedAt(updatedAt);
+    setWorkspaceDraftRestored(false);
+  }, [data, originalData, modifiedPaths, inputText, pendingUploadFiles, pendingPrimaryPath, supportFiles, selectedContextPath]);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
@@ -469,12 +629,18 @@ export default function App() {
   };
 
   const handleResetWorkspace = () => {
+    clearWorkspaceDraft();
     setData(null);
+    setOriginalData(null);
+    setModifiedPaths(new Set());
     setInputText('');
     setPendingUploadFiles([]);
     setPendingPrimaryPath(null);
     setSupportFiles([]);
     setSelectedContextPath(null);
+    setError(null);
+    setWorkspaceDraftSavedAt(null);
+    setWorkspaceDraftRestored(false);
   };
 
   const loadExampleSkill = async () => {
@@ -574,6 +740,20 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-[1680px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {workspaceDraftSavedAt && (
+          <div
+            data-testid="workspace-draft-status"
+            className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border border-border/55 bg-background/72 px-4 py-3 text-sm text-foreground backdrop-blur-xl"
+          >
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.localDraft')}</div>
+              <div className="mt-1 font-medium">
+                {workspaceDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved')}
+              </div>
+            </div>
+            <div className="text-xs font-mono text-muted-foreground">{formatDraftTimestamp(workspaceDraftSavedAt)}</div>
+          </div>
+        )}
         {!data ? (
           <div className="space-y-8">
             <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
@@ -815,4 +995,13 @@ function formatBytes(bytes: number) {
   const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / (1024 ** exponent);
   return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
+function formatDraftTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
 }

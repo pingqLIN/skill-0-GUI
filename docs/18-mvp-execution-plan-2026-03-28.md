@@ -82,12 +82,22 @@ Layer on after validation is trustworthy:
 2. execution-path graph tied back to editor selection
 3. notes, diff summary, and exportable review report
 
+Implemented by 2026-04-03:
+
+- reviewer notes, diff summary, dedicated review report export
+- review status, decision log, reviewer summary, and sign-off gates
+
 ### Milestone 5: Persistence
 
 Keep last:
 
 1. local session persistence
 2. reload recovery
+
+Implemented by 2026-04-03:
+
+- workspace draft persistence for intake/import state
+- reviewer draft persistence for notes, tests, summary, sign-off, and gate progress
 
 ## 18.5 Acceptance Bar For The Next Cycle
 

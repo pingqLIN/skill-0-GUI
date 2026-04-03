@@ -5,6 +5,8 @@ import App from '../App';
 import { analyzeSkillText } from '../services/parserBridgeService';
 import JSZip from 'jszip';
 
+const WORKSPACE_DRAFT_STORAGE_KEY = 'skill-0-review-studio.workspace-draft.v1';
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -44,6 +46,7 @@ describe('App smoke test', () => {
   beforeEach(() => {
     vi.mocked(analyzeSkillText).mockReset();
     vi.mocked(JSZip.loadAsync).mockReset();
+    window.localStorage.clear();
   });
 
   it('renders the intake workspace shell', async () => {
@@ -168,5 +171,46 @@ describe('App smoke test', () => {
         ],
       });
     });
+  });
+
+  it('restores the last workspace draft from localStorage on load', async () => {
+    window.localStorage.setItem(WORKSPACE_DRAFT_STORAGE_KEY, JSON.stringify({
+      data: {
+        projectId: 'restored-skill',
+        projectName: 'Restored Skill',
+        phases: [],
+        riskAssessment: { level: 'SAFE', details: '' },
+        threeClassification: { category: 'demo', granularity: 'task', operability: 90 },
+        parserResult: { decomposition: { actions: [], rules: [], directives: [] } },
+        globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
+      },
+      originalData: {
+        projectId: 'restored-skill',
+        projectName: 'Restored Skill',
+        phases: [],
+        riskAssessment: { level: 'SAFE', details: '' },
+        threeClassification: { category: 'demo', granularity: 'task', operability: 90 },
+        parserResult: { decomposition: { actions: [], rules: [], directives: [] } },
+        globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
+      },
+      modifiedPaths: [],
+      inputText: '# restored skill',
+      pendingUploadFiles: [],
+      pendingPrimaryPath: null,
+      selectedContextPath: null,
+      supportFiles: [],
+      updatedAt: '2026-04-02T01:23:45.000Z',
+    }));
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('review-workspace')).toBeInTheDocument();
+    });
+    expect(analyzeSkillText).not.toHaveBeenCalled();
+    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('app.localDraft');
+    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('app.localDraftRestored');
   });
 });

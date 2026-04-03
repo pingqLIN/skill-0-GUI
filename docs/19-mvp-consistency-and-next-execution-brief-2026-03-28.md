@@ -65,9 +65,20 @@ The MVP loop is stronger, but still incomplete in the following areas:
 - no first-class JSON diff / review diff sign-off surface
 - no dedicated review-report export yet
 
+Completed by 2026-04-03:
+
+- global and element-level reviewer notes workflow
+- review diff summary plus sign-off-oriented review status and decision log
+- dedicated review report export with reviewer summary, sign-off, and gate checklist
+
 ### Persistence
 
 - no local draft persistence or reload recovery
+
+Completed by 2026-04-03:
+
+- workspace-level local draft persistence
+- reviewer-state persistence with reload recovery
 
 ## 19.5 Recommended Execution Order
 

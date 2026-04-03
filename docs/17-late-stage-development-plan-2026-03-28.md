@@ -127,6 +127,14 @@ Remaining gaps:
 - no element-level reviewer notes system
 - no robust before/after diff workflow for reviewer sign-off
 
+Implemented by 2026-04-03:
+
+- workspace and reviewer local draft persistence with reload recovery
+- dedicated review report export separate from `.skill.md`
+- global and element-level reviewer notes
+- diff summary, review status, decision log, and reviewer-facing test history
+- reviewer summary, sign-off name, and explicit sign-off gates for external review
+
 Primary files:
 
 - [../src/components/ReviewWorkspace.tsx](../src/components/ReviewWorkspace.tsx)
