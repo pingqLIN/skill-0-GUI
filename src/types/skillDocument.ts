@@ -163,6 +163,29 @@ export type ReviewState = {
   diffSummary?: DiffSummary;
 };
 
+export type ReviewPacket = {
+  exportedAt: string;
+  projectId: string;
+  projectName: string;
+  parserMode: 'skill-0' | 'standalone' | 'unknown';
+  parserModeSource: string;
+  reviewMode: string;
+  equivalenceStatus: string;
+  reviewDecisionGuidance: string;
+  operatorReminders: Array<Record<string, unknown>>;
+  reviewState: ReviewState;
+  reviewChecklist: ReviewChecklistItem[];
+  validationEvidence: ValidationEvidence | null;
+  skillDocument: SkillDocument | null;
+};
+
+export type ReviewChecklistItem = {
+  id: string;
+  label: string;
+  status: 'complete' | 'attention' | 'blocked';
+  detail: string;
+};
+
 export type ValidationIssue = {
   code: string;
   path: string;
@@ -193,6 +216,19 @@ export type ConsistencyRun = {
   status: 'running' | 'passed' | 'failed';
   issues: ConsistencyIssue[];
   warnings?: ConsistencyIssue[];
+};
+
+export type ValidationEvidence = {
+  provenance: {
+    parsedBy: string;
+    parserVersion: string;
+    schemaVersion: string;
+    skillId: string;
+    source: string;
+  };
+  validationRun: ValidationRun;
+  consistencyRun: ConsistencyRun;
+  evidenceWarnings: string[];
 };
 
 export type PathTestRun = {

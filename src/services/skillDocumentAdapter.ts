@@ -1,9 +1,16 @@
 import type {
   ActionNode,
+  ConsistencyRun,
   DirectiveNode,
   ExecutionPath,
+  DiffSummary,
+  ReviewPacket,
+  ReviewChecklistItem,
+  ReviewState,
   RuleNode,
   SkillDocument,
+  ValidationEvidence,
+  ValidationRun,
 } from '../types/skillDocument';
 
 type BuildReviewDataOptions = {
@@ -133,6 +140,93 @@ function buildReviewGuidance(reviewMode: 'canonical' | 'standalone' | 'unknown',
     return `This SkillDocument was updated in the ${editorLabel} after the last standalone parser run. Original parser provenance is preserved, but final equivalence still requires a fresh canonical re-run before approval.`;
   }
   return `This SkillDocument was updated in the ${editorLabel} after an unverified or imported session. Confirm parser mode and re-run through the canonical bridge before final equivalence decisions.`;
+}
+
+function buildDiffSummaryFromModifiedPaths(modifiedPaths: Iterable<string> | undefined): DiffSummary | undefined {
+  if (!modifiedPaths) {
+    return undefined;
+  }
+
+  const changed = Array.from(modifiedPaths)
+    .filter((path): path is string => typeof path === 'string' && path !== 'metrics')
+    .sort();
+  if (changed.length === 0) {
+    return undefined;
+  }
+
+  return {
+    added: [],
+    changed,
+    removed: [],
+    stats: {
+      actionsAdded: 0,
+      actionsRemoved: 0,
+      directivesAdded: 0,
+      directivesRemoved: 0,
+      fieldsChanged: changed.length,
+      rulesAdded: 0,
+      rulesRemoved: 0,
+    },
+  };
+}
+
+function buildReviewChecklist(
+  bridgeMode: ReviewPacket['parserMode'],
+  bridgeModeSource: string,
+  reviewState: ReviewState,
+  validationEvidence: ValidationEvidence | null,
+): ReviewChecklistItem[] {
+  const validationErrors = validationEvidence?.validationRun.errors.filter((issue) => issue.severity === 'error').length ?? 0;
+  const validationWarnings = (validationEvidence?.validationRun.errors.filter((issue) => issue.severity === 'warning').length ?? 0)
+    + (validationEvidence?.evidenceWarnings.length ?? 0);
+  const consistencyErrors = validationEvidence?.consistencyRun.issues.filter((issue) => issue.severity === 'error').length ?? 0;
+  const consistencyWarnings = validationEvidence?.consistencyRun.issues.filter((issue) => issue.severity === 'warning').length ?? 0;
+  const notesCount = reviewState.globalNotes.length + reviewState.elementNotes.length;
+
+  return [
+    {
+      detail: bridgeMode === 'skill-0'
+        ? `Canonical skill-0 bridge confirmed via ${bridgeModeSource}.`
+        : bridgeMode === 'standalone'
+          ? `Standalone bridge active via ${bridgeModeSource}. Canonical rerun still recommended before final parity claims.`
+          : `Bridge mode is unverified. Source: ${bridgeModeSource}.`,
+      id: 'bridge-mode',
+      label: 'Bridge mode verified',
+      status: bridgeMode === 'skill-0' ? 'complete' : bridgeMode === 'standalone' ? 'attention' : 'blocked',
+    },
+    {
+      detail: !validationEvidence
+        ? 'No validation evidence was attached to this review packet.'
+        : validationErrors > 0
+          ? `${validationErrors} schema validation errors remain open.`
+          : validationWarnings > 0
+            ? `${validationWarnings} validation warnings require reviewer acknowledgement.`
+            : 'Schema validation signals are clean.',
+      id: 'schema-validation',
+      label: 'Schema validation reviewed',
+      status: !validationEvidence ? 'blocked' : validationErrors > 0 ? 'blocked' : validationWarnings > 0 ? 'attention' : 'complete',
+    },
+    {
+      detail: !validationEvidence
+        ? 'No consistency evidence was attached to this review packet.'
+        : consistencyErrors > 0
+          ? `${consistencyErrors} execution consistency errors remain open.`
+          : consistencyWarnings > 0
+            ? `${consistencyWarnings} consistency warnings require reviewer acknowledgement.`
+            : 'Execution-path and reference consistency checks are clean.',
+      id: 'consistency-review',
+      label: 'Consistency review completed',
+      status: !validationEvidence ? 'blocked' : consistencyErrors > 0 ? 'blocked' : consistencyWarnings > 0 ? 'attention' : 'complete',
+    },
+    {
+      detail: reviewState.reviewStatus === 'draft'
+        ? 'Reviewer decision is still draft.'
+        : `${reviewState.reviewStatus} recorded with ${notesCount} notes attached.`,
+      id: 'review-decision',
+      label: 'Reviewer decision recorded',
+      status: reviewState.reviewStatus === 'draft' ? 'attention' : 'complete',
+    },
+  ];
 }
 
 export function buildReviewDataFromSkillDocument(
@@ -366,5 +460,188 @@ export function extractSkillDocumentFromReviewData(data: unknown): SkillDocument
     original_definition: isRecord(parserResult.original_definition)
       ? parserResult.original_definition as SkillDocument['original_definition']
       : undefined,
+  };
+}
+
+export function buildReviewPacketFromReviewData(
+  data: unknown,
+  options: {
+    bridgeMode: ReviewPacket['parserMode'];
+    bridgeModeSource: string;
+    equivalenceStatus: string;
+    reviewDecisionGuidance: string;
+    reviewMode: string;
+    reviewState: ReviewState;
+    skillDocument?: SkillDocument | null;
+    modifiedPaths?: Iterable<string>;
+    validationEvidence?: ValidationEvidence | null;
+  },
+): ReviewPacket | null {
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  const skillDocument = options.skillDocument ?? extractSkillDocumentFromReviewData(data);
+  const projectId = typeof data.projectId === 'string'
+    ? data.projectId
+    : skillDocument?.meta?.skill_id || 'unknown-project';
+  const projectName = typeof data.projectName === 'string'
+    ? data.projectName
+    : skillDocument?.meta?.title || skillDocument?.meta?.name || 'Untitled Review';
+  const reviewerSummary = isRecord(data.reviewerSummary) ? data.reviewerSummary : null;
+  const operatorReminders = Array.isArray(reviewerSummary?.operatorReminders)
+    ? reviewerSummary.operatorReminders.filter((item): item is Record<string, unknown> => isRecord(item))
+    : [];
+  const validationEvidence = options.validationEvidence ?? buildValidationEvidenceFromReviewData(data, {
+    reviewMode: options.reviewMode,
+  });
+  const diffSummary = options.reviewState.diffSummary ?? buildDiffSummaryFromModifiedPaths(options.modifiedPaths);
+  const reviewState = diffSummary
+    ? { ...options.reviewState, diffSummary }
+    : options.reviewState;
+
+  return {
+    equivalenceStatus: options.equivalenceStatus,
+    exportedAt: new Date().toISOString(),
+    operatorReminders,
+    parserMode: options.bridgeMode,
+    parserModeSource: options.bridgeModeSource,
+    projectId,
+    projectName,
+    reviewDecisionGuidance: options.reviewDecisionGuidance,
+    reviewChecklist: buildReviewChecklist(options.bridgeMode, options.bridgeModeSource, reviewState, validationEvidence),
+    reviewMode: options.reviewMode,
+    reviewState,
+    validationEvidence,
+    skillDocument,
+  };
+}
+
+export function buildValidationEvidenceFromReviewData(
+  data: unknown,
+  options: { reviewMode?: string } = {},
+): ValidationEvidence | null {
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  const skillDocument = extractSkillDocumentFromReviewData(data);
+  if (!skillDocument) {
+    return null;
+  }
+
+  const meta = skillDocument.meta ?? {};
+  const actions = skillDocument.decomposition.actions ?? [];
+  const rules = skillDocument.decomposition.rules ?? [];
+  const directives = skillDocument.decomposition.directives ?? [];
+  const executionPaths = skillDocument.execution_paths ?? [];
+  const allIds = [...actions, ...rules, ...directives].map((item) => item.id);
+  const duplicateIds = allIds.filter((id, index) => allIds.indexOf(id) !== index);
+  const knownIds = new Set(allIds);
+  const missingStepReferences = executionPaths.flatMap((path) =>
+    path.steps
+      .filter((step) => !knownIds.has(step))
+      .map((step) => ({ pathId: path.id, step })),
+  );
+  const reviewMode = options.reviewMode
+    || (isRecord(data.reviewerSummary) && typeof data.reviewerSummary.mode === 'string'
+    ? data.reviewerSummary.mode
+    : 'unknown');
+
+  const validationErrors: ValidationRun['errors'] = [];
+  const consistencyIssues: ConsistencyRun['issues'] = [];
+  const evidenceWarnings: string[] = [];
+
+  if (!meta.schema_version || meta.schema_version === 'unknown') {
+    validationErrors.push({
+      code: 'missing_schema_version',
+      message: 'app.validationMissingSchemaVersion',
+      path: 'meta.schema_version',
+      severity: 'error',
+    });
+  }
+
+  if (!meta.skill_id) {
+    validationErrors.push({
+      code: 'missing_skill_id',
+      message: 'app.validationMissingSkillId',
+      path: 'meta.skill_id',
+      severity: 'warning',
+    });
+  }
+
+  if (!(meta.title || meta.name)) {
+    validationErrors.push({
+      code: 'missing_title',
+      message: 'app.validationMissingTitle',
+      path: 'meta.title',
+      severity: 'warning',
+    });
+  }
+
+  if (actions.length + rules.length + directives.length === 0) {
+    validationErrors.push({
+      code: 'empty_decomposition',
+      message: 'app.validationEmptyDecomposition',
+      path: 'decomposition',
+      severity: 'warning',
+    });
+  }
+
+  duplicateIds.forEach((duplicateId) => {
+    consistencyIssues.push({
+      message: 'app.validationDuplicateId',
+      severity: 'error',
+      targetId: duplicateId,
+      type: 'duplicate_id',
+    });
+  });
+
+  missingStepReferences.forEach(({ pathId, step }) => {
+    consistencyIssues.push({
+      message: `app.validationMissingStepReference:${pathId}:${step}`,
+      severity: 'error',
+      targetId: pathId,
+      type: 'missing_reference',
+    });
+  });
+
+  if (executionPaths.length === 0) {
+    consistencyIssues.push({
+      message: 'app.validationMissingExecutionPaths',
+      severity: 'warning',
+      type: 'orphan_path',
+    });
+  }
+
+  if (reviewMode === 'unknown') {
+    evidenceWarnings.push('app.validationImportedJsonWarning');
+  } else if (reviewMode === 'standalone') {
+    evidenceWarnings.push('app.validationStandaloneWarning');
+  }
+
+  return {
+    consistencyRun: {
+      finishedAt: new Date().toISOString(),
+      id: 'consistency-current',
+      issues: consistencyIssues,
+      startedAt: new Date().toISOString(),
+      status: consistencyIssues.some((issue) => issue.severity === 'error') ? 'failed' : 'passed',
+    },
+    evidenceWarnings,
+    provenance: {
+      parsedBy: meta.parsed_by || 'unknown',
+      parserVersion: meta.parser_version || 'unknown',
+      schemaVersion: meta.schema_version || 'unknown',
+      skillId: meta.skill_id || 'unknown',
+      source: skillDocument.original_definition?.source || meta.source || 'unknown',
+    },
+    validationRun: {
+      errors: validationErrors,
+      finishedAt: new Date().toISOString(),
+      id: 'schema-current',
+      startedAt: new Date().toISOString(),
+      status: validationErrors.some((issue) => issue.severity === 'error') ? 'failed' : 'passed',
+    },
   };
 }

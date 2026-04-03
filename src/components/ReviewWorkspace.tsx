@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import {
   ShieldAlert,
+  AlertTriangle,
   Edit2,
   Download,
   Undo2,
@@ -14,7 +15,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
-import { extractSkillDocumentFromReviewData } from '../services/skillDocumentAdapter';
+import {
+  buildReviewPacketFromReviewData,
+  buildValidationEvidenceFromReviewData,
+  extractSkillDocumentFromReviewData,
+} from '../services/skillDocumentAdapter';
 import { checkSkillDocumentConsistency } from '../services/skillDocumentConsistency';
 import { buildSkillDocumentDiffSummary } from '../services/reviewDiffService';
 import {
@@ -36,6 +41,8 @@ import type {
   ReviewChecklist,
   ReviewDecision,
   ReviewNote,
+  ReviewPacket,
+  ReviewState,
   ValidationRun,
 } from '../types/skillDocument';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
@@ -64,6 +71,8 @@ function hasSameReviewDraftContent(left: Record<string, unknown>, right: Record<
     elementNotes: left.elementNotes,
     noteTarget: left.noteTarget,
     reviewStatus: left.reviewStatus,
+    reviewerName: left.reviewerName,
+    reviewerNotes: left.reviewerNotes,
     reviewSummaryDraft: left.reviewSummaryDraft,
     reviewerSignoff: left.reviewerSignoff,
     reviewChecklist: left.reviewChecklist,
@@ -77,6 +86,8 @@ function hasSameReviewDraftContent(left: Record<string, unknown>, right: Record<
     elementNotes: right.elementNotes,
     noteTarget: right.noteTarget,
     reviewStatus: right.reviewStatus,
+    reviewerName: right.reviewerName,
+    reviewerNotes: right.reviewerNotes,
     reviewSummaryDraft: right.reviewSummaryDraft,
     reviewerSignoff: right.reviewerSignoff,
     reviewChecklist: right.reviewChecklist,
@@ -146,16 +157,22 @@ export function ReviewWorkspace({
   const [pathTestRuns, setPathTestRuns] = useState<PathTestRun[]>([]);
   const [globalNotes, setGlobalNotes] = useState<ReviewNote[]>([]);
   const [elementNotes, setElementNotes] = useState<ElementReviewNote[]>([]);
-  const [reviewStatus, setReviewStatus] = useState<'draft' | 'in_review' | 'changes_requested' | 'approved'>('draft');
+  const [reviewStatus, setReviewStatus] = useState<ReviewState['reviewStatus']>(
+    data?.reviewerSummary?.reviewStatus
+      || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
+  );
   const [decisionLog, setDecisionLog] = useState<ReviewDecision[]>([]);
   const [noteDraft, setNoteDraft] = useState('');
   const [noteTarget, setNoteTarget] = useState('global');
+  const [reviewerName, setReviewerName] = useState(data?.reviewerSummary?.reviewerName || '');
+  const [reviewerNotes, setReviewerNotes] = useState(data?.reviewerSummary?.reviewerNotes || '');
   const [reviewSummaryDraft, setReviewSummaryDraft] = useState('');
   const [reviewerSignoff, setReviewerSignoff] = useState('');
   const [reviewChecklist, setReviewChecklist] = useState<ReviewChecklist>(DEFAULT_REVIEW_CHECKLIST);
   const [reviewDraftSavedAt, setReviewDraftSavedAt] = useState<string | null>(null);
   const [reviewDraftRestored, setReviewDraftRestored] = useState(false);
   const hasHydratedReviewDraftRef = useRef(false);
+  const hadStoredReviewDraftRef = useRef(false);
   const skipNextReviewDraftPersistRef = useRef(false);
   const appliedDemoPresetIdRef = useRef<string | null>(null);
 
@@ -209,6 +226,16 @@ export function ReviewWorkspace({
     : bridgeStatus?.mode === 'standalone'
       ? t('app.bridgeGuidanceStandalone')
       : t('app.bridgeGuidanceUnavailable');
+  const reviewReadinessLabel = bridgeStatus?.mode === 'skill-0'
+    ? t('app.reviewEvidenceCanonical')
+    : bridgeStatus?.mode === 'standalone'
+      ? t('app.reviewEvidenceStandalone')
+      : t('app.reviewEvidenceUnavailable');
+  const reviewReadinessStyles = bridgeStatus?.mode === 'skill-0'
+    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+    : bridgeStatus?.mode === 'standalone'
+      ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
+      : 'border-border/55 bg-background/70 text-muted-foreground';
   const skillDocument = extractSkillDocumentFromReviewData(data);
   const originalSkillDocument = originalData ? extractSkillDocumentFromReviewData(originalData) : null;
   const reviewDraftStorageKey = data?.projectId ? `${REVIEW_DRAFT_STORAGE_PREFIX}:${data.projectId}` : null;
@@ -251,12 +278,15 @@ export function ReviewWorkspace({
     try {
       const raw = window.localStorage.getItem(reviewDraftStorageKey);
       if (!raw) {
+        hadStoredReviewDraftRef.current = false;
         setValidationRuns([]);
         setConsistencyRuns([]);
         setPathTestRuns([]);
         setGlobalNotes([]);
         setElementNotes([]);
-        setReviewStatus('draft');
+        setReviewStatus(data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'));
+        setReviewerName(data?.reviewerSummary?.reviewerName || '');
+        setReviewerNotes(data?.reviewerSummary?.reviewerNotes || '');
         setDecisionLog([]);
         setNoteTarget('global');
         setReviewSummaryDraft('');
@@ -268,6 +298,7 @@ export function ReviewWorkspace({
         return;
       }
 
+      hadStoredReviewDraftRef.current = true;
       const parsed = JSON.parse(raw);
       setValidationRuns(Array.isArray(parsed.validationRuns) ? parsed.validationRuns : []);
       setConsistencyRuns(Array.isArray(parsed.consistencyRuns) ? parsed.consistencyRuns : []);
@@ -275,6 +306,8 @@ export function ReviewWorkspace({
       setGlobalNotes(Array.isArray(parsed.globalNotes) ? parsed.globalNotes : []);
       setElementNotes(Array.isArray(parsed.elementNotes) ? parsed.elementNotes : []);
       setReviewStatus(isReviewStatus(parsed.reviewStatus) ? parsed.reviewStatus : 'draft');
+      setReviewerName(typeof parsed.reviewerName === 'string' ? parsed.reviewerName : data?.reviewerSummary?.reviewerName || '');
+      setReviewerNotes(typeof parsed.reviewerNotes === 'string' ? parsed.reviewerNotes : data?.reviewerSummary?.reviewerNotes || '');
       setDecisionLog(Array.isArray(parsed.decisionLog) ? parsed.decisionLog : []);
       setNoteTarget(typeof parsed.noteTarget === 'string' ? parsed.noteTarget : 'global');
       setReviewSummaryDraft(typeof parsed.reviewSummaryDraft === 'string' ? parsed.reviewSummaryDraft : '');
@@ -284,12 +317,15 @@ export function ReviewWorkspace({
       setReviewDraftRestored(true);
       skipNextReviewDraftPersistRef.current = true;
     } catch {
+      hadStoredReviewDraftRef.current = false;
       setValidationRuns([]);
       setConsistencyRuns([]);
       setPathTestRuns([]);
       setGlobalNotes([]);
       setElementNotes([]);
-      setReviewStatus('draft');
+      setReviewStatus(data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'));
+      setReviewerName(data?.reviewerSummary?.reviewerName || '');
+      setReviewerNotes(data?.reviewerSummary?.reviewerNotes || '');
       setDecisionLog([]);
       setNoteTarget('global');
       setReviewSummaryDraft('');
@@ -300,7 +336,7 @@ export function ReviewWorkspace({
     }
 
     hasHydratedReviewDraftRef.current = true;
-  }, [reviewDraftStorageKey]);
+  }, [bridgeStatus?.mode, data?.reviewerSummary?.reviewStatus, data?.reviewerSummary?.reviewerName, data?.reviewerSummary?.reviewerNotes, reviewDraftStorageKey]);
 
   useEffect(() => {
     if (!reviewDraftStorageKey || typeof window === 'undefined') {
@@ -322,6 +358,8 @@ export function ReviewWorkspace({
       || globalNotes.length > 0
       || elementNotes.length > 0
       || decisionLog.length > 0
+      || reviewerName.trim().length > 0
+      || reviewerNotes.trim().length > 0
       || reviewSummaryDraft.trim().length > 0
       || reviewerSignoff.trim().length > 0
       || Object.values(reviewChecklist).some(Boolean)
@@ -341,6 +379,8 @@ export function ReviewWorkspace({
       noteTarget,
       pathTestRuns,
       reviewStatus,
+      reviewerName,
+      reviewerNotes,
       reviewSummaryDraft,
       reviewerSignoff,
       reviewChecklist,
@@ -369,7 +409,7 @@ export function ReviewWorkspace({
     }));
     setReviewDraftSavedAt(updatedAt);
     setReviewDraftRestored(false);
-  }, [reviewDraftStorageKey, validationRuns, consistencyRuns, pathTestRuns, globalNotes, elementNotes, noteTarget, reviewStatus, reviewSummaryDraft, reviewerSignoff, reviewChecklist, decisionLog]);
+  }, [reviewDraftStorageKey, validationRuns, consistencyRuns, pathTestRuns, globalNotes, elementNotes, noteTarget, reviewStatus, reviewerName, reviewerNotes, reviewSummaryDraft, reviewerSignoff, reviewChecklist, decisionLog]);
   useEffect(() => {
     if (!demoPreset || !skillDocument || !hasHydratedReviewDraftRef.current) {
       return;
@@ -379,7 +419,7 @@ export function ReviewWorkspace({
       return;
     }
 
-    if (reviewDraftStorageKey && typeof window !== 'undefined' && window.localStorage.getItem(reviewDraftStorageKey)) {
+    if (hadStoredReviewDraftRef.current) {
       appliedDemoPresetIdRef.current = demoPreset.id;
       return;
     }
@@ -408,7 +448,7 @@ export function ReviewWorkspace({
     setDecisionLog(buildDemoPresetDecisionLog(demoPreset, timestamp, seededValidationRuns, seededConsistencyRuns, seededPathRuns));
     setReviewDraftRestored(false);
     appliedDemoPresetIdRef.current = demoPreset.id;
-  }, [demoPreset, reviewDraftStorageKey, skillDocument]);
+  }, [demoPreset, skillDocument]);
   const appendDecision = (action: ReviewDecision['action'], summary: string, targetId?: string) => {
     const timestamp = new Date().toISOString();
     setDecisionLog((current) => [
@@ -546,6 +586,11 @@ export function ReviewWorkspace({
         : 'unknown');
   const reviewEquivalenceStatus = data?.reviewerSummary?.equivalenceNote
     || (reviewMode === 'canonical' ? 'implementation_identity' : 'equivalence_unverified');
+  const reviewEquivalenceLabel = reviewEquivalenceStatus === 'implementation_identity'
+    ? t('app.equivalenceImplementationIdentity')
+    : reviewEquivalenceStatus === 'equivalence_unverified'
+      ? t('app.equivalenceUnverified')
+      : t('app.equivalencePending');
   const reviewDecisionGuidance = data?.reviewerSummary?.finalDecisionGuidance
     || (bridgeStatus?.mode === 'skill-0'
       ? 'Result was produced by the canonical skill-0 bridge. Final equivalence review is acceptable if supporting files and findings are inspected.'
@@ -557,6 +602,41 @@ export function ReviewWorkspace({
     : reviewMode === 'standalone'
       ? 'standalone'
       : 'unknown';
+  const bridgeToneClass = bridgeStatus?.mode === 'skill-0'
+    ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-900'
+    : bridgeStatus?.mode === 'standalone'
+      ? 'border-amber-500/20 bg-amber-500/10 text-amber-900'
+      : 'border-border/50 bg-background/70 text-foreground';
+  const reviewStatusLabel = reviewStatus === 'approved'
+    ? t('app.reviewStatusApproved')
+    : reviewStatus === 'changes_requested'
+      ? t('app.reviewStatusChangesRequested')
+      : reviewStatus === 'in_review'
+        ? t('app.reviewStatusInReview')
+        : t('app.reviewStatusDraft');
+  const validationEvidence = buildValidationEvidenceFromReviewData(data, { reviewMode });
+  const validationHasErrors = Boolean(
+    validationEvidence?.validationRun.errors.some((issue) => issue.severity === 'error')
+      || validationEvidence?.consistencyRun.issues.some((issue) => issue.severity === 'error'),
+  );
+  const validationHasWarnings = Boolean(
+    validationEvidence?.evidenceWarnings.length
+      || validationEvidence?.validationRun.errors.some((issue) => issue.severity === 'warning')
+      || validationEvidence?.consistencyRun.issues.some((issue) => issue.severity === 'warning'),
+  );
+  const validationStatusLabel = validationHasErrors
+    ? t('app.validationStatusFailed')
+    : validationHasWarnings
+      ? t('app.validationStatusAttention')
+      : t('app.validationStatusPassed');
+  const translateEvidenceMessage = (message: string) => {
+    if (message.startsWith('app.validationMissingStepReference:')) {
+      const [, pathId, step] = message.split(':');
+      return `${t('app.validationMissingStepReference')} ${pathId} -> ${step}`;
+    }
+
+    return message.startsWith('app.') ? t(message) : message;
+  };
 
   const openDerivedWorkflow = () => {
     setActiveTab('pipeline');
@@ -566,7 +646,49 @@ export function ReviewWorkspace({
     }, 80);
   };
 
+  const buildReviewStateSnapshot = (): ReviewState => {
+    const timestamp = new Date().toISOString();
+    const normalizedReviewerName = reviewerName.trim();
+    const normalizedNotes = reviewerNotes.trim();
+    const decisionAction = reviewStatus === 'approved'
+      ? 'approved'
+      : reviewStatus === 'changes_requested'
+        ? 'requested_changes'
+        : 'validated';
+    const synthesizedDecision = {
+      action: decisionAction,
+      id: `decision-${timestamp}`,
+      summary: `${reviewStatusLabel} · ${reviewDecisionGuidance}`,
+      timestamp,
+    } satisfies ReviewDecision;
+    const synthesizedNotes = normalizedNotes ? [
+      {
+        author: normalizedReviewerName || 'reviewer',
+        content: normalizedNotes,
+        createdAt: timestamp,
+        id: `note-${timestamp}`,
+        severity: reviewStatus === 'changes_requested' ? 'warning' : 'info',
+      } satisfies ReviewNote,
+    ] : [];
+
+    return {
+      checklist: reviewChecklist,
+      decisionLog: decisionLog.length > 0 ? decisionLog : [synthesizedDecision],
+      elementNotes,
+      globalNotes: [
+        ...synthesizedNotes,
+        ...globalNotes,
+      ],
+      reviewStatus,
+      reviewSummary: reviewSummaryDraft.trim() || undefined,
+      reviewerName: normalizedReviewerName || undefined,
+      reviewerSignoff: reviewerSignoff.trim() || undefined,
+      updatedAt: timestamp,
+    };
+  };
+
   const convertSkillToMarkdown = (skillData: any) => {
+    const reviewState = buildReviewStateSnapshot();
     const parserResult = skillData?.parserResult;
     if (parserResult?.decomposition) {
       const meta = parserResult.meta ?? {};
@@ -586,6 +708,9 @@ export function ReviewWorkspace({
         `- review_mode: ${reviewMode}`,
         `- equivalence_status: ${reviewEquivalenceStatus}`,
         `- review_decision_guidance: ${reviewDecisionGuidance}`,
+        `- review_status: ${reviewStatus}`,
+        `- reviewer: ${reviewerName.trim() || 'unassigned'}`,
+        `- reviewer_signoff: ${reviewerSignoff.trim() || 'unassigned'}`,
         `- schema_validation_status: ${validationResult?.valid ? 'valid' : 'invalid'}`,
         `- schema_validation_errors: ${validationErrors.length}`,
         `- schema_validation_warnings: ${validationWarnings.length}`,
@@ -595,6 +720,11 @@ export function ReviewWorkspace({
         `- source: ${original.source || 'uploaded skill'}`,
         '',
       ];
+
+      if (reviewerNotes.trim()) {
+        lines.push(`> Reviewer notes: ${reviewerNotes.trim()}`);
+        lines.push('');
+      }
 
       if (reviewEquivalenceStatus !== 'implementation_identity') {
         lines.push(`> Review note: ${reviewDecisionGuidance}`);
@@ -669,6 +799,8 @@ export function ReviewWorkspace({
       `- review_status: ${reviewStatus}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
       `- review_decision_guidance: ${reviewDecisionGuidance}`,
+      `- reviewer: ${reviewerName.trim() || 'unassigned'}`,
+      `- reviewer_signoff: ${reviewerSignoff.trim() || 'unassigned'}`,
       `- schema_validation_status: ${validationResult?.valid ? 'valid' : 'invalid'}`,
       `- schema_validation_errors: ${validationErrors.length}`,
       `- schema_validation_warnings: ${validationWarnings.length}`,
@@ -677,6 +809,11 @@ export function ReviewWorkspace({
       `- consistency_warnings: ${consistencyWarnings.length}`,
       '',
     ];
+
+    if (reviewerNotes.trim()) {
+      lines.push(`> Reviewer notes: ${reviewerNotes.trim()}`);
+      lines.push('');
+    }
 
     if (reviewEquivalenceStatus !== 'implementation_identity') {
       lines.push(`> Review note: ${reviewDecisionGuidance}`);
@@ -889,6 +1026,31 @@ export function ReviewWorkspace({
     );
   };
 
+  const exportReviewPacket = () => {
+    const reviewPacket = buildReviewPacketFromReviewData(data, {
+      bridgeMode: (bridgeStatus?.mode ?? 'unknown') as ReviewPacket['parserMode'],
+      bridgeModeSource: bridgeModeDetail,
+      equivalenceStatus: reviewEquivalenceStatus,
+      modifiedPaths,
+      reviewDecisionGuidance,
+      reviewMode,
+      reviewState: buildReviewStateSnapshot(),
+      skillDocument,
+      validationEvidence,
+    });
+    if (!reviewPacket) {
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(reviewPacket, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${data.projectId}-${exportModeSuffix}.review-packet.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       {demoPreset && (
@@ -1033,6 +1195,13 @@ export function ReviewWorkspace({
                         </button>
                       )}
                       <button
+                        onClick={exportReviewPacket}
+                        className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                      >
+                        <span>{t('app.exportReviewPacket')}</span>
+                        <Download size={14} className="text-muted-foreground" />
+                      </button>
+                      <button
                         onClick={handleResetWorkspace}
                         className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
                       >
@@ -1081,6 +1250,22 @@ export function ReviewWorkspace({
                 </span>
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">{bridgeModeDetail}</p>
+            </div>
+
+            <div
+              data-testid="review-readiness-banner"
+              className={`rounded-[1.35rem] border p-4 backdrop-blur-2xl ${reviewReadinessStyles}`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={15} className="shrink-0" />
+                  <p className="editorial-kicker text-current/80">{t('app.reviewEvidenceStatus')}</p>
+                </div>
+                <span className="rounded-full border border-current/15 bg-background/70 px-2.5 py-1 text-[11px] font-medium text-current">
+                  {reviewReadinessLabel}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-current/80">{bridgeReviewGuidance}</p>
             </div>
           </div>
         </aside>
@@ -1143,6 +1328,108 @@ export function ReviewWorkspace({
           </div>
 
           <div className="glass-panel px-4 py-4 sm:px-5">
+            <div
+              data-testid="review-truth-banner"
+              className={`mb-4 rounded-[1.1rem] border px-4 py-4 backdrop-blur-xl ${bridgeToneClass}`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="editorial-kicker">{t('app.reviewTruthPanel')}</p>
+                  <h3 className="mt-2 text-base font-semibold tracking-tight">{bridgeModeLabel}</h3>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
+                    {bridgeModeSummary}
+                  </span>
+                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
+                    {t('app.equivalenceStatus')}: {reviewEquivalenceLabel}
+                  </span>
+                </div>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-current/80">{bridgeReviewGuidance}</p>
+              <p className="mt-2 text-xs leading-5 text-current/75">
+                {t('app.bridgeSource')}: {bridgeModeDetail}
+              </p>
+            </div>
+
+            <div data-testid="review-decision-panel" className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]">
+              <div className="rounded-[1.1rem] border border-border/55 bg-background/75 px-4 py-4 backdrop-blur-xl">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="editorial-kicker">{t('app.reviewDecisionPanel')}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('app.reviewPacketHint')}</p>
+                  </div>
+                  <span className="rounded-full border border-border/55 bg-white/70 px-3 py-1 text-[11px] font-medium text-foreground">
+                    {reviewStatusLabel}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-1.5 text-sm text-foreground" htmlFor="reviewer-name">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewerName')}</span>
+                    <input
+                      id="reviewer-name"
+                      value={reviewerName}
+                      onChange={(event) => setReviewerName(event.target.value)}
+                      placeholder={t('app.reviewerNamePlaceholder')}
+                      className="rounded-xl border border-border/60 bg-white/70 px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
+                    />
+                  </label>
+
+                  <label className="grid gap-1.5 text-sm text-foreground" htmlFor="review-status">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewDecision')}</span>
+                    <select
+                      id="review-status"
+                      value={reviewStatus}
+                      onChange={(event) => setReviewStatus(event.target.value as ReviewState['reviewStatus'])}
+                      className="rounded-xl border border-border/60 bg-white/70 px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
+                    >
+                      <option value="draft">{t('app.reviewStatusDraft')}</option>
+                      <option value="in_review">{t('app.reviewStatusInReview')}</option>
+                      <option value="changes_requested">{t('app.reviewStatusChangesRequested')}</option>
+                      <option value="approved">{t('app.reviewStatusApproved')}</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label className="mt-3 grid gap-1.5 text-sm text-foreground" htmlFor="review-notes">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewNotes')}</span>
+                  <textarea
+                    id="review-notes"
+                    value={reviewerNotes}
+                    onChange={(event) => setReviewerNotes(event.target.value)}
+                    placeholder={t('app.reviewNotesPlaceholder')}
+                    className="min-h-28 rounded-[1.15rem] border border-border/60 bg-white/70 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
+                  />
+                </label>
+              </div>
+
+              <div className="rounded-[1.1rem] border border-border/55 bg-background/75 px-4 py-4 backdrop-blur-xl">
+                <p className="editorial-kicker">{t('app.reviewPacketSummary')}</p>
+                <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.reviewDecision')}:</span> {reviewStatusLabel}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.reviewerName')}:</span> {reviewerName.trim() || t('app.reviewerUnassigned')}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.bridgeMode')}:</span> {bridgeModeLabel}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.validationEvidence')}:</span> {validationStatusLabel}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.equivalenceStatus')}:</span> {reviewEquivalenceLabel}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">{t('app.modifiedCount')}:</span> {modifiedPaths.size}
+                  </p>
+                  <p className="text-xs leading-5">{reviewerNotes.trim() || t('app.reviewNotesEmpty')}</p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="editorial-kicker">{t('app.workspaceViews')}</p>
@@ -1734,7 +2021,7 @@ export function ReviewWorkspace({
               kicker={t('app.bridgeMode')}
               title={bridgeModeLabel}
               summary={bridgeModeSummary}
-              accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : 'default'}
+              accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : bridgeStatus?.mode === 'standalone' ? 'default' : 'rose'}
             >
               <div className="grid gap-3">
                 <MiniMetric label={t('app.bridgeMode')} value={bridgeModeLabel} />
@@ -1742,6 +2029,79 @@ export function ReviewWorkspace({
                 <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
                   {bridgeReviewGuidance}
                 </div>
+              </div>
+            </InsightBlock>
+
+            <InsightBlock
+              kicker={t('app.validationEvidence')}
+              title={validationStatusLabel}
+              summary={validationEvidence?.provenance.schemaVersion || 'n/a'}
+              accent={validationHasErrors ? 'rose' : validationHasWarnings ? 'default' : 'emerald'}
+              defaultOpen
+            >
+              <div data-testid="validation-evidence-panel" className="space-y-3">
+                {validationEvidence ? (
+                  <>
+                    <div className="grid gap-2">
+                      <MiniMetric label={t('app.schemaVersion')} value={validationEvidence.provenance.schemaVersion} />
+                      <MiniMetric label={t('app.parserVersion')} value={validationEvidence.provenance.parserVersion} />
+                      <MiniMetric label={t('app.reviewMode')} value={reviewMode} />
+                      <MiniMetric label={t('app.source')} value={validationEvidence.provenance.source} />
+                    </div>
+
+                    {validationEvidence.evidenceWarnings.length > 0 && (
+                      <div className="rounded-[1.25rem] border border-amber-500/25 bg-amber-500/8 p-3 text-sm leading-6 text-amber-900">
+                        {validationEvidence.evidenceWarnings.map((warning) => (
+                          <p key={warning}>{t(warning)}</p>
+                        ))}
+                      </div>
+                    )}
+
+                    {validationEvidence.validationRun.errors.length > 0 && (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          {t('app.validationIssues')}
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {validationEvidence.validationRun.errors.map((issue) => (
+                            <div key={`${issue.code}-${issue.path}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                              <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
+                              <div>{issue.path}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {validationEvidence.consistencyRun.issues.length > 0 && (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          {t('app.consistencyIssues')}
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {validationEvidence.consistencyRun.issues.map((issue, index) => (
+                            <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                              <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
+                              {issue.targetId && <div>{issue.targetId}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {validationEvidence.validationRun.errors.length === 0
+                      && validationEvidence.consistencyRun.issues.length === 0
+                      && validationEvidence.evidenceWarnings.length === 0 && (
+                        <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-900">
+                          {t('app.validationNoIssues')}
+                        </div>
+                      )}
+                  </>
+                ) : (
+                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    {t('app.validationUnavailable')}
+                  </div>
+                )}
               </div>
             </InsightBlock>
 

@@ -52,22 +52,26 @@ const sampleData = {
   globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
 };
 
+const baseProps = {
+  darkMode: false,
+  demoPreset: null,
+  modifiedPaths: new Set<string>(),
+  supportFiles: [],
+  selectedContextPath: null,
+  guiRepoUrl: 'https://example.com/gui',
+  engineRepoUrl: 'https://example.com/engine',
+  onSelectContextPath: vi.fn(),
+  onSaveEdit: vi.fn(),
+  onUndo: vi.fn(),
+  onResetWorkspace: vi.fn(),
+};
+
 function createProps() {
   return {
-    demoPreset: null,
-    originalData: sampleData,
-    darkMode: false,
-    modifiedPaths: new Set<string>(),
-    supportFiles: [],
-    selectedContextPath: null,
+    ...baseProps,
     bridgeStatus: { mode: 'skill-0' as const, skill0Root: '/home/miles/dev2/skill-0' },
     bridgeStatusError: null,
-    guiRepoUrl: 'https://example.com/gui',
-    engineRepoUrl: 'https://example.com/engine',
-    onSelectContextPath: vi.fn(),
-    onSaveEdit: vi.fn(),
-    onUndo: vi.fn(),
-    onResetWorkspace: vi.fn(),
+    originalData: sampleData,
   };
 }
 
@@ -78,8 +82,8 @@ describe('ReviewWorkspace', () => {
 
   it('preserves the active tab when parent data rerenders after an edit', async () => {
     const props = createProps();
-
     const { rerender } = render(<ReviewWorkspace data={sampleData} {...props} />);
+
     expect(await screen.findByTestId('dashboard')).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByText('app.tabs.vector')[1]);
@@ -91,9 +95,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('renders schema validation warnings for the current SkillDocument projection', async () => {
-    const props = createProps();
-
-    render(<ReviewWorkspace data={sampleData} {...props} />);
+    render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
     expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
     expect(screen.getByText('app.validationValid')).toBeInTheDocument();
@@ -101,8 +103,6 @@ describe('ReviewWorkspace', () => {
   });
 
   it('renders consistency issues for invalid execution path references', async () => {
-    const props = createProps();
-
     const inconsistentData = {
       ...sampleData,
       parserResult: {
@@ -117,7 +117,7 @@ describe('ReviewWorkspace', () => {
       },
     };
 
-    render(<ReviewWorkspace data={inconsistentData} {...props} />);
+    render(<ReviewWorkspace data={inconsistentData} {...createProps()} />);
 
     expect(await screen.findByText('app.consistencyChecks')).toBeInTheDocument();
     expect(screen.getByText('app.consistencyInvalid')).toBeInTheDocument();
@@ -125,8 +125,6 @@ describe('ReviewWorkspace', () => {
   });
 
   it('surfaces malformed execution paths in the validation panel', async () => {
-    const props = createProps();
-
     const malformedData = {
       ...sampleData,
       parserResult: {
@@ -136,7 +134,7 @@ describe('ReviewWorkspace', () => {
       },
     };
 
-    render(<ReviewWorkspace data={malformedData} {...props} />);
+    render(<ReviewWorkspace data={malformedData} {...createProps()} />);
 
     expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
     expect(screen.getByText('app.validationInvalid')).toBeInTheDocument();
@@ -144,8 +142,6 @@ describe('ReviewWorkspace', () => {
   });
 
   it('opens the structured editor at the validation issue field path', async () => {
-    const props = createProps();
-
     const malformedData = {
       ...sampleData,
       parserResult: {
@@ -155,7 +151,7 @@ describe('ReviewWorkspace', () => {
       },
     };
 
-    render(<ReviewWorkspace data={malformedData} {...props} />);
+    render(<ReviewWorkspace data={malformedData} {...createProps()} />);
 
     fireEvent.click(await screen.findByText('app.openIssueInEditor'));
 
@@ -163,8 +159,6 @@ describe('ReviewWorkspace', () => {
   });
 
   it('opens the structured editor at the consistency issue field path', async () => {
-    const props = createProps();
-
     const inconsistentData = {
       ...sampleData,
       parserResult: {
@@ -179,7 +173,7 @@ describe('ReviewWorkspace', () => {
       },
     };
 
-    render(<ReviewWorkspace data={inconsistentData} {...props} />);
+    render(<ReviewWorkspace data={inconsistentData} {...createProps()} />);
 
     const buttons = await screen.findAllByText('app.openIssueInEditor');
     fireEvent.click(buttons[buttons.length - 1]);
@@ -188,9 +182,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('exposes the structured SkillDocument editor from the action tray', async () => {
-    const props = createProps();
-
-    render(<ReviewWorkspace data={sampleData} {...props} />);
+    render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
     fireEvent.click(await screen.findByText('app.actionsTray'));
 
@@ -199,9 +191,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('records a reviewer-facing validation run from the test panel', async () => {
-    const props = createProps();
-
-    render(<ReviewWorkspace data={sampleData} {...props} />);
+    render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
     fireEvent.click(await screen.findByText('app.runValidation'));
 
@@ -210,9 +200,7 @@ describe('ReviewWorkspace', () => {
   });
 
   it('captures a session reviewer note', async () => {
-    const props = createProps();
-
-    render(<ReviewWorkspace data={sampleData} {...props} />);
+    render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
     fireEvent.change(await screen.findByPlaceholderText('app.reviewerNotesPlaceholder'), {
       target: { value: 'Need canonical rerun before approval.' },
@@ -224,7 +212,6 @@ describe('ReviewWorkspace', () => {
   });
 
   it('shows a diff summary against the original review data', async () => {
-    const props = createProps();
     const changedData = {
       ...sampleData,
       parserResult: {
@@ -239,7 +226,7 @@ describe('ReviewWorkspace', () => {
       },
     };
 
-    render(<ReviewWorkspace data={changedData} {...props} />);
+    render(<ReviewWorkspace data={changedData} {...createProps()} />);
 
     expect(await screen.findByText('app.diffSummary')).toBeInTheDocument();
     expect(screen.getByText('3 app.diffEntries')).toBeInTheDocument();
@@ -273,6 +260,8 @@ describe('ReviewWorkspace', () => {
       elementNotes: [],
       noteTarget: 'global',
       reviewStatus: 'approved',
+      reviewerName: 'Persisted Reviewer',
+      reviewerNotes: 'Persisted reviewer packet notes.',
       reviewSummaryDraft: 'Final review summary',
       reviewerSignoff: 'qa-bot',
       reviewChecklist: {
@@ -292,8 +281,7 @@ describe('ReviewWorkspace', () => {
       ],
     }));
 
-    const props = createProps();
-    render(<ReviewWorkspace data={sampleData} {...props} />);
+    render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
     expect(await screen.findByText('Persisted note')).toBeInTheDocument();
     expect(screen.getByText('0 app.validationErrors · 1 app.validationWarnings')).toBeInTheDocument();
@@ -301,15 +289,15 @@ describe('ReviewWorkspace', () => {
     expect(screen.getByText('Review status changed to approved.')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Final review summary')).toBeInTheDocument();
     expect(screen.getByDisplayValue('qa-bot')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Persisted Reviewer')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Persisted reviewer packet notes.')).toBeInTheDocument();
     expect(screen.getByText('3/4')).toBeInTheDocument();
     expect(screen.getByTestId('review-draft-status')).toHaveTextContent('app.localDraft');
     expect(screen.getByTestId('review-draft-status')).toHaveTextContent('app.localDraftRestored');
   });
 
   it('updates the review status and records a decision log entry', async () => {
-    const props = createProps();
-
-    render(<ReviewWorkspace data={sampleData} {...props} />);
+    render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
     fireEvent.click(await screen.findByText('app.markApproved'));
 
@@ -319,32 +307,38 @@ describe('ReviewWorkspace', () => {
   });
 
   it('applies a guided demo preset when no reviewer draft exists', async () => {
-    const props = createProps();
-
-    render(<ReviewWorkspace data={sampleData} {...props} demoPreset={{
-      id: 'bundle-review',
-      title: 'Bundle Intake Review',
-      focus: 'bundle review focus',
-      nextStep: 'Inspect supporting files and clear the evidence gate.',
-      reviewStatus: 'changes_requested',
-      reviewSummary: 'Supporting files need one more evidence pass before approval.',
-      reviewerSignoff: 'bundle-reviewer',
-      reviewChecklist: {
-        modeConfirmed: true,
-        validationReviewed: true,
-        diffReviewed: true,
-        evidenceReady: false,
-      },
-      notes: ['Preset note for the bundle review demo.'],
-      seedValidationRun: true,
-      seedConsistencyRun: true,
-      seedPathRun: true,
-    }} />);
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...createProps()}
+        demoPreset={{
+          id: 'bundle-review',
+          title: 'Bundle Intake Review',
+          focus: 'bundle review focus',
+          nextStep: 'Inspect supporting files and clear the evidence gate.',
+          reviewStatus: 'changes_requested',
+          reviewSummary: 'Supporting files need one more evidence pass before approval.',
+          reviewerSignoff: 'bundle-reviewer',
+          reviewChecklist: {
+            modeConfirmed: true,
+            validationReviewed: true,
+            diffReviewed: true,
+            evidenceReady: false,
+          },
+          notes: ['Preset note for the bundle review demo.'],
+          seedValidationRun: true,
+          seedConsistencyRun: true,
+          seedPathRun: true,
+        }}
+      />,
+    );
 
     const demoPreset = await screen.findByTestId('demo-review-preset');
     expect(demoPreset).toHaveTextContent('Bundle Intake Review');
-    expect(screen.getByDisplayValue('Supporting files need one more evidence pass before approval.')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('bundle-reviewer')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('app.reviewSummaryPlaceholder')).toHaveValue('Supporting files need one more evidence pass before approval.');
+    });
+    expect(screen.getByPlaceholderText('app.reviewerSignoffPlaceholder')).toHaveValue('bundle-reviewer');
     expect(screen.getByText('Preset note for the bundle review demo.')).toBeInTheDocument();
     expect(screen.getAllByText('app.reviewStatusChangesRequested').length).toBeGreaterThan(0);
     expect(within(demoPreset).getByText('3/4')).toBeInTheDocument();
@@ -361,6 +355,8 @@ describe('ReviewWorkspace', () => {
       elementNotes: [],
       noteTarget: 'global',
       reviewStatus: 'approved',
+      reviewerName: 'persisted-reviewer',
+      reviewerNotes: 'Persisted reviewer note wins.',
       reviewSummaryDraft: 'Persisted summary wins.',
       reviewerSignoff: 'persisted-reviewer',
       reviewChecklist: {
@@ -373,34 +369,132 @@ describe('ReviewWorkspace', () => {
       decisionLog: [],
     }));
 
-    const props = createProps();
-    render(<ReviewWorkspace data={sampleData} {...props} demoPreset={{
-      id: 'publish-gate',
-      title: 'Publish Approval Gate',
-      focus: 'release focus',
-      nextStep: 'Export the report.',
-      reviewStatus: 'changes_requested',
-      reviewSummary: 'Demo preset summary should not replace persisted state.',
-      reviewerSignoff: 'demo-reviewer',
-      reviewChecklist: {
-        modeConfirmed: true,
-        validationReviewed: false,
-        diffReviewed: false,
-        evidenceReady: false,
-      },
-      notes: ['demo preset note'],
-    }} />);
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...createProps()}
+        demoPreset={{
+          id: 'publish-gate',
+          title: 'Publish Approval Gate',
+          focus: 'release focus',
+          nextStep: 'Export the report.',
+          reviewStatus: 'changes_requested',
+          reviewSummary: 'Demo preset summary should not replace persisted state.',
+          reviewerSignoff: 'demo-reviewer',
+          reviewChecklist: {
+            modeConfirmed: true,
+            validationReviewed: false,
+            diffReviewed: false,
+            evidenceReady: false,
+          },
+          notes: ['demo preset note'],
+        }}
+      />,
+    );
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Persisted summary wins.')).toBeInTheDocument();
     });
-    expect(screen.getByDisplayValue('persisted-reviewer')).toBeInTheDocument();
+    expect(screen.getByLabelText('app.reviewerName')).toHaveValue('persisted-reviewer');
+    expect(screen.getByPlaceholderText('app.reviewerSignoffPlaceholder')).toHaveValue('persisted-reviewer');
+    expect(screen.getByLabelText('app.reviewNotes')).toHaveValue('Persisted reviewer note wins.');
     expect(screen.queryByText('demo preset note')).not.toBeInTheDocument();
     expect(screen.getAllByText('app.reviewStatusApproved').length).toBeGreaterThan(0);
   });
 
+  it('shows mode-aware review evidence guidance when the workspace is using the standalone parser', async () => {
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...baseProps}
+        originalData={sampleData}
+        bridgeStatus={{ mode: 'standalone', skill0Root: null }}
+        bridgeStatusError={null}
+      />,
+    );
+
+    const readinessBanner = await screen.findByTestId('review-readiness-banner');
+    const truthBanner = screen.getByTestId('review-truth-banner');
+
+    expect(readinessBanner).toHaveTextContent('app.reviewEvidenceStatus');
+    expect(readinessBanner).toHaveTextContent('app.reviewEvidenceStandalone');
+    expect(readinessBanner).toHaveTextContent('app.bridgeGuidanceStandalone');
+    expect(truthBanner).toHaveTextContent('app.reviewTruthPanel');
+    expect(truthBanner).toHaveTextContent('app.equivalenceStatus: app.equivalenceUnverified');
+    expect(screen.getAllByText('app.bridgeModeBundled')).not.toHaveLength(0);
+  });
+
+  it('shows reviewer-facing validation evidence for incomplete parser metadata', async () => {
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...baseProps}
+        originalData={sampleData}
+        bridgeStatus={{ mode: 'standalone', skill0Root: null }}
+        bridgeStatusError={null}
+      />,
+    );
+
+    const panel = await screen.findByTestId('validation-evidence-panel');
+    expect(panel).toHaveTextContent('app.validationStandaloneWarning');
+    expect(panel).toHaveTextContent('app.validationMissingSchemaVersion');
+    expect(panel).toHaveTextContent('app.validationMissingSkillId');
+    expect(panel).toHaveTextContent('app.validationMissingExecutionPaths');
+  });
+
+  it('exports a review packet with reviewer decision metadata', async () => {
+    const originalCreateObjectUrl = URL.createObjectURL;
+    const originalRevokeObjectUrl = URL.revokeObjectURL;
+    const originalScrollTo = window.scrollTo;
+    URL.createObjectURL = vi.fn(() => 'blob:review-packet') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
+    window.scrollTo = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const stringifySpy = vi.spyOn(JSON, 'stringify');
+
+    render(
+      <ReviewWorkspace
+        data={sampleData}
+        {...createProps()}
+        modifiedPaths={new Set(['projectName', 'riskAssessment.level', 'metrics'])}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('app.reviewerName'), { target: { value: 'Miles' } });
+    fireEvent.change(screen.getByLabelText('app.reviewDecision'), { target: { value: 'approved' } });
+    fireEvent.change(screen.getByLabelText('app.reviewNotes'), { target: { value: 'Ready for merge after canonical verification.' } });
+
+    const reviewDecisionPanel = screen.getByTestId('review-decision-panel');
+    expect(reviewDecisionPanel).toHaveTextContent('app.reviewStatusApproved');
+    expect(reviewDecisionPanel).toHaveTextContent('Miles');
+    expect(reviewDecisionPanel).toHaveTextContent('Ready for merge after canonical verification.');
+
+    fireEvent.click(screen.getByText('app.actionsTray'));
+    fireEvent.click(await screen.findByText('app.exportReviewPacket'));
+
+    expect(clickSpy).toHaveBeenCalled();
+    const packet = stringifySpy.mock.calls.at(-1)?.[0] as any;
+    expect(packet.projectId).toBe('demo-skill');
+    expect(packet.parserMode).toBe('skill-0');
+    expect(packet.reviewState.reviewerName).toBe('Miles');
+    expect(packet.reviewState.reviewStatus).toBe('approved');
+    expect(packet.reviewState.diffSummary.changed).toEqual(['projectName', 'riskAssessment.level']);
+    expect(packet.reviewState.diffSummary.stats.fieldsChanged).toBe(2);
+    expect(packet.validationEvidence.provenance.parserVersion).toBe('v1');
+    expect(packet.reviewChecklist.find((item: any) => item.id === 'bridge-mode')?.status).toBe('complete');
+    expect(packet.reviewChecklist.find((item: any) => item.id === 'schema-validation')?.status).toBe('blocked');
+    expect(packet.reviewState.globalNotes[0].content).toContain('Ready for merge');
+    expect(packet.reviewState.decisionLog[0].action).toBe('approved');
+    expect(packet.reviewDecisionGuidance).toContain('canonical skill-0 bridge');
+
+    URL.createObjectURL = originalCreateObjectUrl;
+    URL.revokeObjectURL = originalRevokeObjectUrl;
+    window.scrollTo = originalScrollTo;
+    clickSpy.mockRestore();
+    stringifySpy.mockRestore();
+  });
+
   it('exports a reviewer-facing report with notes diff and test summaries', async () => {
-    const props = createProps();
     const changedData = {
       ...sampleData,
       parserResult: {
@@ -419,6 +513,7 @@ describe('ReviewWorkspace', () => {
     const originalBlob = globalThis.Blob;
     let capturedBlob: Blob | null = null;
     let capturedAnchor: HTMLAnchorElement | null = null;
+
     class MockBlob {
       private readonly textContent: string;
       readonly type: string;
@@ -440,6 +535,7 @@ describe('ReviewWorkspace', () => {
         return Promise.resolve(this.textContent);
       }
     }
+
     Object.defineProperty(globalThis, 'Blob', {
       configurable: true,
       writable: true,
@@ -469,7 +565,7 @@ describe('ReviewWorkspace', () => {
     });
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-    render(<ReviewWorkspace data={changedData} {...props} />);
+    render(<ReviewWorkspace data={changedData} {...createProps()} />);
 
     fireEvent.change(await screen.findByPlaceholderText('app.reviewerNotesPlaceholder'), {
       target: { value: 'Need canonical rerun before approval.' },
