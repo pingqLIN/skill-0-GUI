@@ -127,6 +127,27 @@
     "demoArtifactExampleSkillTitle": "`.skill.md`",
     "demoArtifactExampleSkillBody": "這是 skill-style 匯出預覽，幫 reviewer 對照人類可讀產物與結構化 SkillDocument 投影。",
     "demoArtifactExampleSkillSnippet": "# Demo-safe Export\n\n## Workflow\n- Review supporting files\n- Record reviewer notes\n- Export report after sign-off\n\n## Rules\n- Never approve unresolved references\n- Always capture reviewer summary",
+    "demoReviewGuide": "導覽式 demo 審查",
+    "demoReviewNextStep": "建議下一步",
+    "demoReviewPrefilled": "預填 reviewer 狀態",
+    "demoReviewChecklist": "預填 checklist",
+    "demoReviewPreset": {
+      "modeAware": {
+        "summary": "先確認畫面上標示的 parser mode，再走一次 reviewer report export 路徑，之後才把結果當成外部審查證據。",
+        "note": "這個 demo 一開始就已經進入 review 狀態，也先標記 parser mode 已確認，但 diff review 與 evidence gate 仍需補完。",
+        "nextStep": "先檢查 parser mode 與 reviewer notes，再試著匯出 review report。"
+      },
+      "bundleReview": {
+        "summary": "supporting files 與 helper command 已經浮出來了，但這個 bundle 在通過 evidence gate 之前，仍維持 requested changes。",
+        "note": "Bundle review preset：先確認 supporting references 與 helper script 的 authority，再決定是否把 evidence gate 補齊。",
+        "nextStep": "先檢查 supporting files，再把最後一個 evidence gate 補完，之後再把狀態切回 review。"
+      },
+      "publishGate": {
+        "summary": "這個 demo-safe release 情境展示的是一條已完成的 sign-off 路徑，reviewer summary 與 publish gates 都已經到位。",
+        "note": "Publish-gate preset：把匯出的 review report 當成 release approval artifact，再與 SkillDocument snapshot 對照。",
+        "nextStep": "匯出 review report，然後把 release evidence 與 `.skill.md` 匯出互相比對。"
+      }
+    },
     "emptyTitle": "A ternary classification system for parsing the internal structure of Claude Skills and MCP Tools",
     "emptyLead": "上傳 SKILL 定義、貼上草稿，或測試一段 parser 情境。這個工作區會把流程、風險與追溯線索整理成一眼可判讀的版面。",
     "emptyFeatureFlowTitle": "流程優先布局",

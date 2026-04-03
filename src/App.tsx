@@ -15,7 +15,7 @@ import { analyzeSkillText } from './services/parserBridgeService';
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
 import type { PreparedUploadFile, UploadedContextFile } from './types/intake';
-import type { SkillDocument } from './types/skillDocument';
+import type { ReviewChecklist, SkillDocument } from './types/skillDocument';
 import type { EditorConfig } from './types/workspace';
 
 const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((module) => ({ default: module.ReviewWorkspace })));
@@ -44,12 +44,33 @@ type WorkspaceDraftSnapshot = {
 };
 
 type DemoScenarioDefinition = {
+  artifacts: string;
+  body: string;
+  cta: string;
+  focus: string;
   id: string;
   primaryPath?: string;
+  reviewPreset?: DemoReviewPreset;
   skillName?: string;
   text?: string;
+  title: string;
   contextFiles?: UploadedContextFile[];
   type: 'server-example' | 'local-bundle';
+};
+
+export type DemoReviewPreset = {
+  focus: string;
+  id: string;
+  nextStep: string;
+  notes: string[];
+  reviewChecklist: ReviewChecklist;
+  reviewStatus: 'draft' | 'in_review' | 'changes_requested' | 'approved';
+  reviewSummary: string;
+  reviewerSignoff: string;
+  seedConsistencyRun?: boolean;
+  seedPathRun?: boolean;
+  seedValidationRun?: boolean;
+  title: string;
 };
 
 function readWorkspaceDraft(): WorkspaceDraftSnapshot | null {
@@ -145,6 +166,7 @@ export default function App() {
   const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
   const [workspaceDraftSavedAt, setWorkspaceDraftSavedAt] = useState<string | null>(null);
   const [workspaceDraftRestored, setWorkspaceDraftRestored] = useState(false);
+  const [activeDemoPreset, setActiveDemoPreset] = useState<DemoReviewPreset | null>(null);
   const hasHydratedWorkspaceDraftRef = useRef(false);
   const skipNextWorkspaceDraftPersistRef = useRef(false);
 
@@ -209,6 +231,7 @@ export default function App() {
       setSelectedContextPath(snapshot.selectedContextPath);
       setWorkspaceDraftSavedAt(snapshot.updatedAt);
       setWorkspaceDraftRestored(true);
+      setActiveDemoPreset(null);
       skipNextWorkspaceDraftPersistRef.current = true;
     }
 
@@ -397,6 +420,7 @@ export default function App() {
   const loadSkillDocument = (
     document: SkillDocument,
     options: {
+      demoPreset?: DemoReviewPreset | null;
       fileName?: string;
       sourceLabel?: string;
       supportFiles?: UploadedContextFile[];
@@ -413,6 +437,7 @@ export default function App() {
     setSupportFiles(options.supportFiles ?? []);
     setSelectedContextPath(options.selectedContextPath ?? null);
     setInputText(JSON.stringify(document, null, 2));
+    setActiveDemoPreset(options.demoPreset ?? null);
     setError(null);
   };
 
@@ -429,6 +454,7 @@ export default function App() {
     setPendingPrimaryPath(primaryFile?.path ?? null);
     setSupportFiles([]);
     setSelectedContextPath(null);
+    setActiveDemoPreset(null);
     setData(null);
     setOriginalData(null);
     setModifiedPaths(new Set());
@@ -492,6 +518,7 @@ export default function App() {
     if (trimmed) {
       setPendingUploadFiles([]);
       setPendingPrimaryPath(null);
+      setActiveDemoPreset(null);
       const importedSkillDocument = parseSkillDocumentJson(trimmed);
       if (importedSkillDocument) {
         loadSkillDocument(importedSkillDocument, {
@@ -524,6 +551,7 @@ export default function App() {
 
     setSupportFiles(contextEntries);
     setSelectedContextPath(contextEntries[0]?.path ?? null);
+    setActiveDemoPreset(null);
     setInputText(primaryFile.text);
     const importedSkillDocument = parseSkillDocumentJson(primaryFile.text);
     if (importedSkillDocument) {
@@ -656,6 +684,7 @@ export default function App() {
     setPendingPrimaryPath(null);
     setSupportFiles([]);
     setSelectedContextPath(null);
+    setActiveDemoPreset(null);
     setError(null);
     setWorkspaceDraftSavedAt(null);
     setWorkspaceDraftRestored(false);
@@ -685,6 +714,7 @@ export default function App() {
       setInputText(payload.text);
       setPendingUploadFiles([]);
       setPendingPrimaryPath(null);
+      setActiveDemoPreset(curatedScenarios.find((scenario) => scenario.id === 'mode-aware')?.reviewPreset ?? null);
       await processSkill(payload.text, payload.name || 'example-skill');
     } catch (err) {
       console.error(err);
@@ -702,6 +732,7 @@ export default function App() {
 
     const text = scenario.text || '';
     const contextFiles = scenario.contextFiles || [];
+    setActiveDemoPreset(scenario.reviewPreset ?? null);
     setSupportFiles(contextFiles);
     setSelectedContextPath(contextFiles[0]?.path ?? null);
     setInputText(text);
@@ -771,14 +802,41 @@ export default function App() {
       href: DEMO_PLAN_URL,
     },
   ];
-  const curatedScenarioDefinitions: DemoScenarioDefinition[] = [
+  const curatedScenarios: DemoScenarioDefinition[] = [
     {
       id: 'mode-aware',
       type: 'server-example',
+      title: t('app.demoScenario.mode-aware.title'),
+      body: t('app.demoScenario.mode-aware.body'),
+      focus: t('app.demoScenario.mode-aware.focus'),
+      artifacts: t('app.demoScenario.mode-aware.artifacts'),
+      cta: t('app.demoScenario.mode-aware.cta'),
+      reviewPreset: {
+        id: 'mode-aware',
+        title: t('app.demoScenario.mode-aware.title'),
+        focus: t('app.demoScenario.mode-aware.focus'),
+        nextStep: t('app.demoReviewPreset.modeAware.nextStep'),
+        reviewStatus: 'in_review',
+        reviewSummary: t('app.demoReviewPreset.modeAware.summary'),
+        reviewerSignoff: 'demo-reviewer',
+        reviewChecklist: {
+          modeConfirmed: true,
+          validationReviewed: true,
+          diffReviewed: false,
+          evidenceReady: false,
+        },
+        notes: [t('app.demoReviewPreset.modeAware.note')],
+        seedValidationRun: true,
+      },
     },
     {
       id: 'bundle-review',
       type: 'local-bundle',
+      title: t('app.demoScenario.bundle-review.title'),
+      body: t('app.demoScenario.bundle-review.body'),
+      focus: t('app.demoScenario.bundle-review.focus'),
+      artifacts: t('app.demoScenario.bundle-review.artifacts'),
+      cta: t('app.demoScenario.bundle-review.cta'),
       skillName: 'bundle-intake-review',
       primaryPath: 'demo/bundle-review/SKILL.md',
       text: `---
@@ -839,10 +897,34 @@ print("verify policy before execution")
 `,
         },
       ],
+      reviewPreset: {
+        id: 'bundle-review',
+        title: t('app.demoScenario.bundle-review.title'),
+        focus: t('app.demoScenario.bundle-review.focus'),
+        nextStep: t('app.demoReviewPreset.bundleReview.nextStep'),
+        reviewStatus: 'changes_requested',
+        reviewSummary: t('app.demoReviewPreset.bundleReview.summary'),
+        reviewerSignoff: 'bundle-reviewer',
+        reviewChecklist: {
+          modeConfirmed: true,
+          validationReviewed: true,
+          diffReviewed: true,
+          evidenceReady: false,
+        },
+        notes: [t('app.demoReviewPreset.bundleReview.note')],
+        seedValidationRun: true,
+        seedConsistencyRun: true,
+        seedPathRun: true,
+      },
     },
     {
       id: 'publish-gate',
       type: 'local-bundle',
+      title: t('app.demoScenario.publish-gate.title'),
+      body: t('app.demoScenario.publish-gate.body'),
+      focus: t('app.demoScenario.publish-gate.focus'),
+      artifacts: t('app.demoScenario.publish-gate.artifacts'),
+      cta: t('app.demoScenario.publish-gate.cta'),
       skillName: 'publish-approval-gate',
       primaryPath: 'demo/publish-approval/SKILL.md',
       text: `---
@@ -890,6 +972,24 @@ npm run release:preview
 `,
         },
       ],
+      reviewPreset: {
+        id: 'publish-gate',
+        title: t('app.demoScenario.publish-gate.title'),
+        focus: t('app.demoScenario.publish-gate.focus'),
+        nextStep: t('app.demoReviewPreset.publishGate.nextStep'),
+        reviewStatus: 'approved',
+        reviewSummary: t('app.demoReviewPreset.publishGate.summary'),
+        reviewerSignoff: 'release-reviewer',
+        reviewChecklist: {
+          modeConfirmed: true,
+          validationReviewed: true,
+          diffReviewed: true,
+          evidenceReady: true,
+        },
+        notes: [t('app.demoReviewPreset.publishGate.note')],
+        seedValidationRun: true,
+        seedConsistencyRun: true,
+      },
     },
   ];
   const landingWhy = [
@@ -934,14 +1034,6 @@ npm run release:preview
       body: t('app.demoArtifactSkillBody'),
     },
   ];
-  const curatedScenarios = curatedScenarioDefinitions.map((scenario) => ({
-    ...scenario,
-    title: t(`app.demoScenario.${scenario.id}.title`),
-    body: t(`app.demoScenario.${scenario.id}.body`),
-    focus: t(`app.demoScenario.${scenario.id}.focus`),
-    artifacts: t(`app.demoScenario.${scenario.id}.artifacts`),
-    cta: t(`app.demoScenario.${scenario.id}.cta`),
-  }));
   const artifactExamples = [
     {
       title: t('app.demoArtifactExampleReportTitle'),
@@ -1476,6 +1568,7 @@ npm run release:preview
               key={analysisSessionId}
               data={data}
               originalData={originalData}
+              demoPreset={activeDemoPreset}
               darkMode={darkMode}
               modifiedPaths={modifiedPaths}
               supportFiles={supportFiles}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReviewWorkspace } from '../components/ReviewWorkspace';
 
@@ -54,6 +54,7 @@ const sampleData = {
 
 function createProps() {
   return {
+    demoPreset: null,
     originalData: sampleData,
     darkMode: false,
     modifiedPaths: new Set<string>(),
@@ -315,6 +316,87 @@ describe('ReviewWorkspace', () => {
     expect(screen.getAllByText('app.reviewStatusApproved').length).toBeGreaterThan(0);
     expect(screen.getByText('Review status changed to approved.')).toBeInTheDocument();
     expect(await screen.findByTestId('review-draft-status')).toHaveTextContent('app.localDraftAutosaved');
+  });
+
+  it('applies a guided demo preset when no reviewer draft exists', async () => {
+    const props = createProps();
+
+    render(<ReviewWorkspace data={sampleData} {...props} demoPreset={{
+      id: 'bundle-review',
+      title: 'Bundle Intake Review',
+      focus: 'bundle review focus',
+      nextStep: 'Inspect supporting files and clear the evidence gate.',
+      reviewStatus: 'changes_requested',
+      reviewSummary: 'Supporting files need one more evidence pass before approval.',
+      reviewerSignoff: 'bundle-reviewer',
+      reviewChecklist: {
+        modeConfirmed: true,
+        validationReviewed: true,
+        diffReviewed: true,
+        evidenceReady: false,
+      },
+      notes: ['Preset note for the bundle review demo.'],
+      seedValidationRun: true,
+      seedConsistencyRun: true,
+      seedPathRun: true,
+    }} />);
+
+    const demoPreset = await screen.findByTestId('demo-review-preset');
+    expect(demoPreset).toHaveTextContent('Bundle Intake Review');
+    expect(screen.getByDisplayValue('Supporting files need one more evidence pass before approval.')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('bundle-reviewer')).toBeInTheDocument();
+    expect(screen.getByText('Preset note for the bundle review demo.')).toBeInTheDocument();
+    expect(screen.getAllByText('app.reviewStatusChangesRequested').length).toBeGreaterThan(0);
+    expect(within(demoPreset).getByText('3/4')).toBeInTheDocument();
+    expect(screen.getByText('Demo preset loaded with review status changes_requested.')).toBeInTheDocument();
+    expect(screen.getByText(/Demo preset seeded validation run/)).toBeInTheDocument();
+  });
+
+  it('does not override a persisted reviewer draft with a demo preset', async () => {
+    window.localStorage.setItem(REVIEW_DRAFT_STORAGE_KEY, JSON.stringify({
+      validationRuns: [],
+      consistencyRuns: [],
+      pathTestRuns: [],
+      globalNotes: [],
+      elementNotes: [],
+      noteTarget: 'global',
+      reviewStatus: 'approved',
+      reviewSummaryDraft: 'Persisted summary wins.',
+      reviewerSignoff: 'persisted-reviewer',
+      reviewChecklist: {
+        modeConfirmed: true,
+        validationReviewed: true,
+        diffReviewed: true,
+        evidenceReady: true,
+      },
+      updatedAt: '2026-04-02T00:00:04.000Z',
+      decisionLog: [],
+    }));
+
+    const props = createProps();
+    render(<ReviewWorkspace data={sampleData} {...props} demoPreset={{
+      id: 'publish-gate',
+      title: 'Publish Approval Gate',
+      focus: 'release focus',
+      nextStep: 'Export the report.',
+      reviewStatus: 'changes_requested',
+      reviewSummary: 'Demo preset summary should not replace persisted state.',
+      reviewerSignoff: 'demo-reviewer',
+      reviewChecklist: {
+        modeConfirmed: true,
+        validationReviewed: false,
+        diffReviewed: false,
+        evidenceReady: false,
+      },
+      notes: ['demo preset note'],
+    }} />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Persisted summary wins.')).toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue('persisted-reviewer')).toBeInTheDocument();
+    expect(screen.queryByText('demo preset note')).not.toBeInTheDocument();
+    expect(screen.getAllByText('app.reviewStatusApproved').length).toBeGreaterThan(0);
   });
 
   it('exports a reviewer-facing report with notes diff and test summaries', async () => {

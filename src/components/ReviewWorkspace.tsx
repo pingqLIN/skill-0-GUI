@@ -39,6 +39,7 @@ import type {
   ValidationRun,
 } from '../types/skillDocument';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
+import type { DemoReviewPreset } from '../App';
 
 const Dashboard = lazy(() => import('./Dashboard').then((module) => ({ default: module.Dashboard })));
 const PhaseDetails = lazy(() => import('./PhaseDetails').then((module) => ({ default: module.PhaseDetails })));
@@ -100,6 +101,7 @@ function normalizeReviewChecklist(value: unknown): ReviewChecklist {
 
 type ReviewWorkspaceProps = {
   data: any;
+  demoPreset: DemoReviewPreset | null;
   originalData: any | null;
   darkMode: boolean;
   modifiedPaths: Set<string>;
@@ -117,6 +119,7 @@ type ReviewWorkspaceProps = {
 
 export function ReviewWorkspace({
   data,
+  demoPreset,
   originalData,
   darkMode,
   modifiedPaths,
@@ -154,6 +157,7 @@ export function ReviewWorkspace({
   const [reviewDraftRestored, setReviewDraftRestored] = useState(false);
   const hasHydratedReviewDraftRef = useRef(false);
   const skipNextReviewDraftPersistRef = useRef(false);
+  const appliedDemoPresetIdRef = useRef<string | null>(null);
 
   const parserActions = data?.parserResult?.decomposition?.actions ?? [];
   const parserRules = data?.parserResult?.decomposition?.rules ?? [];
@@ -366,6 +370,45 @@ export function ReviewWorkspace({
     setReviewDraftSavedAt(updatedAt);
     setReviewDraftRestored(false);
   }, [reviewDraftStorageKey, validationRuns, consistencyRuns, pathTestRuns, globalNotes, elementNotes, noteTarget, reviewStatus, reviewSummaryDraft, reviewerSignoff, reviewChecklist, decisionLog]);
+  useEffect(() => {
+    if (!demoPreset || !skillDocument || !hasHydratedReviewDraftRef.current) {
+      return;
+    }
+
+    if (appliedDemoPresetIdRef.current === demoPreset.id) {
+      return;
+    }
+
+    if (reviewDraftStorageKey && typeof window !== 'undefined' && window.localStorage.getItem(reviewDraftStorageKey)) {
+      appliedDemoPresetIdRef.current = demoPreset.id;
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const seededValidationRuns = demoPreset.seedValidationRun ? [createValidationRun(skillDocument)] : [];
+    const seededConsistencyRuns = demoPreset.seedConsistencyRun ? [createConsistencyRun(skillDocument)] : [];
+    const seededPathRuns = demoPreset.seedPathRun ? [createPathTestRun(skillDocument)] : [];
+
+    setGlobalNotes(demoPreset.notes.map((content, index) => ({
+      author: 'Demo Reviewer',
+      content,
+      createdAt: timestamp,
+      id: `demo-note-${demoPreset.id}-${index + 1}`,
+      severity: 'info',
+    })));
+    setElementNotes([]);
+    setNoteTarget('global');
+    setReviewStatus(demoPreset.reviewStatus);
+    setReviewSummaryDraft(demoPreset.reviewSummary);
+    setReviewerSignoff(demoPreset.reviewerSignoff);
+    setReviewChecklist(demoPreset.reviewChecklist);
+    setValidationRuns(seededValidationRuns);
+    setConsistencyRuns(seededConsistencyRuns);
+    setPathTestRuns(seededPathRuns);
+    setDecisionLog(buildDemoPresetDecisionLog(demoPreset, timestamp, seededValidationRuns, seededConsistencyRuns, seededPathRuns));
+    setReviewDraftRestored(false);
+    appliedDemoPresetIdRef.current = demoPreset.id;
+  }, [demoPreset, reviewDraftStorageKey, skillDocument]);
   const appendDecision = (action: ReviewDecision['action'], summary: string, targetId?: string) => {
     const timestamp = new Date().toISOString();
     setDecisionLog((current) => [
@@ -848,6 +891,39 @@ export function ReviewWorkspace({
 
   return (
     <>
+      {demoPreset && (
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-5 rounded-[1.4rem] border border-primary/20 bg-primary/8 px-4 py-4 text-foreground backdrop-blur-xl"
+          data-testid="demo-review-preset"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.demoReviewGuide')}</div>
+              <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">{demoPreset.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{demoPreset.focus}</p>
+            </div>
+            <div className="rounded-full border border-primary/20 bg-background/72 px-3 py-1.5 text-[11px] font-medium text-foreground">
+              {t(reviewStatusLabelKey(reviewStatus))}
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.demoReviewNextStep')}</div>
+              <div className="mt-2 text-sm leading-6 text-foreground">{demoPreset.nextStep}</div>
+            </div>
+            <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.demoReviewPrefilled')}</div>
+              <div className="mt-2 text-sm leading-6 text-foreground">{reviewerSignoff || t('app.reviewerSignoffPending')}</div>
+            </div>
+            <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.demoReviewChecklist')}</div>
+              <div className="mt-2 text-sm leading-6 text-foreground">{checklistCompletedCount}/4</div>
+            </div>
+          </div>
+        </motion.div>
+      )}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid gap-7 xl:grid-cols-[16rem_minmax(0,1fr)_20rem]">
         <aside className="xl:sticky xl:top-28 xl:self-start">
           <div className="glass-panel space-y-5 p-4 sm:p-5">
@@ -2011,6 +2087,60 @@ function summarizeTestPanel(
   }
 
   return t('app.reviewerTestsMixed');
+}
+
+function buildDemoPresetDecisionLog(
+  demoPreset: DemoReviewPreset,
+  timestamp: string,
+  validationRuns: ValidationRun[],
+  consistencyRuns: ConsistencyRun[],
+  pathTestRuns: PathTestRun[],
+): ReviewDecision[] {
+  const decisions: ReviewDecision[] = [
+    {
+      action: demoPreset.reviewStatus === 'approved'
+        ? 'approved'
+        : demoPreset.reviewStatus === 'changes_requested'
+          ? 'requested_changes'
+          : 'review_status_updated',
+      id: `demo-decision-${demoPreset.id}-status`,
+      summary: `Demo preset loaded with review status ${demoPreset.reviewStatus}.`,
+      timestamp,
+    },
+    {
+      action: 'review_status_updated',
+      id: `demo-decision-${demoPreset.id}-checklist`,
+      summary: `Demo preset seeded ${Object.values(demoPreset.reviewChecklist).filter(Boolean).length}/4 sign-off gates.`,
+      timestamp,
+    },
+  ];
+
+  if (validationRuns.length > 0) {
+    decisions.unshift({
+      action: 'validated',
+      id: `demo-decision-${demoPreset.id}-validation`,
+      summary: `Demo preset seeded validation run ${validationRuns[0].status}.`,
+      timestamp,
+    });
+  }
+  if (consistencyRuns.length > 0) {
+    decisions.unshift({
+      action: 'tested',
+      id: `demo-decision-${demoPreset.id}-consistency`,
+      summary: `Demo preset seeded consistency run ${consistencyRuns[0].status}.`,
+      timestamp,
+    });
+  }
+  if (pathTestRuns.length > 0) {
+    decisions.unshift({
+      action: 'tested',
+      id: `demo-decision-${demoPreset.id}-path`,
+      summary: `Demo preset seeded path walk ${pathTestRuns[0].status}.`,
+      timestamp,
+    });
+  }
+
+  return decisions.slice(0, 12);
 }
 
 function summarizeDiffSummary(t: (key: string) => string, diffSummary: DiffSummary) {

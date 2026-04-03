@@ -127,6 +127,27 @@
     "demoArtifactExampleSkillTitle": "`.skill.md`",
     "demoArtifactExampleSkillBody": "A skill-style export preview that helps reviewers compare the human-readable artifact against the structured SkillDocument projection.",
     "demoArtifactExampleSkillSnippet": "# Demo-safe Export\n\n## Workflow\n- Review supporting files\n- Record reviewer notes\n- Export report after sign-off\n\n## Rules\n- Never approve unresolved references\n- Always capture reviewer summary",
+    "demoReviewGuide": "Guided demo review",
+    "demoReviewNextStep": "Suggested next step",
+    "demoReviewPrefilled": "Prefilled reviewer state",
+    "demoReviewChecklist": "Prefilled checklist",
+    "demoReviewPreset": {
+      "modeAware": {
+        "summary": "Confirm the visible parser mode first, then walk the reviewer report export path before treating the output as external evidence.",
+        "note": "This demo starts in review with parser mode already acknowledged, but still expects diff review and evidence confirmation before final export.",
+        "nextStep": "Open the review report export after checking the current parser mode and reviewer notes."
+      },
+      "bundleReview": {
+        "summary": "Supporting files and helper commands were surfaced, but this bundle still needs evidence confirmation before it can move past requested changes.",
+        "note": "Bundle review preset: confirm supporting references and helper script authority before clearing the evidence gate.",
+        "nextStep": "Inspect supporting files, then resolve the last evidence gate before switching this review back from requested changes."
+      },
+      "publishGate": {
+        "summary": "This demo-safe release scenario shows a completed sign-off path with reviewer summary and publish gates already satisfied.",
+        "note": "Publish-gate preset: use the exported review report as the release approval artifact, then compare it against the SkillDocument snapshot.",
+        "nextStep": "Export the review report and compare the release evidence with the `.skill.md` export."
+      }
+    },
     "emptyTitle": "A ternary classification system for parsing the internal structure of Claude Skills and MCP Tools",
     "emptyLead": "Upload a SKILL definition, paste a draft, or test a parser scenario. The workspace is designed to make flow, security posture, and execution trace feel legible at a glance.",
     "emptyFeatureFlowTitle": "Flow-first layout",
