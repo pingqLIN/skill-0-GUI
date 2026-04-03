@@ -2,8 +2,12 @@ import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import {
   Activity,
   AlertCircle,
+  BookOpen,
+  FileText,
   Github,
   Languages,
+  PlayCircle,
+  ShieldCheck,
   UploadCloud,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +22,9 @@ const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((
 
 const GUI_REPO_URL = 'https://github.com/pingqLIN/skill-0-review-studio';
 const ENGINE_REPO_URL = 'https://github.com/pingqLIN/skill-0';
+const DOCS_INDEX_URL = `${GUI_REPO_URL}/blob/main/docs/README.md`;
+const DEMO_PLAN_URL = `${GUI_REPO_URL}/blob/main/docs/20-online-demo-plan-2026-04-03.md`;
+const DEPLOYMENT_GUIDE_URL = `${GUI_REPO_URL}/blob/main/docs/06-deployment-operations-and-configuration.md`;
 const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
 const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
 const WORKSPACE_DRAFT_STORAGE_KEY = 'skill-0-review-studio.workspace-draft.v1';
@@ -685,6 +692,54 @@ export default function App() {
     || (bridgeStatus?.mode === 'standalone'
       ? t('app.bridgeModeBundled')
       : bridgeStatusError || t('app.bridgeModeChecking'));
+  const landingHighlights = [
+    {
+      title: t('app.demoFeatureModeTitle'),
+      body: t('app.demoFeatureModeBody'),
+      icon: ShieldCheck,
+    },
+    {
+      title: t('app.demoFeatureFlowTitle'),
+      body: t('app.demoFeatureFlowBody'),
+      icon: PlayCircle,
+    },
+    {
+      title: t('app.demoFeatureExportTitle'),
+      body: t('app.demoFeatureExportBody'),
+      icon: FileText,
+    },
+  ];
+  const landingPaths = [
+    {
+      title: t('app.demoPathSampleTitle'),
+      body: t('app.demoPathSampleBody'),
+    },
+    {
+      title: t('app.demoPathImportTitle'),
+      body: t('app.demoPathImportBody'),
+    },
+    {
+      title: t('app.demoPathReviewTitle'),
+      body: t('app.demoPathReviewBody'),
+    },
+  ];
+  const landingDocs = [
+    {
+      title: t('app.demoDocsIndexTitle'),
+      body: t('app.demoDocsIndexBody'),
+      href: DOCS_INDEX_URL,
+    },
+    {
+      title: t('app.demoDocsDeployTitle'),
+      body: t('app.demoDocsDeployBody'),
+      href: DEPLOYMENT_GUIDE_URL,
+    },
+    {
+      title: t('app.demoDocsPlanTitle'),
+      body: t('app.demoDocsPlanBody'),
+      href: DEMO_PLAN_URL,
+    },
+  ];
 
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
@@ -758,11 +813,51 @@ export default function App() {
           <div className="space-y-8">
             <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
               <div className="flex items-center justify-end px-1 py-8 text-right sm:px-2 sm:py-10 xl:min-h-[430px]">
-                <div className="max-w-3xl space-y-3 text-right">
-                  <p className="text-pretty-wrap text-sm font-medium text-foreground/80">{t('app.analysisReady')}</p>
-                  <h2 className="text-pretty-wrap max-w-3xl text-3xl font-semibold leading-tight text-foreground sm:text-4xl sm:leading-tight">
-                    {t('app.emptyTitle')}
-                  </h2>
+                <div className="max-w-3xl space-y-5 text-right">
+                  <div className="space-y-3">
+                    <p className="text-pretty-wrap text-sm font-medium text-foreground/80">{t('app.demoEyebrow')}</p>
+                    <h2 className="text-pretty-wrap max-w-3xl text-3xl font-semibold leading-tight text-foreground sm:text-4xl sm:leading-tight">
+                      {t('app.demoTitle')}
+                    </h2>
+                    <p className="ml-auto max-w-2xl text-pretty text-sm leading-7 text-muted-foreground sm:text-base">
+                      {t('app.demoLead')}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={loadExampleSkill}
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.7)] transition hover:bg-primary/92"
+                    >
+                      <PlayCircle size={16} />
+                      {t('app.demoPrimaryCta')}
+                    </button>
+                    <a
+                      href={DOCS_INDEX_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-full border border-border/60 bg-background/72 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                    >
+                      <BookOpen size={16} />
+                      {t('app.demoDocsCta')}
+                    </a>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {landingHighlights.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.title} className="rounded-[1.35rem] border border-border/55 bg-background/70 px-4 py-4 text-left backdrop-blur-xl">
+                          <div className="inline-flex rounded-2xl border border-border/55 bg-background/75 p-2 text-muted-foreground">
+                            <Icon size={18} />
+                          </div>
+                          <h3 className="mt-4 text-sm font-semibold text-foreground">{item.title}</h3>
+                          <p className="mt-2 text-xs leading-6 text-muted-foreground">{item.body}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -953,6 +1048,61 @@ export default function App() {
                   >
                     {t('app.loadExample')}
                   </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="editorial-kicker">{t('app.demoPathKicker')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoPathTitle')}</h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoPathLead')}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
+                    <PlayCircle size={22} />
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {landingPaths.map((item, index) => (
+                    <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                        <div className="rounded-full border border-border/55 bg-background/72 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          {t('app.demoStepLabel')} {index + 1}
+                        </div>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="editorial-kicker">{t('app.demoDocsKicker')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoDocsTitle')}</h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoDocsLead')}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
+                    <BookOpen size={22} />
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {landingDocs.map((item) => (
+                    <a
+                      key={item.title}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 text-left backdrop-blur-xl transition hover:border-primary/30 hover:bg-card/72"
+                    >
+                      <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                    </a>
+                  ))}
                 </div>
               </div>
             </section>
