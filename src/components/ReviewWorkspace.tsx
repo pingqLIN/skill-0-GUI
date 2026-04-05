@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import {
-  ShieldAlert,
   AlertTriangle,
   Edit2,
   Download,
@@ -35,13 +34,16 @@ import { validateSkillDocument } from '../services/skillDocumentValidation';
 import type { UploadedContextFile } from '../types/intake';
 import type {
   ConsistencyRun,
+  ContextSummaryItem,
   DiffSummary,
   ElementReviewNote,
+  HandoffState,
   PathTestRun,
   ReviewChecklist,
   ReviewDecision,
   ReviewNote,
   ReviewPacket,
+  ReviewProfile,
   ReviewState,
   ValidationRun,
 } from '../types/skillDocument';
@@ -75,6 +77,8 @@ function hasSameReviewDraftContent(left: Record<string, unknown>, right: Record<
     reviewerNotes: left.reviewerNotes,
     reviewSummaryDraft: left.reviewSummaryDraft,
     reviewerSignoff: left.reviewerSignoff,
+    handoffState: left.handoffState,
+    reviewProfile: left.reviewProfile,
     reviewChecklist: left.reviewChecklist,
     decisionLog: left.decisionLog,
     updatedAt: null,
@@ -90,6 +94,8 @@ function hasSameReviewDraftContent(left: Record<string, unknown>, right: Record<
     reviewerNotes: right.reviewerNotes,
     reviewSummaryDraft: right.reviewSummaryDraft,
     reviewerSignoff: right.reviewerSignoff,
+    handoffState: right.handoffState,
+    reviewProfile: right.reviewProfile,
     reviewChecklist: right.reviewChecklist,
     decisionLog: right.decisionLog,
     updatedAt: null,
@@ -108,6 +114,22 @@ function normalizeReviewChecklist(value: unknown): ReviewChecklist {
     diffReviewed: Boolean(candidate.diffReviewed),
     evidenceReady: Boolean(candidate.evidenceReady),
   };
+}
+
+function normalizeReviewProfile(value: unknown): ReviewProfile | null {
+  if (value === 'mode_verification' || value === 'bundle_evidence_review' || value === 'publish_gate_review') {
+    return value;
+  }
+
+  return null;
+}
+
+function normalizeHandoffState(value: unknown): HandoffState | null {
+  if (value === 'ready_for_review' || value === 'needs_evidence' || value === 'needs_changes' || value === 'approved_for_export') {
+    return value;
+  }
+
+  return null;
 }
 
 type ReviewWorkspaceProps = {
@@ -170,6 +192,13 @@ export function ReviewWorkspace({
   const [reviewSummaryDraft, setReviewSummaryDraft] = useState('');
   const [reviewerSignoff, setReviewerSignoff] = useState('');
   const [reviewChecklist, setReviewChecklist] = useState<ReviewChecklist>(DEFAULT_REVIEW_CHECKLIST);
+  const [reviewProfile, setReviewProfile] = useState<ReviewProfile>(() => deriveReviewProfile({
+    bridgeMode: bridgeStatus?.mode ?? 'unknown',
+    demoPresetId: demoPreset?.id ?? null,
+    reviewStatus: data?.reviewerSummary?.reviewStatus,
+    supportFileCount: supportFiles.length,
+  }));
+  const [handoffState, setHandoffState] = useState<HandoffState>('ready_for_review');
   const [reviewDraftSavedAt, setReviewDraftSavedAt] = useState<string | null>(null);
   const [reviewDraftRestored, setReviewDraftRestored] = useState(false);
   const hasHydratedReviewDraftRef = useRef(false);
@@ -274,6 +303,21 @@ export function ReviewWorkspace({
   const latestConsistencyRun = consistencyRuns[0] ?? null;
   const latestPathTestRun = pathTestRuns[0] ?? null;
   const checklistCompletedCount = Object.values(reviewChecklist).filter(Boolean).length;
+  const hasBlockingChecks = validationErrors.length > 0
+    || consistencyErrors.length > 0
+    || latestValidationRun?.status === 'failed'
+    || latestConsistencyRun?.status === 'failed'
+    || latestPathTestRun?.status === 'failed';
+  const derivedHandoffState = deriveDefaultHandoffState({
+    hasBlockingChecks,
+    reviewChecklist,
+    reviewStatus,
+  });
+  const allowedHandoffStates = getAllowedHandoffStates({
+    derivedHandoffState,
+    hasBlockingChecks,
+    reviewStatus,
+  });
 
   useEffect(() => {
     if (!reviewDraftStorageKey || typeof window === 'undefined') {
@@ -292,15 +336,26 @@ export function ReviewWorkspace({
         setReviewStatus(data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'));
         setReviewerName(data?.reviewerSummary?.reviewerName || '');
         setReviewerNotes(data?.reviewerSummary?.reviewerNotes || '');
-        setDecisionLog([]);
-        setNoteTarget('global');
-        setReviewSummaryDraft('');
-        setReviewerSignoff('');
-        setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
-        setReviewDraftSavedAt(null);
-        setReviewDraftRestored(false);
-        hasHydratedReviewDraftRef.current = true;
-        return;
+      setDecisionLog([]);
+      setNoteTarget('global');
+      setReviewSummaryDraft('');
+      setReviewerSignoff('');
+      setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
+      setReviewProfile(deriveReviewProfile({
+        bridgeMode: bridgeStatus?.mode ?? 'unknown',
+        demoPresetId: demoPreset?.id ?? null,
+        reviewStatus: data?.reviewerSummary?.reviewStatus,
+        supportFileCount: supportFiles.length,
+      }));
+      setHandoffState(deriveDefaultHandoffState({
+        hasBlockingChecks,
+        reviewChecklist: DEFAULT_REVIEW_CHECKLIST,
+        reviewStatus: data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
+      }));
+      setReviewDraftSavedAt(null);
+      setReviewDraftRestored(false);
+      hasHydratedReviewDraftRef.current = true;
+      return;
       }
 
       hadStoredReviewDraftRef.current = true;
@@ -318,6 +373,23 @@ export function ReviewWorkspace({
       setReviewSummaryDraft(typeof parsed.reviewSummaryDraft === 'string' ? parsed.reviewSummaryDraft : '');
       setReviewerSignoff(typeof parsed.reviewerSignoff === 'string' ? parsed.reviewerSignoff : '');
       setReviewChecklist(normalizeReviewChecklist(parsed.reviewChecklist));
+      setReviewProfile(
+        normalizeReviewProfile(parsed.reviewProfile)
+        || deriveReviewProfile({
+          bridgeMode: bridgeStatus?.mode ?? 'unknown',
+          demoPresetId: demoPreset?.id ?? null,
+          reviewStatus: parsed.reviewStatus,
+          supportFileCount: supportFiles.length,
+        }),
+      );
+      setHandoffState(
+        normalizeHandoffState(parsed.handoffState)
+        || deriveDefaultHandoffState({
+          hasBlockingChecks,
+          reviewChecklist: normalizeReviewChecklist(parsed.reviewChecklist),
+          reviewStatus: isReviewStatus(parsed.reviewStatus) ? parsed.reviewStatus : 'draft',
+        }),
+      );
       setReviewDraftSavedAt(typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null);
       setReviewDraftRestored(true);
       skipNextReviewDraftPersistRef.current = true;
@@ -336,6 +408,17 @@ export function ReviewWorkspace({
       setReviewSummaryDraft('');
       setReviewerSignoff('');
       setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
+      setReviewProfile(deriveReviewProfile({
+        bridgeMode: bridgeStatus?.mode ?? 'unknown',
+        demoPresetId: demoPreset?.id ?? null,
+        reviewStatus: data?.reviewerSummary?.reviewStatus,
+        supportFileCount: supportFiles.length,
+      }));
+      setHandoffState(deriveDefaultHandoffState({
+        hasBlockingChecks,
+        reviewChecklist: DEFAULT_REVIEW_CHECKLIST,
+        reviewStatus: data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
+      }));
       setReviewDraftSavedAt(null);
       setReviewDraftRestored(false);
     }
@@ -388,6 +471,8 @@ export function ReviewWorkspace({
       reviewerNotes,
       reviewSummaryDraft,
       reviewerSignoff,
+      handoffState,
+      reviewProfile,
       reviewChecklist,
       decisionLog,
       validationRuns,
@@ -414,7 +499,7 @@ export function ReviewWorkspace({
     }));
     setReviewDraftSavedAt(updatedAt);
     setReviewDraftRestored(false);
-  }, [reviewDraftStorageKey, validationRuns, consistencyRuns, pathTestRuns, globalNotes, elementNotes, noteTarget, reviewStatus, reviewerName, reviewerNotes, reviewSummaryDraft, reviewerSignoff, reviewChecklist, decisionLog]);
+  }, [reviewDraftStorageKey, validationRuns, consistencyRuns, pathTestRuns, globalNotes, elementNotes, noteTarget, reviewStatus, reviewerName, reviewerNotes, reviewSummaryDraft, reviewerSignoff, handoffState, reviewProfile, reviewChecklist, decisionLog]);
   useEffect(() => {
     if (!demoPreset || !skillDocument || !hasHydratedReviewDraftRef.current) {
       return;
@@ -447,13 +532,36 @@ export function ReviewWorkspace({
     setReviewSummaryDraft(demoPreset.reviewSummary);
     setReviewerSignoff(demoPreset.reviewerSignoff);
     setReviewChecklist(demoPreset.reviewChecklist);
+    setReviewProfile(deriveReviewProfile({
+      bridgeMode: bridgeStatus?.mode ?? 'unknown',
+      demoPresetId: demoPreset.id,
+      reviewStatus: demoPreset.reviewStatus,
+      supportFileCount: supportFiles.length,
+    }));
+    setHandoffState(deriveDefaultHandoffState({
+      hasBlockingChecks,
+      reviewChecklist: demoPreset.reviewChecklist,
+      reviewStatus: demoPreset.reviewStatus,
+    }));
     setValidationRuns(seededValidationRuns);
     setConsistencyRuns(seededConsistencyRuns);
     setPathTestRuns(seededPathRuns);
     setDecisionLog(buildDemoPresetDecisionLog(demoPreset, timestamp, seededValidationRuns, seededConsistencyRuns, seededPathRuns));
     setReviewDraftRestored(false);
     appliedDemoPresetIdRef.current = demoPreset.id;
-  }, [demoPreset, skillDocument]);
+  }, [bridgeStatus?.mode, demoPreset, hasBlockingChecks, skillDocument, supportFiles.length]);
+
+  useEffect(() => {
+    setHandoffState(derivedHandoffState);
+  }, [derivedHandoffState]);
+
+  useEffect(() => {
+    if (allowedHandoffStates.includes(handoffState)) {
+      return;
+    }
+
+    setHandoffState(derivedHandoffState);
+  }, [allowedHandoffStates, derivedHandoffState, handoffState]);
   const appendDecision = (action: ReviewDecision['action'], summary: string, targetId?: string) => {
     const timestamp = new Date().toISOString();
     setDecisionLog((current) => [
@@ -547,6 +655,22 @@ export function ReviewWorkspace({
       `Review status changed to ${nextStatus}.`,
     );
   };
+  const updateReviewProfile = (nextProfile: ReviewProfile) => {
+    if (nextProfile === reviewProfile) {
+      return;
+    }
+
+    setReviewProfile(nextProfile);
+    appendDecision('review_profile_updated', `Review profile changed to ${nextProfile}.`);
+  };
+  const updateHandoffState = (nextState: HandoffState) => {
+    if (nextState === handoffState || !allowedHandoffStates.includes(nextState)) {
+      return;
+    }
+
+    setHandoffState(nextState);
+    appendDecision('handoff_state_updated', `Handoff state changed to ${nextState}.`);
+  };
   const toggleReviewChecklist = (key: keyof ReviewChecklist) => {
     setReviewChecklist((current) => {
       const nextValue = !current[key];
@@ -568,6 +692,17 @@ export function ReviewWorkspace({
     setReviewSummaryDraft('');
     setReviewerSignoff('');
     setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
+    setReviewProfile(deriveReviewProfile({
+      bridgeMode: bridgeStatus?.mode ?? 'unknown',
+      demoPresetId: demoPreset?.id ?? null,
+      reviewStatus: data?.reviewerSummary?.reviewStatus,
+      supportFileCount: supportFiles.length,
+    }));
+    setHandoffState(deriveDefaultHandoffState({
+      hasBlockingChecks,
+      reviewChecklist: DEFAULT_REVIEW_CHECKLIST,
+      reviewStatus: data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
+    }));
     setReviewDraftSavedAt(null);
     setReviewDraftRestored(false);
     onResetWorkspace();
@@ -629,11 +764,40 @@ export function ReviewWorkspace({
       || validationEvidence?.validationRun.errors.some((issue) => issue.severity === 'warning')
       || validationEvidence?.consistencyRun.issues.some((issue) => issue.severity === 'warning'),
   );
+  const hasAttentionChecks = !hasBlockingChecks && (
+    validationWarnings.length > 0
+    || consistencyWarnings.length > 0
+    || Boolean(validationEvidence?.evidenceWarnings.length)
+  );
   const validationStatusLabel = validationHasErrors
     ? t('app.validationStatusFailed')
     : validationHasWarnings
       ? t('app.validationStatusAttention')
       : t('app.validationStatusPassed');
+  const effectiveHandoffState = allowedHandoffStates.includes(handoffState) ? handoffState : derivedHandoffState;
+  const exportBlockedReasons = buildExportBlockedReasons({
+    checklistCompletedCount,
+    hasBlockingChecks,
+    reviewStatus,
+  }).map((reason) => t(reason));
+  const canExportArtifacts = effectiveHandoffState === 'approved_for_export' && exportBlockedReasons.length === 0;
+  const reviewProfileSummary = t(reviewProfileLabelKey(reviewProfile));
+  const handoffSummary = t(handoffStateLabelKey(effectiveHandoffState));
+  const handoffGuidance = t(handoffStateGuidanceKey(effectiveHandoffState));
+  const nextActionLabel = t(reviewProfileNextStepKey(reviewProfile, effectiveHandoffState));
+  const contextSummary = buildContextSummary({
+    bridgeModeDetail,
+    commandReferences: parserCommandReferences,
+    findings: parserAnalysisFindings,
+    operatorReminders,
+    scanScore,
+    selectedContextPath,
+    supportFiles,
+  }).map((item) => ({
+    ...item,
+    label: t(item.label),
+    detail: t(item.detail),
+  }));
   const translateEvidenceMessage = (message: string) => {
     if (message.startsWith('app.validationMissingStepReference:')) {
       const [, pathId, step] = message.split(':');
@@ -684,6 +848,8 @@ export function ReviewWorkspace({
         ...synthesizedNotes,
         ...globalNotes,
       ],
+      handoffState: effectiveHandoffState,
+      reviewProfile,
       reviewStatus,
       reviewSummary: reviewSummaryDraft.trim() || undefined,
       reviewerName: normalizedReviewerName || undefined,
@@ -711,7 +877,9 @@ export function ReviewWorkspace({
         `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
         `- parser_mode_source: ${bridgeModeDetail}`,
         `- review_mode: ${reviewMode}`,
+        `- review_profile: ${reviewProfile}`,
         `- equivalence_status: ${reviewEquivalenceStatus}`,
+        `- handoff_state: ${effectiveHandoffState}`,
         `- review_decision_guidance: ${reviewDecisionGuidance}`,
         `- review_status: ${reviewStatus}`,
         `- reviewer: ${reviewerName.trim() || 'unassigned'}`,
@@ -801,7 +969,9 @@ export function ReviewWorkspace({
       `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
       `- parser_mode_source: ${bridgeModeDetail}`,
       `- review_mode: ${reviewMode}`,
+      `- review_profile: ${reviewProfile}`,
       `- review_status: ${reviewStatus}`,
+      `- handoff_state: ${effectiveHandoffState}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
       `- review_decision_guidance: ${reviewDecisionGuidance}`,
       `- reviewer: ${reviewerName.trim() || 'unassigned'}`,
@@ -871,6 +1041,10 @@ export function ReviewWorkspace({
   };
 
   const exportSkill = () => {
+    if (!canExportArtifacts) {
+      return;
+    }
+
     downloadBlob(
       new Blob([convertSkillToMarkdown(data)], { type: 'text/markdown;charset=utf-8' }),
       `${data.projectId}-${exportModeSuffix}.skill.md`,
@@ -878,7 +1052,7 @@ export function ReviewWorkspace({
   };
 
   const exportSkillJson = () => {
-    if (!skillDocument) {
+    if (!skillDocument || !canExportArtifacts) {
       return;
     }
 
@@ -889,7 +1063,7 @@ export function ReviewWorkspace({
   };
 
   const exportReviewReport = () => {
-    if (!skillDocument) {
+    if (!skillDocument || !canExportArtifacts) {
       return;
     }
 
@@ -901,7 +1075,9 @@ export function ReviewWorkspace({
       `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
       `- parser_mode_source: ${bridgeModeDetail}`,
       `- review_mode: ${reviewMode}`,
+      `- review_profile: ${reviewProfile}`,
       `- review_status: ${reviewStatus}`,
+      `- handoff_state: ${effectiveHandoffState}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
       `- schema_validation_status: ${validationResult?.valid ? 'valid' : 'invalid'}`,
       `- consistency_status: ${consistencyResult?.valid ? 'consistent' : 'inconsistent'}`,
@@ -1032,12 +1208,19 @@ export function ReviewWorkspace({
   };
 
   const exportReviewPacket = () => {
+    if (!canExportArtifacts) {
+      return;
+    }
+
     const reviewPacket = buildReviewPacketFromReviewData(data, {
       bridgeMode: (bridgeStatus?.mode ?? 'unknown') as ReviewPacket['parserMode'],
       bridgeModeSource: bridgeModeDetail,
+      contextSummary,
       equivalenceStatus: reviewEquivalenceStatus,
+      handoffState: effectiveHandoffState,
       modifiedPaths,
       reviewDecisionGuidance,
+      reviewProfile,
       reviewMode,
       reviewState: buildReviewStateSnapshot(),
       skillDocument,
@@ -1176,7 +1359,8 @@ export function ReviewWorkspace({
                       )}
                       <button
                         onClick={exportSkill}
-                        className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                        disabled={!canExportArtifacts}
+                        className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                       >
                         <span>{t('app.export')}</span>
                         <Download size={14} className="text-muted-foreground" />
@@ -1184,7 +1368,8 @@ export function ReviewWorkspace({
                       {skillDocument && (
                         <button
                           onClick={exportSkillJson}
-                          className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                          disabled={!canExportArtifacts}
+                          className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                         >
                           <span>{t('app.exportJson')}</span>
                           <Download size={14} className="text-muted-foreground" />
@@ -1193,7 +1378,8 @@ export function ReviewWorkspace({
                       {skillDocument && (
                         <button
                           onClick={exportReviewReport}
-                          className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                          disabled={!canExportArtifacts}
+                          className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                         >
                           <span>{t('app.exportReviewReport')}</span>
                           <Download size={14} className="text-muted-foreground" />
@@ -1201,7 +1387,8 @@ export function ReviewWorkspace({
                       )}
                       <button
                         onClick={exportReviewPacket}
-                        className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                        disabled={!canExportArtifacts}
+                        className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                       >
                         <span>{t('app.exportReviewPacket')}</span>
                         <Download size={14} className="text-muted-foreground" />
@@ -1333,6 +1520,10 @@ export function ReviewWorkspace({
                   <MiniMetric label={t('app.bridgeMode')} value={bridgeModeSummary} highlight={bridgeStatus?.mode === 'skill-0'} />
                   <MiniMetric label={t('app.equivalenceStatus')} value={reviewEquivalenceLabel} highlight={reviewEquivalenceLabel === t('app.equivalenceImplementationIdentity')} />
                 </div>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <MiniMetric label={t('app.handoffState')} value={handoffSummary} highlight={effectiveHandoffState === 'approved_for_export'} />
+                  <MiniMetric label={t('app.reviewProfile')} value={reviewProfileSummary} highlight />
+                </div>
                 {reviewerNotes.trim() && (
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">{reviewerNotes.trim()}</p>
                 )}
@@ -1352,6 +1543,9 @@ export function ReviewWorkspace({
                   </span>
                   <span className="editorial-chip px-3 py-1 font-medium">
                     {t('app.equivalenceStatus')}: {reviewEquivalenceLabel}
+                  </span>
+                  <span className="editorial-chip px-3 py-1 font-medium">
+                    {t('app.handoffState')}: {handoffSummary}
                   </span>
                 </div>
               </div>
@@ -1529,14 +1723,18 @@ export function ReviewWorkspace({
               <>
                 <InsightBlock
                   kicker={t('app.detailsPanel')}
-                  title={t('app.reviewStatus')}
-                  summary={t(reviewStatusLabelKey(reviewStatus))}
-                  accent={reviewStatus === 'approved' ? 'emerald' : reviewStatus === 'changes_requested' ? 'rose' : 'default'}
+                  title={t('app.workflowCheckpoint')}
+                  summary={handoffSummary}
+                  accent={effectiveHandoffState === 'approved_for_export' ? 'emerald' : effectiveHandoffState === 'needs_changes' ? 'rose' : 'default'}
                   defaultOpen
                 >
                   <div className="space-y-3">
                     <div className="grid gap-2 sm:grid-cols-2">
                       <MiniMetric label={t('app.reviewStatus')} value={t(reviewStatusLabelKey(reviewStatus))} highlight={reviewStatus !== 'draft'} />
+                      <MiniMetric label={t('app.handoffState')} value={handoffSummary} highlight={effectiveHandoffState === 'approved_for_export'} />
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <MiniMetric label={t('app.reviewProfile')} value={reviewProfileSummary} highlight />
                       <MiniMetric label={t('app.reviewDecisionLog')} value={`${decisionLog.length} ${t('app.decisionCount')}`} highlight={decisionLog.length > 0} />
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -1546,6 +1744,11 @@ export function ReviewWorkspace({
                         value={reviewerSignoff || t('app.reviewerSignoffPending')}
                         highlight={Boolean(reviewerSignoff)}
                       />
+                    </div>
+                    <div className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-muted-foreground">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.nextAction')}</div>
+                      <p className="mt-2 font-medium text-foreground">{nextActionLabel}</p>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{handoffGuidance}</p>
                     </div>
                     {reviewDraftSavedAt && (
                       <div
@@ -1564,6 +1767,40 @@ export function ReviewWorkspace({
                       </div>
                     )}
                     <div className="space-y-2">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <label htmlFor="review-profile-input" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            {t('app.reviewProfile')}
+                          </label>
+                          <select
+                            id="review-profile-input"
+                            value={reviewProfile}
+                            onChange={(event) => updateReviewProfile(event.target.value as ReviewProfile)}
+                            className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                          >
+                            <option value="mode_verification">{t('app.reviewProfileModeVerification')}</option>
+                            <option value="bundle_evidence_review">{t('app.reviewProfileBundleEvidenceReview')}</option>
+                            <option value="publish_gate_review">{t('app.reviewProfilePublishGateReview')}</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor="handoff-state-input" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            {t('app.handoffState')}
+                          </label>
+                          <select
+                            id="handoff-state-input"
+                            value={effectiveHandoffState}
+                            onChange={(event) => updateHandoffState(event.target.value as HandoffState)}
+                            className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                          >
+                            {allowedHandoffStates.map((state) => (
+                              <option key={state} value={state}>
+                                {t(handoffStateLabelKey(state))}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                       <div className="space-y-1">
                         <label htmlFor="reviewer-name-input" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                           {t('app.reviewerName')}
@@ -1655,6 +1892,23 @@ export function ReviewWorkspace({
                       >
                         {t('app.requestChanges')}
                       </button>
+                    </div>
+                    <div className={`rounded-[1.15rem] border px-3 py-3 text-sm leading-6 ${
+                      canExportArtifacts
+                        ? 'border-emerald-500/25 bg-emerald-500/8 text-emerald-900'
+                        : 'border-amber-500/25 bg-amber-500/8 text-amber-900'
+                    }`}>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t('app.exportReadiness')}</div>
+                      <p className="mt-2 font-medium">
+                        {canExportArtifacts ? t('app.exportReady') : t('app.exportLocked')}
+                      </p>
+                      {!canExportArtifacts && exportBlockedReasons.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {exportBlockedReasons.map((reason) => (
+                            <p key={reason}>- {reason}</p>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     {decisionLog.length > 0 ? (
                       <div className="space-y-2">
@@ -1767,6 +2021,21 @@ export function ReviewWorkspace({
 
             {activeInsightTab === 'checks' && (
               <>
+                <InsightBlock
+                  kicker={t('app.detailsPanel')}
+                  title={t('app.checksPosture')}
+                  summary={hasBlockingChecks ? t('app.checksBlocked') : hasAttentionChecks ? t('app.checksAttention') : t('app.checksClean')}
+                  accent={hasBlockingChecks ? 'rose' : hasAttentionChecks ? 'default' : 'emerald'}
+                  defaultOpen
+                >
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <MiniMetric label={t('app.handoffState')} value={handoffSummary} highlight={effectiveHandoffState === 'approved_for_export'} />
+                    <MiniMetric label={t('app.exportReadiness')} value={canExportArtifacts ? t('app.exportReady') : t('app.exportLocked')} highlight={canExportArtifacts} />
+                    <MiniMetric label={t('app.validationErrors')} value={String(validationErrors.length + consistencyErrors.length)} highlight={hasBlockingChecks} />
+                    <MiniMetric label={t('app.validationWarnings')} value={String(validationWarnings.length + consistencyWarnings.length)} highlight={hasAttentionChecks} />
+                  </div>
+                </InsightBlock>
+
                 <InsightBlock
                   kicker={t('app.detailsPanel')}
                   title={t('app.schemaValidation')}
@@ -2061,49 +2330,102 @@ export function ReviewWorkspace({
             {activeInsightTab === 'context' && (
               <>
                 <InsightBlock
-                  kicker={t('app.detailsPanel')}
-                  title={t('dashboard.riskAssessment')}
-                  summary={`${data.riskAssessment.level} · ${scanScore}`}
-                  accent={data.riskAssessment.level === 'SAFE' || data.riskAssessment.level === 'LOW' ? 'emerald' : 'rose'}
+                  kicker={t('app.projectSummary')}
+                  title={t('app.contextLayers')}
+                  summary={`${contextSummary.length} ${t('app.contextBuckets')}`}
                   defaultOpen
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <ShieldAlert size={16} className={data.riskAssessment.level === 'SAFE' || data.riskAssessment.level === 'LOW' ? 'text-emerald-500' : 'text-destructive'} />
-                        <span className={`text-lg font-semibold tracking-tight ${modifiedPaths.has('riskAssessment.level') ? 'text-amber-600' : 'text-foreground'}`}>
-                          {data.riskAssessment.level}
-                        </span>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {contextSummary.map((item) => (
+                      <div key={item.id} className="rounded-[1.15rem] border border-border/55 bg-background/72 px-3 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm font-medium text-foreground">{item.label}</div>
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                            item.status === 'blocked'
+                              ? 'bg-destructive/12 text-destructive'
+                              : item.status === 'attention'
+                                ? 'bg-amber-500/12 text-amber-700'
+                                : 'bg-emerald-500/12 text-emerald-700'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-xl font-semibold tracking-tight text-foreground">{item.count}</div>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.detail}</p>
                       </div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{data.riskAssessment.details}</p>
-                    </div>
-                    <span className="rounded-full border border-border/55 bg-background/76 px-3 py-1 text-[11px] font-mono text-muted-foreground backdrop-blur-lg">
-                      {scanScore}
-                    </span>
+                    ))}
                   </div>
                 </InsightBlock>
 
                 <InsightBlock
-                  kicker={t('app.bridgeMode')}
-                  title={bridgeModeLabel}
-                  summary={bridgeModeSummary}
-                  accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : bridgeStatus?.mode === 'standalone' ? 'default' : 'rose'}
+                  kicker={t('app.contextBucketPolicyReference')}
+                  title={t('app.contextBucketPolicyReference')}
+                  summary={`${parserCommandReferences.length} ${t('app.commandReferences')}`}
+                  accent={parserCommandReferences.length > 0 ? 'default' : 'rose'}
                 >
                   <div className="grid gap-3">
-                    <MiniMetric label={t('app.bridgeMode')} value={bridgeModeLabel} />
-                    <MiniMetric label={t('app.bridgeSource')} value={bridgeModeDetail} />
-                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                      {bridgeReviewGuidance}
-                    </div>
+                    <MiniMetric label={t('app.commandReferences')} value={String(parserCommandReferences.length)} highlight={parserCommandReferences.length > 0} />
+                    <MiniMetric
+                      label={t('app.supportingFiles')}
+                      value={String(supportFiles.filter((file) => /policy|reference|checklist|docs?/i.test(`${file.name} ${file.path}`)).length)}
+                      highlight={supportFiles.some((file) => /policy|reference|checklist|docs?/i.test(`${file.name} ${file.path}`))}
+                    />
+                    {parserCommandReferences.length > 0 ? (
+                      <div className="space-y-2">
+                        {parserCommandReferences.slice(0, 5).map((reference: any, index: number) => (
+                          <div key={`${reference.command || reference.id || index}`} className="rounded-[1.15rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground">
+                            <div className="font-medium text-foreground">{reference.command || reference.label || reference.id || `reference-${index + 1}`}</div>
+                            {(reference.detail || reference.path) && (
+                              <p className="mt-1">{reference.detail || reference.path}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.contextPolicyReferenceEmpty')}
+                      </div>
+                    )}
                   </div>
                 </InsightBlock>
 
                 <InsightBlock
-                  kicker={t('app.projectSummary')}
-                  title={t('app.securityScan')}
-                  summary={firstFinding ? firstFinding.ruleName : t('securityMatrix.auditLogSummary')}
+                  kicker={t('app.contextBucketSupportingFiles')}
+                  title={t('app.contextBucketSupportingFiles')}
+                  summary={supportFiles.length > 0 ? `${supportFiles.length} ${t('app.contextFiles')}` : t('app.noContextFiles')}
                 >
-                  {firstFinding || operatorReminders.length > 0 ? (
+                  <div className="space-y-2">
+                    {supportFiles.length > 0 ? supportFiles.map((file) => (
+                      <button
+                        key={`${file.path}-${file.size}`}
+                        type="button"
+                        onClick={() => onSelectContextPath(file.path)}
+                        className={`w-full rounded-[1.25rem] border px-4 py-3 text-left backdrop-blur-xl transition ${
+                          selectedContextPath === file.path ? 'border-primary/35 bg-primary/8' : 'border-border/55 bg-background/72'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium text-foreground">{file.name}</span>
+                          <span className="text-[11px] text-muted-foreground">{formatBytes(file.size)}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">{file.type}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">{file.path}</p>
+                      </button>
+                    )) : (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.noContextFiles')}
+                      </div>
+                    )}
+                  </div>
+                </InsightBlock>
+
+                <InsightBlock
+                  kicker={t('app.contextBucketAnalysisFindings')}
+                  title={t('app.contextBucketAnalysisFindings')}
+                  summary={firstFinding ? firstFinding.ruleName : `${parserAnalysisFindings.length} ${t('app.analysisFindings')}`}
+                  accent={firstFinding ? 'rose' : parserAnalysisFindings.length > 0 ? 'default' : 'emerald'}
+                >
+                  {firstFinding || operatorReminders.length > 0 || parserAnalysisFindings.length > 0 ? (
                     <div className="space-y-3">
                       {firstFinding && (
                         <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
@@ -2121,7 +2443,20 @@ export function ReviewWorkspace({
                           <MiniMetric label={t('app.firstFinding')} value={`${firstFinding.ruleId} · L${firstFinding.lineNumber}`} />
                         )}
                         <MiniMetric label={t('app.scanScore')} value={String(scanScore)} />
+                        <MiniMetric label={t('app.analysisFindings')} value={String(parserAnalysisFindings.length)} highlight={parserAnalysisFindings.length > 0} />
                       </div>
+                      {parserAnalysisFindings.length > 0 && (
+                        <div className="space-y-2">
+                          {parserAnalysisFindings.slice(0, 4).map((finding: any, index: number) => (
+                            <div key={`${finding.id || finding.code || index}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-3">
+                              <div className="text-sm font-medium text-foreground">{finding.label || finding.title || finding.code || `finding-${index + 1}`}</div>
+                              {(finding.detail || finding.message) && (
+                                <p className="mt-2 text-xs leading-6 text-muted-foreground">{finding.detail || finding.message}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {operatorReminders.length > 0 && (
                         <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
                           <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -2158,28 +2493,11 @@ export function ReviewWorkspace({
                 </InsightBlock>
 
                 <InsightBlock
-                  kicker={t('app.projectSummary')}
-                  title={t('dashboard.threeClassification')}
-                  summary={`${data.threeClassification.category} · ${data.threeClassification.granularity}`}
+                  kicker={t('app.contextBucketSourceProvenance')}
+                  title={t('app.contextBucketSourceProvenance')}
+                  summary={bridgeModeSummary}
                 >
-                  <div className="grid gap-3">
-                    <MiniMetric label={t('dashboard.category')} value={data.threeClassification.category} highlight={modifiedPaths.has('threeClassification.category')} />
-                    <MiniMetric label={t('dashboard.granularity')} value={data.threeClassification.granularity} />
-                    <MiniMetric label={t('vector.operability')} value={`${data.threeClassification.operability}%`} />
-                    <MiniMetric label={t('app.modifiedCount')} value={String(modifiedPaths.size)} highlight={modifiedPaths.size > 0} />
-                  </div>
-                </InsightBlock>
-
-                <InsightBlock
-                  kicker={t('app.collaborationContext')}
-                  title={t('app.sourceDefinition')}
-                  summary={parserManifest
-                    ? `${parserSupportingFiles.length} ${t('app.supportingFiles')} · ${parserManifest.unresolved_references_count || 0} ${t('app.unresolvedReferences')}`
-                    : supportFiles.length > 0
-                      ? `${supportFiles.length} ${t('app.contextFiles')}`
-                      : t('app.noContextFiles')}
-                >
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {parserManifest && (
                       <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
                         {t('app.analysisLevel')}: <span className="font-medium text-foreground">{parserManifest.analysis_level}</span>
@@ -2189,26 +2507,11 @@ export function ReviewWorkspace({
                         {t('app.unresolved')}: <span className="font-medium text-foreground">{parserManifest.unresolved_references_count || 0}</span>
                       </div>
                     )}
-                    {supportFiles.length > 0 ? supportFiles.map((file) => (
-                      <button
-                        key={`${file.path}-${file.size}`}
-                        type="button"
-                        onClick={() => onSelectContextPath(file.path)}
-                        className={`w-full rounded-[1.25rem] border px-4 py-3 text-left backdrop-blur-xl transition ${
-                          selectedContextPath === file.path ? 'border-primary/35 bg-primary/8' : 'border-border/55 bg-background/72'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm font-medium text-foreground">{file.name}</span>
-                          <span className="text-[11px] text-muted-foreground">{formatBytes(file.size)}</span>
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">{file.type}</p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">{file.path}</p>
-                      </button>
-                    )) : (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                        {t('app.noContextFiles')}
-                      </div>
+                    <MiniMetric label={t('app.bridgeMode')} value={bridgeModeLabel} />
+                    <MiniMetric label={t('app.bridgeSource')} value={bridgeModeDetail} />
+                    <MiniMetric label={t('app.modifiedCount')} value={String(modifiedPaths.size)} highlight={modifiedPaths.size > 0} />
+                    {selectedContextPath && (
+                      <MiniMetric label={t('app.sourceDefinition')} value={selectedContextPath} />
                     )}
                   </div>
                 </InsightBlock>
@@ -2498,6 +2801,159 @@ function buildDemoPresetDecisionLog(
   return decisions.slice(0, 12);
 }
 
+function deriveReviewProfile({
+  bridgeMode,
+  demoPresetId,
+  reviewStatus,
+  supportFileCount,
+}: {
+  bridgeMode: BridgeStatus['mode'] | 'unknown';
+  demoPresetId: string | null;
+  reviewStatus?: ReviewState['reviewStatus'];
+  supportFileCount: number;
+}): ReviewProfile {
+  if (demoPresetId === 'bundle-review') {
+    return 'bundle_evidence_review';
+  }
+  if (demoPresetId === 'publish-gate') {
+    return 'publish_gate_review';
+  }
+  if (supportFileCount > 0) {
+    return 'bundle_evidence_review';
+  }
+  if (reviewStatus === 'approved') {
+    return 'publish_gate_review';
+  }
+  if (bridgeMode === 'skill-0' || demoPresetId === 'mode-aware') {
+    return 'mode_verification';
+  }
+
+  return 'mode_verification';
+}
+
+function deriveDefaultHandoffState({
+  hasBlockingChecks,
+  reviewChecklist,
+  reviewStatus,
+}: {
+  hasBlockingChecks: boolean;
+  reviewChecklist: ReviewChecklist;
+  reviewStatus: ReviewState['reviewStatus'];
+}): HandoffState {
+  if (reviewStatus === 'changes_requested') {
+    return 'needs_changes';
+  }
+
+  if (hasBlockingChecks || Object.values(reviewChecklist).some((value) => !value)) {
+    return 'needs_evidence';
+  }
+
+  if (reviewStatus === 'approved') {
+    return 'approved_for_export';
+  }
+
+  return 'ready_for_review';
+}
+
+function getAllowedHandoffStates({
+  derivedHandoffState,
+  hasBlockingChecks,
+  reviewStatus,
+}: {
+  derivedHandoffState: HandoffState;
+  hasBlockingChecks: boolean;
+  reviewStatus: ReviewState['reviewStatus'];
+}): HandoffState[] {
+  const options: HandoffState[] = ['ready_for_review', 'needs_evidence', 'needs_changes'];
+
+  if (!hasBlockingChecks && reviewStatus === 'approved') {
+    options.push('approved_for_export');
+  }
+
+  if (derivedHandoffState === 'approved_for_export' && !options.includes('approved_for_export')) {
+    options.push('approved_for_export');
+  }
+
+  return options;
+}
+
+function buildExportBlockedReasons({
+  checklistCompletedCount,
+  hasBlockingChecks,
+  reviewStatus,
+}: {
+  checklistCompletedCount: number;
+  hasBlockingChecks: boolean;
+  reviewStatus: ReviewState['reviewStatus'];
+}) {
+  const reasons: string[] = [];
+
+  if (reviewStatus !== 'approved') {
+    reasons.push('app.exportBlockedReviewStatus');
+  }
+  if (checklistCompletedCount < 4) {
+    reasons.push('app.exportBlockedGates');
+  }
+  if (hasBlockingChecks) {
+    reasons.push('app.exportBlockedChecks');
+  }
+
+  return reasons;
+}
+
+function buildContextSummary({
+  bridgeModeDetail,
+  commandReferences,
+  findings,
+  operatorReminders,
+  scanScore,
+  selectedContextPath,
+  supportFiles,
+}: {
+  bridgeModeDetail: string;
+  commandReferences: any[];
+  findings: any[];
+  operatorReminders: any[];
+  scanScore: number;
+  selectedContextPath: string | null;
+  supportFiles: UploadedContextFile[];
+}): ContextSummaryItem[] {
+  const policyReferenceCount = commandReferences.length
+    + supportFiles.filter((file) => /policy|reference|checklist|docs?/i.test(`${file.name} ${file.path}`)).length;
+  const analysisCount = findings.length + operatorReminders.length + (scanScore > 0 ? 1 : 0);
+
+  return [
+    {
+      count: policyReferenceCount,
+      detail: policyReferenceCount > 0 ? 'app.contextPolicyReferenceDetail' : 'app.contextPolicyReferenceEmpty',
+      id: 'policy_and_reference',
+      label: 'app.contextBucketPolicyReference',
+      status: policyReferenceCount > 0 ? 'complete' : 'attention',
+    },
+    {
+      count: supportFiles.length,
+      detail: supportFiles.length > 0 ? 'app.contextSupportingFilesDetail' : 'app.noContextFiles',
+      id: 'supporting_files',
+      label: 'app.contextBucketSupportingFiles',
+      status: supportFiles.length > 0 ? 'complete' : 'attention',
+    },
+    {
+      count: analysisCount,
+      detail: analysisCount > 0 ? 'app.contextAnalysisFindingsDetail' : 'app.contextAnalysisFindingsEmpty',
+      id: 'analysis_findings',
+      label: 'app.contextBucketAnalysisFindings',
+      status: findings.length > 0 ? 'attention' : operatorReminders.length > 0 ? 'attention' : 'complete',
+    },
+    {
+      count: 3 + (selectedContextPath ? 1 : 0),
+      detail: bridgeModeDetail ? 'app.contextSourceProvenanceDetail' : 'app.contextSourceProvenanceEmpty',
+      id: 'source_provenance',
+      label: 'app.contextBucketSourceProvenance',
+      status: bridgeModeDetail ? 'complete' : 'blocked',
+    },
+  ];
+}
+
 function summarizeDiffSummary(t: (key: string) => string, diffSummary: DiffSummary) {
   const totalChanges = diffSummary.added.length + diffSummary.removed.length + diffSummary.changed.length;
   return totalChanges > 0 ? `${totalChanges} ${t('app.diffEntries')}` : t('app.diffNone');
@@ -2509,6 +2965,58 @@ function capitalizeNoteType(value: 'action' | 'rule' | 'directive') {
 
 function isReviewStatus(value: unknown): value is 'draft' | 'in_review' | 'changes_requested' | 'approved' {
   return value === 'draft' || value === 'in_review' || value === 'changes_requested' || value === 'approved';
+}
+
+function reviewProfileLabelKey(value: ReviewProfile) {
+  if (value === 'bundle_evidence_review') {
+    return 'app.reviewProfileBundleEvidenceReview';
+  }
+  if (value === 'publish_gate_review') {
+    return 'app.reviewProfilePublishGateReview';
+  }
+  return 'app.reviewProfileModeVerification';
+}
+
+function handoffStateLabelKey(value: HandoffState) {
+  if (value === 'needs_evidence') {
+    return 'app.handoffStateNeedsEvidence';
+  }
+  if (value === 'needs_changes') {
+    return 'app.handoffStateNeedsChanges';
+  }
+  if (value === 'approved_for_export') {
+    return 'app.handoffStateApprovedForExport';
+  }
+  return 'app.handoffStateReadyForReview';
+}
+
+function handoffStateGuidanceKey(value: HandoffState) {
+  if (value === 'needs_evidence') {
+    return 'app.handoffGuidanceNeedsEvidence';
+  }
+  if (value === 'needs_changes') {
+    return 'app.handoffGuidanceNeedsChanges';
+  }
+  if (value === 'approved_for_export') {
+    return 'app.handoffGuidanceApprovedForExport';
+  }
+  return 'app.handoffGuidanceReadyForReview';
+}
+
+function reviewProfileNextStepKey(profile: ReviewProfile, handoffState: HandoffState) {
+  if (handoffState === 'approved_for_export') {
+    return 'app.nextActionApprovedForExport';
+  }
+  if (handoffState === 'needs_changes') {
+    return 'app.nextActionNeedsChanges';
+  }
+  if (profile === 'bundle_evidence_review') {
+    return 'app.nextActionBundleEvidenceReview';
+  }
+  if (profile === 'publish_gate_review') {
+    return 'app.nextActionPublishGateReview';
+  }
+  return 'app.nextActionModeVerification';
 }
 
 function reviewStatusLabelKey(value: 'draft' | 'in_review' | 'changes_requested' | 'approved') {

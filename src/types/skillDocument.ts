@@ -121,11 +121,24 @@ export type ReviewDecision = {
     | 'validated'
     | 'tested'
     | 'review_status_updated'
+    | 'handoff_state_updated'
+    | 'review_profile_updated'
     | 'approved'
     | 'requested_changes';
   targetId?: string;
   summary: string;
 };
+
+export type ReviewProfile =
+  | 'mode_verification'
+  | 'bundle_evidence_review'
+  | 'publish_gate_review';
+
+export type HandoffState =
+  | 'ready_for_review'
+  | 'needs_evidence'
+  | 'needs_changes'
+  | 'approved_for_export';
 
 export type ReviewChecklist = {
   modeConfirmed: boolean;
@@ -154,6 +167,8 @@ export type ReviewState = {
   reviewStatus: 'draft' | 'in_review' | 'changes_requested' | 'approved';
   startedAt?: string;
   updatedAt?: string;
+  handoffState?: HandoffState;
+  reviewProfile?: ReviewProfile;
   reviewSummary?: string;
   reviewerSignoff?: string;
   checklist?: ReviewChecklist;
@@ -161,6 +176,14 @@ export type ReviewState = {
   elementNotes: ElementReviewNote[];
   decisionLog: ReviewDecision[];
   diffSummary?: DiffSummary;
+};
+
+export type ContextSummaryItem = {
+  id: 'policy_and_reference' | 'supporting_files' | 'analysis_findings' | 'source_provenance';
+  label: string;
+  count: number;
+  status: 'complete' | 'attention' | 'blocked';
+  detail: string;
 };
 
 export type ReviewPacket = {
@@ -173,8 +196,11 @@ export type ReviewPacket = {
   equivalenceStatus: string;
   reviewDecisionGuidance: string;
   operatorReminders: Array<Record<string, unknown>>;
+  handoffState: HandoffState;
+  reviewProfile: ReviewProfile;
   reviewState: ReviewState;
   reviewChecklist: ReviewChecklistItem[];
+  contextSummary: ContextSummaryItem[];
   validationEvidence: ValidationEvidence | null;
   skillDocument: SkillDocument | null;
 };

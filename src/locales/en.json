@@ -129,6 +129,36 @@
     "reviewTruthPanel": "Review truthfulness",
     "reviewDecisionPanel": "Reviewer decision",
     "reviewDecision": "Review decision",
+    "workflowCheckpoint": "Workflow checkpoint",
+    "handoffState": "Handoff state",
+    "handoffStateReadyForReview": "Ready for review",
+    "handoffStateNeedsEvidence": "Needs evidence",
+    "handoffStateNeedsChanges": "Needs changes",
+    "handoffStateApprovedForExport": "Approved for export",
+    "handoffGuidanceReadyForReview": "The review shell is ready for an active reviewer pass, but the final gate is not closed yet.",
+    "handoffGuidanceNeedsEvidence": "Complete the remaining checks, evidence review, or sign-off gates before handing this review forward.",
+    "handoffGuidanceNeedsChanges": "Requested changes are still open. Keep the next reviewer or editor focused on the blocker list.",
+    "handoffGuidanceApprovedForExport": "The release gate is complete. Formal exports can now be generated from this workspace.",
+    "reviewProfile": "Review profile",
+    "reviewProfileModeVerification": "Mode verification",
+    "reviewProfileBundleEvidenceReview": "Bundle evidence review",
+    "reviewProfilePublishGateReview": "Publish gate review",
+    "nextAction": "Next action",
+    "nextActionModeVerification": "Confirm parser mode wording, inspect the truth bar, and capture the first reviewer decision.",
+    "nextActionBundleEvidenceReview": "Review supporting files and references together, then decide whether the evidence gate can close.",
+    "nextActionPublishGateReview": "Compare the release-oriented checklist, summary, and diff before sign-off.",
+    "nextActionNeedsChanges": "Capture the requested changes clearly so the next handoff can resume from a precise blocker list.",
+    "nextActionApprovedForExport": "Export the review report, review packet, and final skill artifacts for handoff.",
+    "exportReadiness": "Export readiness",
+    "exportReady": "Formal exports are available",
+    "exportLocked": "Formal exports are locked",
+    "exportBlockedReviewStatus": "Set the review status to approved before exporting final artifacts.",
+    "exportBlockedGates": "Complete all four sign-off gates before exporting final artifacts.",
+    "exportBlockedChecks": "Resolve blocking validation, consistency, or path-walk failures before exporting final artifacts.",
+    "checksPosture": "Checks posture",
+    "checksBlocked": "blocked",
+    "checksAttention": "attention",
+    "checksClean": "clean",
     "reviewStatusDraft": "Draft",
     "reviewStatusInReview": "In review",
     "reviewStatusChangesRequested": "Changes requested",
@@ -258,6 +288,19 @@
     ,"contextOnly": "context"
     ,"errorPrimarySkillMissing": "Upload at least one primary SKILL file (.md, .skill, .txt) or a valid SkillDocument JSON file. Auxiliary collaboration files are stored as context only."
     ,"collaborationContext": "Collaboration Context"
+    ,"contextLayers": "Context layers"
+    ,"contextBuckets": "buckets"
+    ,"contextBucketPolicyReference": "Policy and reference"
+    ,"contextBucketSupportingFiles": "Supporting files"
+    ,"contextBucketAnalysisFindings": "Analysis findings"
+    ,"contextBucketSourceProvenance": "Source provenance"
+    ,"contextPolicyReferenceDetail": "Command references and policy material are attached to this review snapshot."
+    ,"contextPolicyReferenceEmpty": "No policy or reference material is attached to this review snapshot yet."
+    ,"contextSupportingFilesDetail": "Supporting files are attached and can be inspected directly from the workbench."
+    ,"contextAnalysisFindingsDetail": "Analysis findings or reviewer reminders are present and should be acknowledged."
+    ,"contextAnalysisFindingsEmpty": "No additional analysis findings are attached to this review snapshot."
+    ,"contextSourceProvenanceDetail": "Bridge mode, source path, and repository provenance remain visible for this review snapshot."
+    ,"contextSourceProvenanceEmpty": "Source provenance is incomplete for this review snapshot."
     ,"contextFiles": "context files"
     ,"noContextFiles": "No auxiliary collaboration files attached."
     ,"totalActions": "actions"

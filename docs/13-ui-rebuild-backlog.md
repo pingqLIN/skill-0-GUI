@@ -117,6 +117,55 @@ Definition of done:
 
 - no single shell component carries most orchestration responsibility
 
+## 13.7A P1: Review Handoff State
+
+Goal:
+
+- make reviewer handoff and export readiness explicit instead of implied
+
+Tasks:
+
+- add a first-class `handoffState` that sits alongside `reviewStatus`
+- derive handoff defaults from sign-off gates and blocking checks
+- surface handoff state in the truth bar, review rail, and export actions
+- lock formal exports until the handoff state is genuinely export-ready
+
+Definition of done:
+
+- reviewers can tell whether a run is ready for review, needs evidence, needs changes, or is approved for export without reading multiple panels
+
+## 13.7B P1: Context Layering
+
+Goal:
+
+- turn the right-side context area into a structured evidence surface
+
+Tasks:
+
+- group context into `policy and reference`, `supporting files`, `analysis findings`, and `source provenance`
+- make each group show count and attention state
+- keep source and provenance visible without mixing them into findings
+
+Definition of done:
+
+- reviewers can quickly identify what kind of context is attached to the current run and what still needs attention
+
+## 13.7C P2: Review Profiles
+
+Goal:
+
+- make common reviewer intents reusable without turning the product into a workflow builder
+
+Tasks:
+
+- introduce fixed profiles for `mode verification`, `bundle evidence review`, and `publish gate review`
+- connect sample scenarios and review guidance to these profiles
+- persist the selected profile into local draft and exported review packet metadata
+
+Definition of done:
+
+- reviewers can switch the workbench emphasis without changing the underlying parser contract or data model
+
 ## 13.8 P2: Motion Hardening
 
 Goal:

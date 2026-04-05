@@ -1,11 +1,14 @@
 import type {
   ActionNode,
   ConsistencyRun,
+  ContextSummaryItem,
   DirectiveNode,
   ExecutionPath,
   DiffSummary,
+  HandoffState,
   ReviewPacket,
   ReviewChecklistItem,
+  ReviewProfile,
   ReviewState,
   RuleNode,
   SkillDocument,
@@ -468,8 +471,11 @@ export function buildReviewPacketFromReviewData(
   options: {
     bridgeMode: ReviewPacket['parserMode'];
     bridgeModeSource: string;
+    contextSummary?: ContextSummaryItem[];
     equivalenceStatus: string;
+    handoffState?: HandoffState;
     reviewDecisionGuidance: string;
+    reviewProfile?: ReviewProfile;
     reviewMode: string;
     reviewState: ReviewState;
     skillDocument?: SkillDocument | null;
@@ -501,8 +507,10 @@ export function buildReviewPacketFromReviewData(
     : options.reviewState;
 
   return {
+    contextSummary: options.contextSummary ?? [],
     equivalenceStatus: options.equivalenceStatus,
     exportedAt: new Date().toISOString(),
+    handoffState: options.handoffState ?? reviewState.handoffState ?? 'ready_for_review',
     operatorReminders,
     parserMode: options.bridgeMode,
     parserModeSource: options.bridgeModeSource,
@@ -510,6 +518,7 @@ export function buildReviewPacketFromReviewData(
     projectName,
     reviewDecisionGuidance: options.reviewDecisionGuidance,
     reviewChecklist: buildReviewChecklist(options.bridgeMode, options.bridgeModeSource, reviewState, validationEvidence),
+    reviewProfile: options.reviewProfile ?? reviewState.reviewProfile ?? 'mode_verification',
     reviewMode: options.reviewMode,
     reviewState,
     validationEvidence,

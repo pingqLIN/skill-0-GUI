@@ -154,9 +154,18 @@ describe('skillDocumentAdapter', () => {
     const reviewPacket = buildReviewPacketFromReviewData(imported, {
       bridgeMode: 'unknown',
       bridgeModeSource: 'json/test',
+      contextSummary: [{
+        count: 1,
+        detail: 'Source provenance is visible.',
+        id: 'source_provenance',
+        label: 'Source provenance',
+        status: 'complete',
+      }],
       equivalenceStatus: 'equivalence_unverified',
+      handoffState: 'needs_changes',
       modifiedPaths: ['projectName', 'phases.A.name', 'metrics'],
       reviewDecisionGuidance: 'Re-run the canonical bridge before final approval.',
+      reviewProfile: 'bundle_evidence_review',
       reviewMode: 'unknown',
       reviewState: {
         decisionLog: [{
@@ -172,7 +181,9 @@ describe('skillDocumentAdapter', () => {
           createdAt: '2026-03-28T00:00:00.000Z',
           id: 'note-001',
         }],
+        handoffState: 'needs_changes',
         reviewStatus: 'changes_requested',
+        reviewProfile: 'bundle_evidence_review',
         reviewerName: 'Miles',
         updatedAt: '2026-03-28T00:00:00.000Z',
       },
@@ -181,10 +192,13 @@ describe('skillDocumentAdapter', () => {
     expect(reviewPacket).not.toBeNull();
     expect(reviewPacket?.projectId).toBe('claude__imported-skill');
     expect(reviewPacket?.skillDocument?.meta.skill_id).toBe('claude__imported-skill');
+    expect(reviewPacket?.handoffState).toBe('needs_changes');
+    expect(reviewPacket?.reviewProfile).toBe('bundle_evidence_review');
     expect(reviewPacket?.reviewState.reviewStatus).toBe('changes_requested');
     expect(reviewPacket?.reviewState.diffSummary?.changed).toEqual(['phases.A.name', 'projectName']);
     expect(reviewPacket?.reviewState.diffSummary?.stats.fieldsChanged).toBe(2);
     expect(reviewPacket?.validationEvidence?.provenance.schemaVersion).toBe('2.4.0');
+    expect(reviewPacket?.contextSummary).toHaveLength(1);
     expect(reviewPacket?.reviewChecklist.map((item) => item.id)).toEqual([
       'bridge-mode',
       'schema-validation',

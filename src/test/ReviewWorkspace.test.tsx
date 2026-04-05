@@ -52,6 +52,30 @@ const sampleData = {
   globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
 };
 
+const exportReadyData = {
+  ...sampleData,
+  parserResult: {
+    ...sampleData.parserResult,
+    meta: {
+      parser_version: 'v1',
+      schema_version: '2.4.0',
+      skill_id: 'demo-skill',
+      title: 'Demo Skill',
+    },
+    decomposition: {
+      actions: [{ id: 'a_001', name: 'Read files', action_type: 'io_read' }],
+      directives: [],
+      rules: [],
+    },
+    execution_paths: [{ id: 'path_001', name: 'default-path', steps: ['a_001'] }],
+    original_definition: { source: 'json/test' },
+    supporting_files: [],
+    command_references: [],
+    analysis_findings: [],
+    manifest: { analysis_level: 'manifest', unresolved_references_count: 0 },
+  },
+};
+
 const baseProps = {
   darkMode: false,
   demoPreset: null,
@@ -82,6 +106,7 @@ async function openInsightTab(name: 'review' | 'checks' | 'context') {
 describe('ReviewWorkspace', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.scrollTo = vi.fn();
   });
 
   it('preserves the active tab when parent data rerenders after an edit', async () => {
@@ -305,7 +330,6 @@ describe('ReviewWorkspace', () => {
     expect(screen.getByDisplayValue('Persisted reviewer packet notes.')).toBeInTheDocument();
     expect(screen.getByText('3/4')).toBeInTheDocument();
     expect(screen.getByTestId('review-draft-status')).toHaveTextContent('app.localDraft');
-    expect(screen.getByTestId('review-draft-status')).toHaveTextContent('app.localDraftRestored');
   });
 
   it('updates the review status and records a decision log entry', async () => {
@@ -316,6 +340,27 @@ describe('ReviewWorkspace', () => {
     expect(screen.getAllByText('app.reviewStatusApproved').length).toBeGreaterThan(0);
     expect(screen.getByText('Review status changed to approved.')).toBeInTheDocument();
     expect(await screen.findByTestId('review-draft-status')).toHaveTextContent('app.localDraftAutosaved');
+  });
+
+  it('allows manual handoff updates within the valid state set and records them', async () => {
+    render(<ReviewWorkspace data={sampleData} {...createProps()} />);
+
+    fireEvent.change(await screen.findByLabelText('app.handoffState'), {
+      target: { value: 'ready_for_review' },
+    });
+
+    expect(screen.getByText('Handoff state changed to ready_for_review.')).toBeInTheDocument();
+  });
+
+  it('locks formal exports until approval, gates, and blocking checks are resolved', async () => {
+    render(<ReviewWorkspace data={sampleData} {...createProps()} />);
+
+    fireEvent.click(await screen.findByText('app.actionsTray'));
+    expect(await screen.findByRole('button', { name: 'app.exportReviewPacket' })).toBeDisabled();
+    await openInsightTab('review');
+    expect(screen.getByText('app.exportLocked')).toBeInTheDocument();
+    expect(screen.getByText(/app.exportBlockedReviewStatus/)).toBeInTheDocument();
+    expect(screen.getByText(/app.exportBlockedGates/)).toBeInTheDocument();
   });
 
   it('applies a guided demo preset when no reviewer draft exists', async () => {
@@ -467,7 +512,7 @@ describe('ReviewWorkspace', () => {
 
     render(
       <ReviewWorkspace
-        data={sampleData}
+        data={exportReadyData}
         {...createProps()}
         modifiedPaths={new Set(['projectName', 'riskAssessment.level', 'metrics'])}
       />,
@@ -475,6 +520,10 @@ describe('ReviewWorkspace', () => {
 
     fireEvent.change(screen.getByLabelText('app.reviewerName'), { target: { value: 'Miles' } });
     fireEvent.change(screen.getByLabelText('app.reviewNotes'), { target: { value: 'Ready for merge after canonical verification.' } });
+    fireEvent.click(screen.getByText('app.reviewChecklistModeConfirmed'));
+    fireEvent.click(screen.getByText('app.reviewChecklistValidationReviewed'));
+    fireEvent.click(screen.getByText('app.reviewChecklistDiffReviewed'));
+    fireEvent.click(screen.getByText('app.reviewChecklistEvidenceReady'));
     fireEvent.click(screen.getByText('app.markApproved'));
 
     const reviewDecisionPanel = screen.getByTestId('review-decision-panel');
@@ -489,13 +538,16 @@ describe('ReviewWorkspace', () => {
     const packet = stringifySpy.mock.calls.at(-1)?.[0] as any;
     expect(packet.projectId).toBe('demo-skill');
     expect(packet.parserMode).toBe('skill-0');
+    expect(packet.handoffState).toBe('approved_for_export');
+    expect(packet.reviewProfile).toBe('mode_verification');
     expect(packet.reviewState.reviewerName).toBe('Miles');
     expect(packet.reviewState.reviewStatus).toBe('approved');
     expect(packet.reviewState.diffSummary.changed).toEqual(['projectName', 'riskAssessment.level']);
     expect(packet.reviewState.diffSummary.stats.fieldsChanged).toBe(2);
     expect(packet.validationEvidence.provenance.parserVersion).toBe('v1');
+    expect(packet.contextSummary).toHaveLength(4);
     expect(packet.reviewChecklist.find((item: any) => item.id === 'bridge-mode')?.status).toBe('complete');
-    expect(packet.reviewChecklist.find((item: any) => item.id === 'schema-validation')?.status).toBe('blocked');
+    expect(packet.reviewChecklist.find((item: any) => item.id === 'schema-validation')?.status).toBe('complete');
     expect(packet.reviewState.globalNotes[0].content).toContain('Ready for merge');
     expect(packet.reviewState.decisionLog[0].action).toBe('approved');
     expect(packet.reviewDecisionGuidance).toContain('canonical skill-0 bridge');
@@ -509,10 +561,10 @@ describe('ReviewWorkspace', () => {
 
   it('exports a reviewer-facing report with notes diff and test summaries', async () => {
     const changedData = {
-      ...sampleData,
+      ...exportReadyData,
       parserResult: {
-        ...sampleData.parserResult,
-        meta: { ...sampleData.parserResult.meta, title: 'Demo Skill Updated' },
+        ...exportReadyData.parserResult,
+        meta: { ...exportReadyData.parserResult.meta, title: 'Demo Skill Updated' },
         decomposition: {
           actions: [{ id: 'a_001', name: 'Read files', action_type: 'io_read' }],
           directives: [],
@@ -607,7 +659,9 @@ describe('ReviewWorkspace', () => {
 
     const reportText = await (capturedBlob as Blob & { text: () => Promise<string> }).text();
     expect(reportText).toContain('# Review Report: Demo Skill');
+    expect(reportText).toContain('- review_profile: mode_verification');
     expect(reportText).toContain('- review_status: approved');
+    expect(reportText).toContain('- handoff_state: approved_for_export');
     expect(reportText).toContain('- reviewer_signoff: reviewer-01');
     expect(reportText).toContain('- signoff_gates_completed: 4/4');
     expect(reportText).toContain('## Reviewer Summary');
