@@ -5,6 +5,7 @@ import {
   BookOpen,
   FileText,
   Github,
+  Info,
   Languages,
   PlayCircle,
   RefreshCw,
@@ -75,6 +76,8 @@ export type DemoReviewPreset = {
   seedValidationRun?: boolean;
   title: string;
 };
+
+type LandingPaneTabId = 'overview' | 'outputs' | 'docs' | DemoScenarioDefinition['id'];
 
 function readWorkspaceDraft(): WorkspaceDraftSnapshot | null {
   if (typeof window === 'undefined') {
@@ -1065,6 +1068,19 @@ npm run release:preview
       body: t('app.reviewOutputSkillBody'),
     },
   ];
+  const [landingPaneTab, setLandingPaneTab] = useState<LandingPaneTabId>('overview');
+  const activeLandingScenario = landingPaneTab === 'overview' || landingPaneTab === 'outputs' || landingPaneTab === 'docs'
+    ? null
+    : curatedScenarios.find((scenario) => scenario.id === landingPaneTab) ?? null;
+  const landingPaneTabs: Array<{ id: LandingPaneTabId; label: string }> = [
+    { id: 'overview', label: t('app.landingOverviewTab') },
+    { id: 'outputs', label: t('app.landingOutputsTab') },
+    { id: 'docs', label: t('app.landingDocsTab') },
+    ...curatedScenarios.map((scenario) => ({
+      id: scenario.id as LandingPaneTabId,
+      label: scenario.title,
+    })),
+  ];
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
       <header className="frost-banner">
@@ -1111,7 +1127,7 @@ npm run release:preview
               href={GUI_REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-medium text-muted-foreground backdrop-blur-xl transition-colors hover:border-primary/28 hover:text-foreground"
+              className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
               title={t('app.guiRepo')}
             >
               <Github size={16} />
@@ -1119,7 +1135,7 @@ npm run release:preview
             </a>
             <button
               onClick={toggleLanguage}
-              className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-medium text-muted-foreground backdrop-blur-xl transition-colors hover:border-primary/28 hover:text-foreground"
+              className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
               title="Toggle Language"
             >
               <Languages size={16} />
@@ -1133,7 +1149,7 @@ npm run release:preview
         {workspaceDraftSavedAt && (
           <div
             data-testid="workspace-draft-status"
-            className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border border-border/55 bg-background/72 px-4 py-3 text-sm text-foreground backdrop-blur-xl"
+            className="surface-panel-muted mb-5 flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm text-foreground"
           >
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.localDraft')}</div>
@@ -1149,64 +1165,130 @@ npm run release:preview
             <section className="grid gap-6 2xl:grid-cols-[minmax(0,1.12fr)_minmax(30rem,0.88fr)]">
               <div className="glass-panel-strong px-5 py-6 sm:px-7 sm:py-7">
                 <div className="space-y-6">
-                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)]">
-                    <div className="space-y-4">
-                      <p className="editorial-kicker">{t('app.landingEyebrow')}</p>
-                      <h2 className="display-serif max-w-4xl text-4xl leading-[0.95] text-foreground sm:text-[3.4rem]">
-                        {t('app.landingTitle')}
+                  <div className="flex flex-wrap gap-2">
+                    {landingPaneTabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        data-state={landingPaneTab === tab.id ? 'active' : 'inactive'}
+                        onClick={() => setLandingPaneTab(tab.id)}
+                        className="editorial-tab-button px-3 py-1.5"
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {landingPaneTab === 'outputs' ? (
+                    <div className="max-w-4xl space-y-4">
+                      <p className="editorial-kicker">{t('app.reviewOutputsKicker')}</p>
+                      <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
+                        {t('app.reviewOutputsTitle')}
                       </h2>
                       <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
-                        {t('app.landingLead')}
+                        {t('app.reviewOutputsLead')}
                       </p>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {landingArtifacts.map((item) => (
+                          <div key={item.title} className="surface-panel-muted px-4 py-4">
+                            <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                          </div>
+                        ))}
+                      </div>
                       <div className="flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={loadExampleSkill}
-                          className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.7)] transition hover:bg-primary/92"
-                        >
-                          <PlayCircle size={16} />
-                          {t('app.landingPrimaryCta')}
-                        </button>
                         <a
-                          href={DOCS_INDEX_URL}
+                          href={README_URL}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 rounded-full border border-border/60 bg-background/72 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                          className="editorial-button-secondary px-5 py-3 text-sm font-medium"
                         >
                           <BookOpen size={16} />
-                          {t('app.landingDocsCta')}
+                          {t('app.reviewOutputsReadmeCta')}
+                        </a>
+                        <a
+                          href={MODE_CONTRACT_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="editorial-button-secondary px-5 py-3 text-sm font-medium"
+                        >
+                          <ShieldCheck size={16} />
+                          {t('app.reviewOutputsContractCta')}
                         </a>
                       </div>
                     </div>
-
-                    <div className="grid gap-3">
-                      <div className="surface-panel px-4 py-4">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.bridgeMode')}</div>
-                        <div className="mt-2 text-base font-semibold text-foreground">{bridgeModeLabel}</div>
-                        <p className="mt-2 text-xs leading-5 text-muted-foreground">{bridgeReviewGuidance}</p>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
-                        <div className="surface-panel px-4 py-4">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.sampleScenariosKicker')}</div>
-                          <div className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{curatedScenarios.length}</div>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">{t('app.sampleScenariosTitle')}</p>
-                        </div>
-                        <div className="surface-panel px-4 py-4">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewOutputsKicker')}</div>
-                          <div className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{landingArtifacts.length}</div>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">{t('app.reviewOutputsTitle')}</p>
-                        </div>
-                        <div className="surface-panel px-4 py-4">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.workspace')}</div>
-                          <div className="mt-2 text-2xl font-semibold tracking-tight text-foreground">4</div>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            intake {'->'} analysis {'->'} review {'->'} export
-                          </p>
-                        </div>
+                  ) : landingPaneTab === 'docs' ? (
+                    <div className="max-w-4xl space-y-4">
+                      <p className="editorial-kicker">{t('app.resourcesKicker')}</p>
+                      <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
+                        {t('app.resourcesTitle')}
+                      </h2>
+                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
+                        {t('app.resourcesLead')}
+                      </p>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {landingDocs.map((item) => (
+                          <a
+                            key={item.title}
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="surface-panel-muted px-4 py-4 text-left transition hover:border-foreground/14 hover:bg-background/96"
+                          >
+                            <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                          </a>
+                        ))}
                       </div>
                     </div>
-                  </div>
-
+                  ) : activeLandingScenario ? (
+                    <div className="max-w-4xl space-y-4">
+                      <p className="editorial-kicker">{t('app.sampleScenariosKicker')}</p>
+                      <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
+                        {activeLandingScenario.title}
+                      </h2>
+                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
+                        {activeLandingScenario.body}
+                      </p>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="surface-panel-muted px-4 py-4">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.sampleScenarioFocusLabel')}</div>
+                          <p className="mt-2 text-sm leading-6 text-foreground">{activeLandingScenario.focus}</p>
+                        </div>
+                        <div className="surface-panel-muted px-4 py-4">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.sampleScenarioArtifactsLabel')}</div>
+                          <p className="mt-2 text-sm leading-6 text-foreground">{activeLandingScenario.artifacts}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => loadCuratedScenario(activeLandingScenario)}
+                          className="editorial-button-primary px-5 py-3 text-sm font-medium"
+                        >
+                          <PlayCircle size={16} />
+                          {activeLandingScenario.cta}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLandingPaneTab('overview')}
+                          className="editorial-button-secondary px-5 py-3 text-sm font-medium"
+                        >
+                          {t('app.title')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="max-w-4xl space-y-4">
+                      <p className="editorial-kicker">{t('app.landingEyebrow')}</p>
+                      <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.4rem]">
+                        {t('app.title')}
+                      </h2>
+                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
+                        {t('app.landingTagline')}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1216,7 +1298,7 @@ npm run release:preview
                     <p className="editorial-kicker">{t('app.inputStudio')}</p>
                     <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.analyzeNew')}</h3>
                   </div>
-                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
+                  <div className="editorial-icon-well p-3 text-muted-foreground">
                     <UploadCloud size={22} />
                   </div>
                 </div>
@@ -1230,10 +1312,10 @@ npm run release:preview
                   }}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`rounded-[1.5rem] border border-dashed p-5 backdrop-blur-xl transition-colors ${
+                  className={`editorial-dropzone p-5 transition-colors ${
                     isDragActive
-                      ? 'border-primary/50 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]'
-                      : 'border-border/60 bg-background/46 hover:border-primary/32 hover:bg-card/60'
+                      ? 'border-foreground/24 bg-accent/70 shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.06)]'
+                      : 'hover:border-foreground/18 hover:bg-card/92'
                   }`}
                 >
                   <input
@@ -1261,14 +1343,20 @@ npm run release:preview
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <p className="text-sm leading-6 text-muted-foreground">{t('app.inputGuide')}</p>
                       <div className="surface-panel px-4 py-4">
                         <div className="flex flex-col gap-3">
-                          <div className="space-y-1">
-                            <label htmlFor="skill-url-input" className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                              {t('app.skillUrlLabel')}
-                            </label>
-                            <p className="text-xs leading-5 text-muted-foreground">{t('app.skillUrlHint')}</p>
+                          <div className="group relative space-y-1">
+                            <div className="flex items-center gap-2">
+                              <label htmlFor="skill-url-input" className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                                {t('app.skillUrlLabel')}
+                              </label>
+                              <span className="editorial-chip px-2 py-1 text-[10px] text-muted-foreground">
+                                <Info size={12} />
+                              </span>
+                            </div>
+                            <div className="editorial-hover-note text-xs leading-5">
+                              {t('app.skillUrlHint')}
+                            </div>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                             <input
@@ -1285,31 +1373,41 @@ npm run release:preview
                                 }
                               }}
                               placeholder={t('app.skillUrlPlaceholder')}
-                              className="w-full rounded-[1.05rem] border border-input/75 bg-card/86 px-4 py-3 text-sm leading-6 shadow-inner outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/18"
+                              className="editorial-input-surface w-full px-4 py-3 text-sm leading-6 outline-none"
                             />
                             <button
                               type="button"
                               onClick={() => void handleAnalyzeSkillUrl()}
                               disabled={!skillUrlInput.trim()}
-                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/80 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/35 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                              className="editorial-button-secondary px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <UploadCloud size={16} />
                               {t('app.skillUrlCta')}
                             </button>
                           </div>
-                          <p className="text-[11px] leading-5 text-muted-foreground">{t('app.skillUrlSupported')}</p>
                         </div>
                       </div>
-                      <div
-                        data-testid="intake-review-readiness"
-                        className={`rounded-[1.2rem] border px-4 py-3 backdrop-blur-xl ${reviewReadinessStyles}`}
+                      <div className="group relative">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.skillTextLabel')}</span>
+                          <span className="editorial-chip px-2 py-1 text-[10px] text-muted-foreground">
+                            <Info size={12} />
+                          </span>
+                        </div>
+                        <div className="editorial-hover-note text-xs leading-5">
+                          {t('app.skillTextHint')}
+                        </div>
+                      </div>
+                        <div
+                          data-testid="intake-review-readiness"
+                        className={`surface-panel-muted px-4 py-3 ${reviewReadinessStyles}`}
                       >
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
                             <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-current/75">{t('app.reviewEvidenceStatus')}</div>
                             <p className="mt-1 text-sm font-medium text-current">{reviewReadinessLabel}</p>
                           </div>
-                          <div className="rounded-full border border-current/15 bg-background/70 px-3 py-1.5 text-[11px] font-medium text-current">
+                          <div className="editorial-chip px-3 py-1.5 text-[11px] font-medium text-current">
                             {bridgeModeLabel}
                           </div>
                         </div>
@@ -1320,7 +1418,7 @@ npm run release:preview
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         placeholder={t('app.placeholder')}
-                        className="min-h-40 w-full resize-none rounded-[1.35rem] border border-input/75 bg-white/55 px-4 py-3 text-sm leading-6 shadow-inner backdrop-blur-xl outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/18"
+                        className="editorial-input-surface min-h-40 w-full resize-none px-4 py-3 text-sm leading-6 outline-none"
                       />
 
                       {error && (
@@ -1330,12 +1428,20 @@ npm run release:preview
                         </div>
                       )}
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="text-xs text-muted-foreground">{t('app.inputDrop')}</div>
+                        <div className="group relative flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{t('app.bundleUploadLabel')}</span>
+                          <span className="editorial-chip px-2 py-1 text-[10px] text-muted-foreground">
+                            <Info size={12} />
+                          </span>
+                          <div className="editorial-hover-note text-xs leading-5">
+                            {t('app.bundleUploadHint')}
+                          </div>
+                        </div>
                         <div className="flex flex-col gap-3 sm:flex-row">
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/70 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/35 hover:text-primary"
+                            className="editorial-button-secondary px-5 py-3 text-sm font-medium"
                           >
                             <UploadCloud size={16} />
                             {t('app.selectFiles')}
@@ -1343,7 +1449,7 @@ npm run release:preview
                           <button
                             type="button"
                             onClick={() => folderInputRef.current?.click()}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/70 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/35 hover:text-primary"
+                            className="editorial-button-secondary px-5 py-3 text-sm font-medium"
                           >
                             <UploadCloud size={16} />
                             {t('app.selectFolder')}
@@ -1351,7 +1457,7 @@ npm run release:preview
                           <button
                             onClick={pendingUploadFiles.length > 0 ? handleAnalyzePendingUpload : () => void handleAnalyzeTextInput()}
                             disabled={pendingUploadFiles.length > 0 ? !pendingPrimaryPath : !inputText.trim()}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.7)] transition hover:bg-primary/92 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="editorial-button-primary px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <Activity size={16} />
                             {pendingUploadFiles.length > 0 ? t('app.reviewAndAnalyze') : t('app.analyzeBtn')}
@@ -1360,13 +1466,13 @@ npm run release:preview
                       </div>
 
                       {pendingUploadFiles.length > 0 && (
-                        <div className="rounded-[1.2rem] border border-border/55 bg-white/44 px-4 py-3 backdrop-blur-xl">
+                        <div className="surface-panel-muted px-4 py-3">
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.intakePreview')}</div>
                               <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('app.intakePreviewHint')}</p>
                             </div>
-                            <div className="rounded-full border border-border/55 bg-background/72 px-3 py-1.5 text-[11px] font-medium text-foreground">
+                            <div className="editorial-chip px-3 py-1.5 text-[11px] font-medium text-foreground">
                               {pendingUploadFiles.length} {t('app.intakeFiles')}
                             </div>
                           </div>
@@ -1378,22 +1484,22 @@ npm run release:preview
                                   key={`${file.path}-${file.size}`}
                                   type="button"
                                   onClick={() => file.isPrimaryCandidate && setPendingPrimaryPath(file.path)}
-                                  className={`rounded-[1rem] border px-3 py-3 text-left transition ${
+                                  className={`rounded-[calc(var(--radius)*1.05)] border border-border/12 px-3 py-3 text-left transition ${
                                     isSelectedPrimary
-                                      ? 'border-primary/35 bg-primary/10'
-                                      : 'border-border/50 bg-background/68'
-                                  } ${file.isPrimaryCandidate ? 'hover:border-primary/30' : ''}`}
+                                      ? 'bg-accent/90 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.03)]'
+                                      : 'bg-background/84'
+                                  } ${file.isPrimaryCandidate ? 'hover:border-foreground/16 hover:bg-background' : ''}`}
                                 >
                                   <div className="flex items-center justify-between gap-3">
                                     <div className="text-sm font-medium text-foreground">{file.name}</div>
                                     <div className="flex items-center gap-2">
                                       <span className="text-[11px] text-muted-foreground">{formatBytes(file.size)}</span>
-                                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                      <span className={`editorial-chip px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                                         isSelectedPrimary
-                                          ? 'bg-primary/14 text-primary'
+                                          ? 'bg-accent/90 text-foreground'
                                           : file.isPrimaryCandidate
-                                            ? 'bg-emerald-500/12 text-emerald-700'
-                                            : 'bg-background/72 text-muted-foreground'
+                                            ? 'bg-[#fbf2eb] text-[#7c5b2a]'
+                                            : 'bg-background/90 text-muted-foreground'
                                       }`}>
                                         {isSelectedPrimary ? t('app.primarySkill') : file.isPrimaryCandidate ? t('app.primaryCandidate') : t('app.contextOnly')}
                                       </span>
@@ -1409,7 +1515,7 @@ npm run release:preview
                       )}
 
                       {supportFiles.length > 0 && (
-                        <div className="rounded-[1.2rem] border border-border/55 bg-white/44 px-4 py-3 backdrop-blur-xl">
+                        <div className="surface-panel-muted px-4 py-3">
                           <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.collaborationContext')}</div>
                           <div className="mt-3 grid gap-2">
                             {supportFiles.map((file) => (
@@ -1417,8 +1523,8 @@ npm run release:preview
                                 key={`${file.path}-${file.size}`}
                                 type="button"
                                 onClick={() => setSelectedContextPath(file.path)}
-                                className={`rounded-[1rem] border px-3 py-3 text-left transition ${
-                                  selectedContextPath === file.path ? 'border-primary/35 bg-primary/8' : 'border-border/50 bg-background/68'
+                                className={`rounded-[calc(var(--radius)*1.05)] border border-border/12 px-3 py-3 text-left transition ${
+                                  selectedContextPath === file.path ? 'bg-accent/88 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.03)]' : 'bg-background/84'
                                 }`}
                               >
                                 <div className="flex items-center justify-between gap-3">
@@ -1439,127 +1545,6 @@ npm run release:preview
                   )}
                 </div>
 
-                <div className="mt-5 flex items-center justify-between gap-4 rounded-[1.35rem] border border-border/45 bg-white/48 px-4 py-3 backdrop-blur-xl">
-                  <div>
-                    <p className="text-xs font-medium text-foreground">{t('app.tryExample')}</p>
-                    <p className="text-xs text-muted-foreground">{t('app.workspaceHint')}</p>
-                  </div>
-                  <button
-                    onClick={loadExampleSkill}
-                    className="rounded-full border border-border/60 px-4 py-2 text-xs font-medium text-muted-foreground transition hover:border-primary/32 hover:text-foreground"
-                  >
-                    {t('app.loadExample')}
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.9fr)_minmax(0,0.95fr)]">
-              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="editorial-kicker">{t('app.sampleScenariosKicker')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.sampleScenariosTitle')}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.sampleScenariosLead')}</p>
-                  </div>
-                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
-                    <PlayCircle size={22} />
-                  </div>
-                </div>
-                <div className="mt-5 grid gap-3">
-                  {curatedScenarios.map((scenario) => (
-                    <div key={scenario.id} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="text-sm font-semibold text-foreground">{scenario.title}</div>
-                        <div className="rounded-full border border-border/55 bg-background/72 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          {scenario.id}
-                        </div>
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{scenario.body}</p>
-                      <div className="mt-3 space-y-2 text-xs leading-6 text-muted-foreground">
-                        <div><span className="font-semibold text-foreground">{t('app.sampleScenarioFocusLabel')}</span> {scenario.focus}</div>
-                        <div><span className="font-semibold text-foreground">{t('app.sampleScenarioArtifactsLabel')}</span> {scenario.artifacts}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => loadCuratedScenario(scenario)}
-                        data-testid={`sample-scenario-${scenario.id}`}
-                        className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
-                      >
-                        <PlayCircle size={14} />
-                        {scenario.cta}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="editorial-kicker">{t('app.resourcesKicker')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.resourcesTitle')}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.resourcesLead')}</p>
-                  </div>
-                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
-                    <BookOpen size={22} />
-                  </div>
-                </div>
-                <div className="mt-5 grid gap-3">
-                  {landingDocs.map((item) => (
-                    <a
-                      key={item.title}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 text-left backdrop-blur-xl transition hover:border-primary/30 hover:bg-card/72"
-                    >
-                      <div className="text-sm font-semibold text-foreground">{item.title}</div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-                    </a>
-                  ))}
-                </div>
-              </div>
-
-              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="editorial-kicker">{t('app.reviewOutputsKicker')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.reviewOutputsTitle')}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.reviewOutputsLead')}</p>
-                  </div>
-                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
-                    <FileText size={22} />
-                  </div>
-                </div>
-                <div className="mt-5 space-y-3">
-                  {landingArtifacts.map((item) => (
-                    <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
-                      <div className="text-sm font-semibold text-foreground">{item.title}</div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <a
-                    href={README_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
-                  >
-                    <BookOpen size={14} />
-                    {t('app.reviewOutputsReadmeCta')}
-                  </a>
-                  <a
-                    href={MODE_CONTRACT_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
-                  >
-                    <ShieldCheck size={14} />
-                    {t('app.reviewOutputsContractCta')}
-                  </a>
-                </div>
               </div>
             </section>
           </div>

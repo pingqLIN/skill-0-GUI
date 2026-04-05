@@ -1127,7 +1127,7 @@ export function ReviewWorkspace({
               ))}
             </div>
 
-            <div className="rounded-[1.35rem] border border-border/50 bg-white/42 backdrop-blur-2xl">
+            <div className="surface-panel-muted">
               <button
                 onClick={() => setShowActions((current) => !current)}
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -1151,7 +1151,7 @@ export function ReviewWorkspace({
                     <div className="grid gap-2 px-4 pb-4">
                       <button
                         onClick={() => setEditorConfig({ type: 'global', payload: data })}
-                        className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        className="editorial-action-button px-3 py-2 text-sm text-foreground"
                       >
                         <span>{t('app.openGlobalEditor')}</span>
                         <Edit2 size={14} className="text-muted-foreground" />
@@ -1159,7 +1159,7 @@ export function ReviewWorkspace({
                       {skillDocument && (
                         <button
                           onClick={() => setEditorConfig({ type: 'skillDocument', payload: skillDocument })}
-                          className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                          className="editorial-action-button px-3 py-2 text-sm text-foreground"
                         >
                           <span>{t('app.openStructuredEditor')}</span>
                           <Edit2 size={14} className="text-muted-foreground" />
@@ -1168,7 +1168,7 @@ export function ReviewWorkspace({
                       {skillDocument && (
                         <button
                           onClick={() => setEditorConfig({ type: 'json', payload: skillDocument })}
-                          className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                          className="editorial-action-button px-3 py-2 text-sm text-foreground"
                         >
                           <span>{t('app.openJsonEditor')}</span>
                           <FileCode2 size={14} className="text-muted-foreground" />
@@ -1176,7 +1176,7 @@ export function ReviewWorkspace({
                       )}
                       <button
                         onClick={exportSkill}
-                        className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        className="editorial-action-button px-3 py-2 text-sm text-foreground"
                       >
                         <span>{t('app.export')}</span>
                         <Download size={14} className="text-muted-foreground" />
@@ -1184,7 +1184,7 @@ export function ReviewWorkspace({
                       {skillDocument && (
                         <button
                           onClick={exportSkillJson}
-                          className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                          className="editorial-action-button px-3 py-2 text-sm text-foreground"
                         >
                           <span>{t('app.exportJson')}</span>
                           <Download size={14} className="text-muted-foreground" />
@@ -1193,7 +1193,7 @@ export function ReviewWorkspace({
                       {skillDocument && (
                         <button
                           onClick={exportReviewReport}
-                          className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                          className="editorial-action-button px-3 py-2 text-sm text-foreground"
                         >
                           <span>{t('app.exportReviewReport')}</span>
                           <Download size={14} className="text-muted-foreground" />
@@ -1201,14 +1201,14 @@ export function ReviewWorkspace({
                       )}
                       <button
                         onClick={exportReviewPacket}
-                        className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        className="editorial-action-button px-3 py-2 text-sm text-foreground"
                       >
                         <span>{t('app.exportReviewPacket')}</span>
                         <Download size={14} className="text-muted-foreground" />
                       </button>
                       <button
                         onClick={handleResetWorkspace}
-                        className="inline-flex items-center justify-between rounded-xl border border-border/60 bg-background/76 px-3 py-2 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        className="editorial-action-button px-3 py-2 text-sm text-foreground"
                       >
                         <span>{t('app.resetWorkspace')}</span>
                         <RefreshCw size={14} className="text-muted-foreground" />
@@ -1228,10 +1228,10 @@ export function ReviewWorkspace({
               </AnimatePresence>
             </div>
 
-            <div className="rounded-[1.35rem] border border-border/50 bg-white/42 p-4 backdrop-blur-2xl">
+            <div className="surface-panel-muted p-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="editorial-kicker">{t('app.currentFocus')}</p>
-                <span className="rounded-full border border-border/55 bg-background/70 px-2.5 py-1 text-[11px] font-mono text-muted-foreground backdrop-blur-lg">
+                <span className="editorial-chip px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
                   {executionPaths.length > 0 ? `${executionPaths.length} ${t('app.executionPaths')}` : '--'}
                 </span>
               </div>
@@ -1241,10 +1241,10 @@ export function ReviewWorkspace({
               <p className="text-pretty-wrap mt-2 text-xs leading-5 text-muted-foreground">{t('app.parserBoardHint')}</p>
             </div>
 
-            <div className="rounded-[1.35rem] border border-border/50 bg-white/42 p-4 backdrop-blur-2xl sm:hidden">
+            <div className="surface-panel-muted p-4 sm:hidden">
               <div className="flex items-center justify-between gap-3">
                 <p className="editorial-kicker">{t('app.bridgeMode')}</p>
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                <span className={`editorial-chip px-2.5 py-1 text-[11px] font-medium ${
                   bridgeStatus?.mode === 'skill-0'
                     ? 'bg-emerald-500/10 text-emerald-700'
                     : bridgeStatus?.mode === 'standalone'
@@ -1259,14 +1259,14 @@ export function ReviewWorkspace({
 
             <div
               data-testid="review-readiness-banner"
-              className={`rounded-[1.35rem] border p-4 backdrop-blur-2xl ${reviewReadinessStyles}`}
+              className={`surface-panel-muted p-4 ${reviewReadinessStyles}`}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle size={15} className="shrink-0" />
                   <p className="editorial-kicker text-current/80">{t('app.reviewEvidenceStatus')}</p>
                 </div>
-                <span className="rounded-full border border-current/15 bg-background/70 px-2.5 py-1 text-[11px] font-medium text-current">
+                <span className="editorial-chip px-2.5 py-1 text-[11px] font-medium text-current">
                   {reviewReadinessLabel}
                 </span>
               </div>
@@ -1290,14 +1290,14 @@ export function ReviewWorkspace({
                   <>
                     <p className="editorial-kicker">{t('app.analysisResult')}</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                      <span className="rounded-full border border-border/55 bg-background/70 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-muted-foreground backdrop-blur-lg">
+                      <span className="editorial-chip px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-muted-foreground">
                         {t('app.project')}: {data.projectId}
                       </span>
-                      <span className="rounded-full border border-border/55 bg-background/70 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-lg">
+                      <span className="editorial-chip px-3 py-1 text-[11px] text-muted-foreground">
                         {t('app.parserVersion')}: {data?.parserResult?.meta?.parser_version || '--'}
                       </span>
                       {parserManifest && (
-                        <span className="rounded-full border border-border/55 bg-background/70 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-lg">
+                        <span className="editorial-chip px-3 py-1 text-[11px] text-muted-foreground">
                           {t('app.analysisLevel')}: {parserManifest.analysis_level}
                         </span>
                       )}
@@ -1317,13 +1317,13 @@ export function ReviewWorkspace({
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{bridgeReviewGuidance}</p>
               </div>
 
-              <div data-testid="review-decision-panel" className="rounded-[1.1rem] border border-border/55 bg-background/75 px-4 py-4 backdrop-blur-xl">
+              <div data-testid="review-decision-panel" className="surface-panel-muted px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="editorial-kicker">{t('app.reviewDecisionPanel')}</p>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('app.reviewPacketHint')}</p>
                   </div>
-                  <span className="rounded-full border border-border/55 bg-white/70 px-3 py-1 text-[11px] font-medium text-foreground">
+                  <span className="editorial-chip px-3 py-1 text-[11px] font-medium text-foreground">
                     {reviewStatusLabel}
                   </span>
                 </div>
@@ -1339,18 +1339,18 @@ export function ReviewWorkspace({
               </div>
             </div>
 
-            <div data-testid="review-truth-banner" className={`mt-4 rounded-[1.1rem] border px-4 py-4 backdrop-blur-xl ${bridgeToneClass}`}>
+            <div data-testid="review-truth-banner" className={`surface-panel-muted mt-4 px-4 py-4 ${bridgeToneClass}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle size={15} className="shrink-0" />
                   <p className="editorial-kicker text-current/80">{t('app.reviewTruthPanel')}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">{bridgeModeSummary}</span>
-                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
+                  <span className="editorial-chip px-3 py-1 font-medium">{bridgeModeSummary}</span>
+                  <span className="editorial-chip px-3 py-1 font-medium">
                     {t('app.reviewEvidenceStatus')}: {reviewReadinessLabel}
                   </span>
-                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
+                  <span className="editorial-chip px-3 py-1 font-medium">
                     {t('app.equivalenceStatus')}: {reviewEquivalenceLabel}
                   </span>
                 </div>
@@ -1379,12 +1379,12 @@ export function ReviewWorkspace({
                   <button
                     type="button"
                     onClick={() => setIsWorkspaceFocusMode(false)}
-                    className="rounded-xl border border-border/50 bg-background/76 px-4 py-2 text-xs font-medium text-foreground shadow-sm backdrop-blur-xl transition hover:border-primary/35 hover:text-primary"
+                    className="editorial-button-secondary px-4 py-2 text-xs font-medium"
                   >
                     {t('app.returnToOverview')}
                   </button>
                 )}
-                <div className="flex flex-wrap items-center gap-1 rounded-[1rem] border border-border/45 bg-white/46 p-1 backdrop-blur-xl">
+                <div className="segment-control">
                   {workspaceTabs.map((view) => (
                     <button
                       key={view.id}
@@ -1392,10 +1392,10 @@ export function ReviewWorkspace({
                         setActiveTab(view.id);
                         setIsWorkspaceFocusMode(true);
                       }}
-                      className={`rounded-xl px-4 py-2 text-xs font-medium transition-all ${
+                      className={`segment-control__button px-4 py-2 text-xs font-medium transition-all ${
                         activeTab === view.id
-                          ? 'border border-border/50 bg-background/78 text-foreground shadow-sm backdrop-blur-xl'
-                          : 'text-muted-foreground hover:bg-background/54 hover:text-foreground'
+                          ? 'segment-control__button--active'
+                          : 'text-muted-foreground'
                       }`}
                     >
                       {view.label}
@@ -1442,7 +1442,7 @@ export function ReviewWorkspace({
                             <p className="editorial-kicker">{t('flowchart.pipeline')}</p>
                             <h3 className="mt-2 text-lg font-semibold tracking-tight text-foreground">{t('app.flowSequence')}</h3>
                           </div>
-                          <span className="rounded-full border border-border/55 bg-background/76 px-2.5 py-1 text-[11px] font-mono text-muted-foreground backdrop-blur-lg">
+                          <span className="editorial-chip px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
                             {activePhase ?? '--'}
                           </span>
                         </div>
@@ -1505,16 +1505,16 @@ export function ReviewWorkspace({
         <aside className="order-last 2xl:sticky 2xl:top-28 2xl:self-start">
           <div className="space-y-4">
             <div className="glass-panel p-3">
-              <div className="flex flex-wrap items-center gap-1 rounded-[1rem] border border-border/45 bg-white/46 p-1 backdrop-blur-xl">
+              <div className="segment-control">
                 {insightTabs.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveInsightTab(tab.id)}
-                    className={`flex-1 rounded-xl px-3 py-2 text-left transition ${
+                    className={`segment-control__button flex-1 px-3 py-2 text-left transition ${
                       activeInsightTab === tab.id
-                        ? 'border border-border/50 bg-background/78 text-foreground shadow-sm backdrop-blur-xl'
-                        : 'text-muted-foreground hover:bg-background/54 hover:text-foreground'
+                        ? 'segment-control__button--active'
+                        : 'text-muted-foreground'
                     }`}
                   >
                     <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">{tab.id}</div>
