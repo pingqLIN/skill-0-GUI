@@ -846,21 +846,6 @@ export default function App() {
     || (bridgeStatus?.mode === 'standalone'
       ? t('app.bridgeModeBundled')
       : bridgeStatusError || t('app.bridgeModeChecking'));
-  const bridgeReviewGuidance = bridgeStatus?.mode === 'skill-0'
-    ? t('app.bridgeHelpCanonical')
-    : bridgeStatus?.mode === 'standalone'
-      ? t('app.bridgeHelpStandalone')
-      : t('app.bridgeHelpUnavailable');
-  const reviewReadinessLabel = bridgeStatus?.mode === 'skill-0'
-    ? t('app.reviewEvidenceCanonical')
-    : bridgeStatus?.mode === 'standalone'
-      ? t('app.reviewEvidenceStandalone')
-      : t('app.reviewEvidenceUnavailable');
-  const reviewReadinessStyles = bridgeStatus?.mode === 'skill-0'
-    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
-    : bridgeStatus?.mode === 'standalone'
-      ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
-      : 'border-border/50 bg-card/60 text-muted-foreground';
   const sampleScenarioContent = getSampleScenarioContent(i18n.language);
   const landingDocs = [
     {
@@ -1397,22 +1382,6 @@ npm run release:preview
                         <div className="editorial-hover-note text-xs leading-5">
                           {t('app.skillTextHint')}
                         </div>
-                      </div>
-                        <div
-                          data-testid="intake-review-readiness"
-                        className={`surface-panel-muted px-4 py-3 ${reviewReadinessStyles}`}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-current/75">{t('app.reviewEvidenceStatus')}</div>
-                            <p className="mt-1 text-sm font-medium text-current">{reviewReadinessLabel}</p>
-                          </div>
-                          <div className="editorial-chip px-3 py-1.5 text-[11px] font-medium text-current">
-                            {bridgeModeLabel}
-                          </div>
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-current/80">{bridgeReviewGuidance}</p>
-                        <p className="mt-2 text-[11px] leading-5 text-current/70">{bridgeModeDetail}</p>
                       </div>
                       <textarea
                         value={inputText}
