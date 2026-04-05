@@ -1,0 +1,81 @@
+Product: Skill-0 Review Studio
+Type: desktop-first reviewer workbench
+Users: reviewers and operators inspecting Skill-0 parser output before approval, export, or external sharing
+Core flow: intake -> analysis -> review -> export
+
+Must keep visible:
+- parser mode
+- evidence status
+- validation state
+- review decision
+
+Intake methods:
+- paste SKILL text
+- import SkillDocument JSON
+- upload files or folder
+- import from skill URL
+- show pending upload preview
+- show supporting files preview
+
+Main workspace views:
+- pipeline
+- vector
+- matrix
+
+Right-side reviewer rail:
+- review
+- checks
+- context
+
+Key review features:
+- reviewer notes
+- review status
+- decision log
+- review summary
+- reviewer signoff
+- 4 sign-off gates:
+  - mode confirmed
+  - validation reviewed
+  - diff reviewed
+  - evidence ready
+
+Checks and evidence:
+- schema validation
+- consistency checks
+- path-walk / test history
+- supporting files
+- command references
+- analysis findings
+- diff summary
+
+Exports:
+- review report
+- review packet
+- SkillDocument JSON
+- .skill.md
+
+Sample scenarios:
+- mode overview
+- bundle intake review
+- publish approval gate
+
+Tone:
+- reviewer-first
+- honest
+- operational
+
+Visual direction:
+- dense editorial workbench
+- light mode
+- warm neutrals
+- dark slate structure
+- restrained motion
+- strong typography
+
+Avoid:
+- marketing landing page
+- generic KPI dashboard
+- decorative glassmorphism
+- playful SaaS aesthetics
+- invented collaboration features
+- implied canonical proof when mode is standalone

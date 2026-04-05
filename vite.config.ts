@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
 import { createSkill0Bridge, readJsonBody } from './bridge/skill0Bridge.mjs';
+import { resolveSkillUrlImport, serializeSkillUrlError } from './bridge/skillUrlResolver.mjs';
 
 const VECTOR_SPACE_3D_PACKAGES = [
   '@tweenjs/tween.js',
@@ -97,6 +98,40 @@ export default defineConfig(({ mode }) => {
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown parser bridge error' }));
+            }
+          });
+
+          server.middlewares.use('/api/resolve-skill-url', async (req, res, next) => {
+            if (req.method !== 'POST') {
+              next();
+              return;
+            }
+
+            try {
+              const body = await readJsonBody(req);
+              const url = String(body?.url || '');
+
+              if (!url.trim()) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({
+                  error: 'missing_skill_url',
+                  detail: 'Enter a valid HTTPS URL for a remote skill file.',
+                }));
+                return;
+              }
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(await resolveSkillUrlImport(url)));
+            } catch (error) {
+              const payload = serializeSkillUrlError(error);
+              res.statusCode = payload.status;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                error: payload.error,
+                detail: payload.detail,
+              }));
             }
           });
         },

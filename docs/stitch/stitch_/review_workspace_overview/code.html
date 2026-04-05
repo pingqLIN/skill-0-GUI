@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Skill-0 Review Studio | Review Workspace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Inter:wght@100..900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#fcf9f6",
+                        "on-primary": "#f7f7ff",
+                        "on-secondary-fixed-variant": "#4e5c71",
+                        "error-dim": "#4e0309",
+                        "surface-variant": "#e4e3dd",
+                        "inverse-primary": "#dae2fd",
+                        "error": "#9f403d",
+                        "on-tertiary-fixed-variant": "#563400",
+                        "secondary": "#526075",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#eae8e3",
+                        "surface-container-highest": "#e4e3dd",
+                        "outline": "#7b7b76",
+                        "secondary-fixed": "#d5e3fd",
+                        "secondary-fixed-dim": "#c7d5ee",
+                        "tertiary-container": "#f8a010",
+                        "on-surface": "#32332f",
+                        "on-tertiary": "#fff7f3",
+                        "tertiary": "#865400",
+                        "error-container": "#fe8983",
+                        "surface-container": "#f0eee9",
+                        "primary-dim": "#4a5268",
+                        "on-secondary": "#f8f8ff",
+                        "on-error-container": "#752121",
+                        "tertiary-fixed-dim": "#e79400",
+                        "on-tertiary-container": "#4a2c00",
+                        "inverse-surface": "#0e0e0d",
+                        "surface-container-low": "#f6f3ef",
+                        "tertiary-fixed": "#f8a010",
+                        "inverse-on-surface": "#9e9d9a",
+                        "surface-dim": "#dbdad4",
+                        "surface-tint": "#565e74",
+                        "tertiary-dim": "#764900",
+                        "on-primary-fixed": "#373f54",
+                        "primary-fixed": "#dae2fd",
+                        "on-error": "#fff7f6",
+                        "background": "#fcf9f6",
+                        "on-primary-fixed-variant": "#535b71",
+                        "primary": "#565e74",
+                        "on-tertiary-fixed": "#2a1700",
+                        "secondary-container": "#d5e3fd",
+                        "on-secondary-fixed": "#324054",
+                        "primary-fixed-dim": "#ccd4ee",
+                        "primary-container": "#dae2fd",
+                        "outline-variant": "#b3b2ad",
+                        "on-background": "#32332f",
+                        "on-surface-variant": "#5f5f5b",
+                        "on-primary-container": "#4a5167",
+                        "surface": "#fcf9f6",
+                        "secondary-dim": "#465469",
+                        "on-secondary-container": "#455367"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Newsreader"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #fcf9f6; }
+        .serif-heading { font-family: 'Newsreader', serif; }
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background-color: #b3b2ad26; }
+    </style>
+</head>
+<body class="overflow-hidden h-screen flex flex-col text-on-surface">
+<!-- Top Navigation Anchor -->
+<header class="bg-[#fcf9f6] text-slate-700 font-['Newsreader'] serif tracking-tight flex justify-between items-center w-full px-6 py-3 tonal-shift bg-[#f6f3ef] z-50">
+<div class="flex items-center gap-6">
+<span class="text-xl font-bold font-['Newsreader'] text-slate-800">Skill-0 Review Studio</span>
+<nav class="hidden md:flex gap-4">
+<a class="text-slate-900 font-semibold border-b border-slate-900 transition-colors" href="#">Docs</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-xs uppercase tracking-widest font-body text-on-surface-variant">Canonical skill-0 bridge</span>
+<div class="flex gap-2">
+<button class="material-symbols-outlined text-slate-500 hover:text-slate-800 transition-colors">language</button>
+<button class="material-symbols-outlined text-slate-500 hover:text-slate-800 transition-colors">cloud_done</button>
+</div>
+<img alt="User profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="professional portrait of a technical reviewer in a clean minimal office setting soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATidLwJz_Q7hgNFIAy3esF1jVVBteNLmfSajjpd3y3cLBWQv2RO_DdOMZFzDHIX0ppjM-6jDg9Z8LUHiL9nsFf5a5IEG3BwwGj3drR82Z3sPAbpZwpRa31p5CFxhVnztihMvIUJkvXVLTv73sJgvifBMraDr7DmQk5Ojr2twTVX7tulCWvk7Qr-GtrgQ31bIUhMHhTIIB-DthxXlWm5SmBiItXZqoQ7r8RjT2v-iSY-Wk3LXNMGCoUCXu4-yNdwl8DKXOdllem2ZBb"/>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<!-- SideNavBar (Left) -->
+<aside class="bg-[#334155] text-slate-100 font-['Inter'] sans-serif text-xs uppercase tracking-wider flex flex-col items-center py-8 gap-6 h-screen w-20 shadow-xl shrink-0 z-40">
+<div class="mb-4">
+<span class="material-symbols-outlined text-3xl">account_tree</span>
+</div>
+<nav class="flex flex-col gap-8 items-center w-full">
+<button class="flex flex-col items-center gap-1 bg-slate-700 text-white border-l-2 border-white w-full py-3 scale-95 duration-75">
+<span class="material-symbols-outlined">account_tree</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-all w-full py-3">
+<span class="material-symbols-outlined">architecture</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-all w-full py-3">
+<span class="material-symbols-outlined">grid_on</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-all w-full py-3">
+<span class="material-symbols-outlined">edit_note</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-all w-full py-3">
+<span class="material-symbols-outlined">javascript</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-all w-full py-3">
+<span class="material-symbols-outlined">ios_share</span>
+</button>
+</nav>
+<div class="mt-auto flex flex-col gap-4">
+<button class="material-symbols-outlined text-slate-400 hover:text-error transition-colors" title="Reset Workspace">restart_alt</button>
+<button class="material-symbols-outlined text-slate-400 hover:text-white transition-colors" title="Undo">undo</button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto bg-surface relative p-8">
+<div class="max-w-6xl mx-auto space-y-10 pb-24">
+<!-- Header / Decision Summary -->
+<section>
+<div class="flex justify-between items-end mb-6">
+<div>
+<h1 class="serif-heading text-4xl font-bold tracking-tight text-on-surface">Bundle Intake Review Skill</h1>
+<p class="text-sm font-mono mt-1 text-on-surface-variant">Parser: <span class="text-primary font-semibold">Skill-O v2.4-auto</span> | Level: <span class="bg-surface-container-high px-1.5 rounded-sm">manifest</span></p>
+</div>
+<div class="flex gap-1">
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-widest rounded-sm">Active Review</span>
+<span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container text-[10px] font-bold uppercase tracking-widest rounded-sm">3 Warnings</span>
+</div>
+</div>
+<div class="grid grid-cols-4 gap-px bg-outline-variant/20 rounded-sm overflow-hidden border border-outline-variant/10">
+<div class="bg-surface-container-low p-5">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant block mb-1">Actions</span>
+<span class="text-3xl font-light serif-heading">12</span>
+</div>
+<div class="bg-surface-container-low p-5">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant block mb-1">Rules</span>
+<span class="text-3xl font-light serif-heading">04</span>
+</div>
+<div class="bg-surface-container-low p-5">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant block mb-1">Directives</span>
+<span class="text-3xl font-light serif-heading">08</span>
+</div>
+<div class="bg-surface-container-low p-5">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant block mb-1">Findings</span>
+<span class="text-3xl font-light serif-heading text-error">02</span>
+</div>
+</div>
+</section>
+<!-- Core Workspace Grid -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Evidence & Validation -->
+<div class="col-span-8 space-y-8">
+<!-- Schema Validation Section -->
+<div class="bg-surface-container-low p-6 rounded-sm">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-xs uppercase tracking-widest">Schema Validation</h3>
+<div class="flex items-center gap-2 text-secondary text-xs">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>Validation Passed</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center py-2 border-b border-outline-variant/10">
+<span class="text-sm font-mono">core.manifest.integrity</span>
+<span class="text-xs text-on-surface-variant">SHA-256 Verified</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant/10">
+<span class="text-sm font-mono">dependency_graph_depth</span>
+<span class="text-xs text-on-surface-variant">Lvl 4 (Compliant)</span>
+</div>
+</div>
+</div>
+<!-- Consistency Checks -->
+<div class="bg-surface-container-low p-6 rounded-sm">
+<h3 class="font-bold text-xs uppercase tracking-widest mb-4">Consistency Checks (3 Warnings)</h3>
+<div class="space-y-4">
+<div class="p-3 bg-surface-bright border-l-2 border-tertiary flex gap-4 items-start">
+<span class="material-symbols-outlined text-tertiary">warning</span>
+<div>
+<p class="text-sm font-semibold">Ambiguous Directive Definition</p>
+<p class="text-xs text-on-surface-variant mt-1">Directive 'D-092' points to a deprecated handler in the matrix. Review required for backward compatibility.</p>
+</div>
+</div>
+<div class="p-3 bg-surface-bright border-l-2 border-tertiary flex gap-4 items-start">
+<span class="material-symbols-outlined text-tertiary">warning</span>
+<div>
+<p class="text-sm font-semibold">Recursive Path Detected</p>
+<p class="text-xs text-on-surface-variant mt-1">Vector map 'V-intake' contains a circular reference in the fallback layer.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Path Walk & Diff -->
+<div class="grid grid-cols-2 gap-8">
+<div class="bg-surface-container-low p-6 rounded-sm">
+<h3 class="font-bold text-xs uppercase tracking-widest mb-4">Path Walk History</h3>
+<div class="font-mono text-[11px] space-y-1 opacity-80">
+<div class="flex gap-2"><span class="text-outline">01</span> <span>init.root_call()</span></div>
+<div class="flex gap-2"><span class="text-outline">02</span> <span>load.manifest(v2.4)</span></div>
+<div class="flex gap-2"><span class="text-outline">03</span> <span>verify.signature(ok)</span></div>
+<div class="flex gap-2"><span class="text-outline">04</span> <span>map.vector_table()</span></div>
+<div class="flex gap-2 text-tertiary"><span class="text-outline">05</span> <span>branch.detect(warning)</span></div>
+<div class="flex gap-2"><span class="text-outline">...</span> <span>(+7 more steps)</span></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm flex flex-col">
+<h3 class="font-bold text-xs uppercase tracking-widest mb-4">Diff Summary</h3>
+<div class="flex-1 flex flex-col justify-center items-center text-center p-4">
+<span class="material-symbols-outlined text-3xl mb-2 text-outline-variant">difference</span>
+<p class="text-xs text-on-surface-variant">32 Insertions<br/>14 Deletions<br/>2 Conflicts</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Rail Content (Secondary Action Area) -->
+<div class="col-span-4 space-y-8">
+<div class="bg-[#f6f3ef] border-l border-slate-200 p-6 h-full flex flex-col">
+<h3 class="font-bold text-xs uppercase tracking-widest mb-6">Reviewer Rail</h3>
+<div class="space-y-6">
+<div>
+<span class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant block mb-1">Current Reviewer</span>
+<p class="text-sm italic text-outline">Unassigned</p>
+</div>
+<div>
+<span class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant block mb-1">Status</span>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
+<p class="text-sm font-semibold">In Review</p>
+</div>
+</div>
+<hr class="border-outline-variant/10"/>
+<div>
+<span class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant block mb-4">Sign-off Gates</span>
+<div class="space-y-4">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="rounded-sm border-outline text-primary focus:ring-0 w-4 h-4" type="checkbox"/>
+<span class="text-xs font-medium group-hover:text-primary transition-colors">Sign-off 1: Mode Confirmed</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded-sm border-outline text-primary focus:ring-0 w-4 h-4" type="checkbox"/>
+<span class="text-xs font-medium group-hover:text-primary transition-colors">Sign-off 2: Validation Reviewed</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded-sm border-outline text-primary focus:ring-0 w-4 h-4" type="checkbox"/>
+<span class="text-xs font-medium group-hover:text-primary transition-colors">Sign-off 3: Diff Reviewed</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded-sm border-outline text-primary focus:ring-0 w-4 h-4" type="checkbox"/>
+<span class="text-xs font-medium group-hover:text-primary transition-colors">Final Gate: Evidence Ready</span>
+</label>
+</div>
+</div>
+<div class="mt-8">
+<button class="w-full py-2 bg-primary text-on-primary font-bold text-xs uppercase tracking-widest rounded-sm hover:opacity-90 transition-opacity">
+                                        Add Review Note
+                                    </button>
+</div>
+</div>
+<div class="mt-auto pt-8">
+<h4 class="text-[10px] font-bold uppercase text-on-surface-variant mb-3">Decision Log</h4>
+<div class="space-y-3 opacity-60">
+<div class="text-[10px]">
+<span class="font-bold block">14:02 · System</span>
+<p>Automatic intake successful. Schema valid.</p>
+</div>
+<div class="text-[10px]">
+<span class="font-bold block">14:05 · System</span>
+<p>3 consistency warnings generated for matrix resolution.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Sticky Truth Bar (Bottom NavBar Style) -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-center gap-12 items-center px-8 bg-slate-800 h-10 border-t border-slate-700 shadow-2xl">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-400 text-sm">terminal</span>
+<span class="text-slate-400 font-['Inter'] text-[10px] uppercase font-bold">Parser Mode:</span>
+<span class="text-amber-400 font-['Inter'] text-[10px] uppercase font-bold">Canonical</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-sm">inventory</span>
+<span class="text-slate-400 font-['Inter'] text-[10px] uppercase font-bold">Evidence Status:</span>
+<span class="text-slate-100 font-['Inter'] text-[10px] uppercase font-bold">Ready</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-sm">balance</span>
+<span class="text-slate-400 font-['Inter'] text-[10px] uppercase font-bold">Equivalence:</span>
+<span class="text-slate-100 font-['Inter'] text-[10px] uppercase font-bold">Matches</span>
+</div>
+<div class="ml-auto flex items-center gap-2">
+<span class="text-slate-400 font-['Inter'] text-[10px] uppercase font-bold">Export Readiness:</span>
+<span class="bg-primary px-2 py-0.5 rounded-sm text-on-primary text-[9px] font-bold uppercase">Approved</span>
+</div>
+</footer>
+</div>
+<!-- Review Rail (Side NavBar - Fixed Right) - Combined logically above but referenced as per JSON requirements if distinct shell needed -->
+<div class="fixed right-0 top-0 flex flex-col p-4 w-64 h-screen bg-[#f6f3ef] border-l border-slate-200 pointer-events-none opacity-0 select-none">
+<!-- This area is rendered semantically within the Main Content Grid for better layout control on wide screens -->
+</div>
+</body></html>

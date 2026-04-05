@@ -7,13 +7,15 @@ import {
   Github,
   Languages,
   PlayCircle,
+  RefreshCw,
   ShieldCheck,
   UploadCloud,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { analyzeSkillText } from './services/parserBridgeService';
+import { analyzeSkillText, resolveSkillUrl } from './services/parserBridgeService';
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
+import { getSampleScenarioContent } from './content/sampleScenarios';
 import type { PreparedUploadFile, UploadedContextFile } from './types/intake';
 import type { ReviewChecklist, SkillDocument } from './types/skillDocument';
 import type { EditorConfig } from './types/workspace';
@@ -36,6 +38,7 @@ type WorkspaceDraftSnapshot = {
   originalData: any | null;
   modifiedPaths: string[];
   inputText: string;
+  skillUrlInput: string;
   pendingUploadFiles: PreparedUploadFile[];
   pendingPrimaryPath: string | null;
   supportFiles: UploadedContextFile[];
@@ -94,6 +97,7 @@ function readWorkspaceDraft(): WorkspaceDraftSnapshot | null {
       originalData: 'originalData' in parsed ? parsed.originalData : null,
       modifiedPaths: Array.isArray(parsed.modifiedPaths) ? parsed.modifiedPaths.filter((item): item is string => typeof item === 'string') : [],
       inputText: typeof parsed.inputText === 'string' ? parsed.inputText : '',
+      skillUrlInput: typeof parsed.skillUrlInput === 'string' ? parsed.skillUrlInput : '',
       pendingUploadFiles: Array.isArray(parsed.pendingUploadFiles) ? parsed.pendingUploadFiles : [],
       pendingPrimaryPath: typeof parsed.pendingPrimaryPath === 'string' ? parsed.pendingPrimaryPath : null,
       supportFiles: Array.isArray(parsed.supportFiles) ? parsed.supportFiles : [],
@@ -119,6 +123,7 @@ function hasSameWorkspaceDraftContent(left: WorkspaceDraftSnapshot, right: Works
     originalData: left.originalData,
     modifiedPaths: left.modifiedPaths,
     inputText: left.inputText,
+    skillUrlInput: left.skillUrlInput,
     pendingUploadFiles: left.pendingUploadFiles,
     pendingPrimaryPath: left.pendingPrimaryPath,
     supportFiles: left.supportFiles,
@@ -129,6 +134,7 @@ function hasSameWorkspaceDraftContent(left: WorkspaceDraftSnapshot, right: Works
     originalData: right.originalData,
     modifiedPaths: right.modifiedPaths,
     inputText: right.inputText,
+    skillUrlInput: right.skillUrlInput,
     pendingUploadFiles: right.pendingUploadFiles,
     pendingPrimaryPath: right.pendingPrimaryPath,
     supportFiles: right.supportFiles,
@@ -157,6 +163,7 @@ export default function App() {
   const [originalData, setOriginalData] = useState<any | null>(null);
   const [modifiedPaths, setModifiedPaths] = useState<Set<string>>(new Set());
   const [inputText, setInputText] = useState('');
+  const [skillUrlInput, setSkillUrlInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pendingUploadFiles, setPendingUploadFiles] = useState<PreparedUploadFile[]>([]);
   const [pendingPrimaryPath, setPendingPrimaryPath] = useState<string | null>(null);
@@ -225,6 +232,7 @@ export default function App() {
       setOriginalData(snapshot.originalData);
       setModifiedPaths(new Set(snapshot.modifiedPaths));
       setInputText(snapshot.inputText);
+      setSkillUrlInput(snapshot.skillUrlInput);
       setPendingUploadFiles(snapshot.pendingUploadFiles);
       setPendingPrimaryPath(snapshot.pendingPrimaryPath);
       setSupportFiles(snapshot.supportFiles);
@@ -252,6 +260,7 @@ export default function App() {
       data
       || originalData
       || inputText.trim()
+      || skillUrlInput.trim()
       || pendingUploadFiles.length > 0
       || supportFiles.length > 0,
     );
@@ -268,6 +277,7 @@ export default function App() {
       originalData,
       modifiedPaths: Array.from(modifiedPaths),
       inputText,
+      skillUrlInput,
       pendingUploadFiles,
       pendingPrimaryPath,
       supportFiles,
@@ -288,7 +298,7 @@ export default function App() {
     });
     setWorkspaceDraftSavedAt(updatedAt);
     setWorkspaceDraftRestored(false);
-  }, [data, originalData, modifiedPaths, inputText, pendingUploadFiles, pendingPrimaryPath, supportFiles, selectedContextPath]);
+  }, [data, originalData, modifiedPaths, inputText, skillUrlInput, pendingUploadFiles, pendingPrimaryPath, supportFiles, selectedContextPath]);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
@@ -441,6 +451,37 @@ export default function App() {
     setError(null);
   };
 
+  const applyAnalysisResult = (result: any) => {
+    setData(result);
+    setAnalysisSessionId((current) => current + 1);
+    setOriginalData(JSON.parse(JSON.stringify(result)));
+    setModifiedPaths(new Set());
+    setPendingUploadFiles([]);
+    setPendingPrimaryPath(null);
+  };
+
+  const getUrlImportErrorMessage = (err: unknown) => {
+    const code = typeof err === 'object' && err && 'code' in err && typeof err.code === 'string'
+      ? err.code
+      : null;
+    const detail = typeof err === 'object' && err && 'detail' in err && typeof err.detail === 'string'
+      ? err.detail
+      : null;
+
+    if (code === 'missing_skill_url') return t('app.errorSkillUrlEmpty');
+    if (code === 'invalid_url') return t('app.errorSkillUrlInvalid');
+    if (code === 'unsupported_protocol') return t('app.errorSkillUrlProtocol');
+    if (code === 'unsupported_url_host') return t('app.errorSkillUrlUnsupportedHost');
+    if (code === 'unsupported_github_url') return t('app.errorSkillUrlUnsupportedGitHub');
+    if (code === 'unsupported_file_type') return t('app.errorSkillUrlUnsupportedFileType');
+    if (code === 'non_text_response') return t('app.errorSkillUrlNonText');
+    if (code === 'empty_remote_content') return t('app.errorSkillUrlEmptyRemote');
+    if (code === 'remote_fetch_failed' && detail) return detail;
+
+    if (detail) return detail;
+    return err instanceof Error ? err.message : t('app.errorFailed');
+  };
+
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
 
@@ -455,6 +496,7 @@ export default function App() {
     setSupportFiles([]);
     setSelectedContextPath(null);
     setActiveDemoPreset(null);
+    setSkillUrlInput('');
     setData(null);
     setOriginalData(null);
     setModifiedPaths(new Set());
@@ -512,13 +554,14 @@ export default function App() {
     e.target.value = '';
   };
 
-  const handlePasteUrl = () => {
+  const handleAnalyzeTextInput = async () => {
     const trimmed = inputText.trim();
 
     if (trimmed) {
       setPendingUploadFiles([]);
       setPendingPrimaryPath(null);
       setActiveDemoPreset(null);
+      setSkillUrlInput('');
       const importedSkillDocument = parseSkillDocumentJson(trimmed);
       if (importedSkillDocument) {
         loadSkillDocument(importedSkillDocument, {
@@ -527,9 +570,56 @@ export default function App() {
         });
         return;
       }
-      void processSkill(inputText);
+      await processSkill(inputText);
     } else {
       setError(t('app.errorEmpty'));
+    }
+  };
+
+  const handleAnalyzeSkillUrl = async () => {
+    const trimmed = skillUrlInput.trim();
+
+    if (!trimmed) {
+      setError(t('app.errorSkillUrlEmpty'));
+      return;
+    }
+
+    setIsExtracting(true);
+    setError(null);
+    setPendingUploadFiles([]);
+    setPendingPrimaryPath(null);
+    setSupportFiles([]);
+    setSelectedContextPath(null);
+    setActiveDemoPreset(null);
+
+    try {
+      const payload = await resolveSkillUrl(trimmed);
+      setInputText(payload.text);
+
+      const importedSkillDocument = parseSkillDocumentJson(payload.text);
+      if (importedSkillDocument) {
+        loadSkillDocument(importedSkillDocument, {
+          fileName: payload.fileName,
+          sourceLabel: payload.resolvedUrl,
+        });
+        return;
+      }
+
+      const result = await analyzeSkillText(payload.text, payload.fileName, {
+        primaryPath: payload.primaryPath,
+      });
+      applyAnalysisResult(result);
+    } catch (err) {
+      const isHandledUrlImportError = typeof err === 'object' && err && 'code' in err && typeof err.code === 'string';
+      if (!isHandledUrlImportError) {
+        console.error(err);
+      }
+      setError(getUrlImportErrorMessage(err));
+      setData(null);
+      setOriginalData(null);
+      setModifiedPaths(new Set());
+    } finally {
+      setIsExtracting(false);
     }
   };
 
@@ -552,6 +642,7 @@ export default function App() {
     setSupportFiles(contextEntries);
     setSelectedContextPath(contextEntries[0]?.path ?? null);
     setActiveDemoPreset(null);
+    setSkillUrlInput('');
     setInputText(primaryFile.text);
     const importedSkillDocument = parseSkillDocumentJson(primaryFile.text);
     if (importedSkillDocument) {
@@ -578,12 +669,7 @@ export default function App() {
     setError(null);
     try {
       const result = await analyzeSkillText(text, skillName, options);
-      setData(result);
-      setAnalysisSessionId((current) => current + 1);
-      setOriginalData(JSON.parse(JSON.stringify(result)));
-      setModifiedPaths(new Set());
-      setPendingUploadFiles([]);
-      setPendingPrimaryPath(null);
+      applyAnalysisResult(result);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : t('app.errorFailed'));
@@ -680,6 +766,7 @@ export default function App() {
     setOriginalData(null);
     setModifiedPaths(new Set());
     setInputText('');
+    setSkillUrlInput('');
     setPendingUploadFiles([]);
     setPendingPrimaryPath(null);
     setSupportFiles([]);
@@ -712,6 +799,7 @@ export default function App() {
       }] : []);
       setSelectedContextPath(payload?.source || null);
       setInputText(payload.text);
+      setSkillUrlInput('');
       setPendingUploadFiles([]);
       setPendingPrimaryPath(null);
       setActiveDemoPreset(curatedScenarios.find((scenario) => scenario.id === 'mode-aware')?.reviewPreset ?? null);
@@ -736,6 +824,7 @@ export default function App() {
     setSupportFiles(contextFiles);
     setSelectedContextPath(contextFiles[0]?.path ?? null);
     setInputText(text);
+    setSkillUrlInput('');
     setPendingUploadFiles([]);
     setPendingPrimaryPath(null);
     setError(null);
@@ -755,10 +844,10 @@ export default function App() {
       ? t('app.bridgeModeBundled')
       : bridgeStatusError || t('app.bridgeModeChecking'));
   const bridgeReviewGuidance = bridgeStatus?.mode === 'skill-0'
-    ? t('app.bridgeGuidanceCanonical')
+    ? t('app.bridgeHelpCanonical')
     : bridgeStatus?.mode === 'standalone'
-      ? t('app.bridgeGuidanceStandalone')
-      : t('app.bridgeGuidanceUnavailable');
+      ? t('app.bridgeHelpStandalone')
+      : t('app.bridgeHelpUnavailable');
   const reviewReadinessLabel = bridgeStatus?.mode === 'skill-0'
     ? t('app.reviewEvidenceCanonical')
     : bridgeStatus?.mode === 'standalone'
@@ -769,51 +858,21 @@ export default function App() {
     : bridgeStatus?.mode === 'standalone'
       ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
       : 'border-border/50 bg-card/60 text-muted-foreground';
-  const landingHighlights = [
-    {
-      title: t('app.demoFeatureModeTitle'),
-      body: t('app.demoFeatureModeBody'),
-      icon: ShieldCheck,
-    },
-    {
-      title: t('app.demoFeatureFlowTitle'),
-      body: t('app.demoFeatureFlowBody'),
-      icon: PlayCircle,
-    },
-    {
-      title: t('app.demoFeatureExportTitle'),
-      body: t('app.demoFeatureExportBody'),
-      icon: FileText,
-    },
-  ];
-  const landingPaths = [
-    {
-      title: t('app.demoPathSampleTitle'),
-      body: t('app.demoPathSampleBody'),
-    },
-    {
-      title: t('app.demoPathImportTitle'),
-      body: t('app.demoPathImportBody'),
-    },
-    {
-      title: t('app.demoPathReviewTitle'),
-      body: t('app.demoPathReviewBody'),
-    },
-  ];
+  const sampleScenarioContent = getSampleScenarioContent(i18n.language);
   const landingDocs = [
     {
-      title: t('app.demoDocsIndexTitle'),
-      body: t('app.demoDocsIndexBody'),
+      title: t('app.resourceDocsIndexTitle'),
+      body: t('app.resourceDocsIndexBody'),
       href: DOCS_INDEX_URL,
     },
     {
-      title: t('app.demoDocsDeployTitle'),
-      body: t('app.demoDocsDeployBody'),
+      title: t('app.resourceDeployTitle'),
+      body: t('app.resourceDeployBody'),
       href: DEPLOYMENT_GUIDE_URL,
     },
     {
-      title: t('app.demoDocsPlanTitle'),
-      body: t('app.demoDocsPlanBody'),
+      title: t('app.resourcePlanTitle'),
+      body: t('app.resourcePlanBody'),
       href: DEMO_PLAN_URL,
     },
   ];
@@ -821,37 +880,32 @@ export default function App() {
     {
       id: 'mode-aware',
       type: 'server-example',
-      title: t('app.demoScenario.mode-aware.title'),
-      body: t('app.demoScenario.mode-aware.body'),
-      focus: t('app.demoScenario.mode-aware.focus'),
-      artifacts: t('app.demoScenario.mode-aware.artifacts'),
-      cta: t('app.demoScenario.mode-aware.cta'),
+      title: sampleScenarioContent[0].title,
+      body: sampleScenarioContent[0].body,
+      focus: sampleScenarioContent[0].focus,
+      artifacts: sampleScenarioContent[0].artifacts,
+      cta: sampleScenarioContent[0].cta,
       reviewPreset: {
         id: 'mode-aware',
-        title: t('app.demoScenario.mode-aware.title'),
-        focus: t('app.demoScenario.mode-aware.focus'),
-        nextStep: t('app.demoReviewPreset.modeAware.nextStep'),
-        reviewStatus: 'in_review',
-        reviewSummary: t('app.demoReviewPreset.modeAware.summary'),
-        reviewerSignoff: 'demo-reviewer',
-        reviewChecklist: {
-          modeConfirmed: true,
-          validationReviewed: true,
-          diffReviewed: false,
-          evidenceReady: false,
-        },
-        notes: [t('app.demoReviewPreset.modeAware.note')],
-        seedValidationRun: true,
+        title: sampleScenarioContent[0].title,
+        focus: sampleScenarioContent[0].focus,
+        nextStep: sampleScenarioContent[0].preset.nextStep,
+        reviewStatus: sampleScenarioContent[0].preset.reviewStatus,
+        reviewSummary: sampleScenarioContent[0].preset.reviewSummary,
+        reviewerSignoff: sampleScenarioContent[0].preset.reviewerSignoff,
+        reviewChecklist: sampleScenarioContent[0].preset.reviewChecklist,
+        notes: [sampleScenarioContent[0].preset.note],
+        seedValidationRun: sampleScenarioContent[0].preset.seedValidationRun,
       },
     },
     {
       id: 'bundle-review',
       type: 'local-bundle',
-      title: t('app.demoScenario.bundle-review.title'),
-      body: t('app.demoScenario.bundle-review.body'),
-      focus: t('app.demoScenario.bundle-review.focus'),
-      artifacts: t('app.demoScenario.bundle-review.artifacts'),
-      cta: t('app.demoScenario.bundle-review.cta'),
+      title: sampleScenarioContent[1].title,
+      body: sampleScenarioContent[1].body,
+      focus: sampleScenarioContent[1].focus,
+      artifacts: sampleScenarioContent[1].artifacts,
+      cta: sampleScenarioContent[1].cta,
       skillName: 'bundle-intake-review',
       primaryPath: 'demo/bundle-review/SKILL.md',
       text: `---
@@ -914,32 +968,27 @@ print("verify policy before execution")
       ],
       reviewPreset: {
         id: 'bundle-review',
-        title: t('app.demoScenario.bundle-review.title'),
-        focus: t('app.demoScenario.bundle-review.focus'),
-        nextStep: t('app.demoReviewPreset.bundleReview.nextStep'),
-        reviewStatus: 'changes_requested',
-        reviewSummary: t('app.demoReviewPreset.bundleReview.summary'),
-        reviewerSignoff: 'bundle-reviewer',
-        reviewChecklist: {
-          modeConfirmed: true,
-          validationReviewed: true,
-          diffReviewed: true,
-          evidenceReady: false,
-        },
-        notes: [t('app.demoReviewPreset.bundleReview.note')],
-        seedValidationRun: true,
-        seedConsistencyRun: true,
-        seedPathRun: true,
+        title: sampleScenarioContent[1].title,
+        focus: sampleScenarioContent[1].focus,
+        nextStep: sampleScenarioContent[1].preset.nextStep,
+        reviewStatus: sampleScenarioContent[1].preset.reviewStatus,
+        reviewSummary: sampleScenarioContent[1].preset.reviewSummary,
+        reviewerSignoff: sampleScenarioContent[1].preset.reviewerSignoff,
+        reviewChecklist: sampleScenarioContent[1].preset.reviewChecklist,
+        notes: [sampleScenarioContent[1].preset.note],
+        seedValidationRun: sampleScenarioContent[1].preset.seedValidationRun,
+        seedConsistencyRun: sampleScenarioContent[1].preset.seedConsistencyRun,
+        seedPathRun: sampleScenarioContent[1].preset.seedPathRun,
       },
     },
     {
       id: 'publish-gate',
       type: 'local-bundle',
-      title: t('app.demoScenario.publish-gate.title'),
-      body: t('app.demoScenario.publish-gate.body'),
-      focus: t('app.demoScenario.publish-gate.focus'),
-      artifacts: t('app.demoScenario.publish-gate.artifacts'),
-      cta: t('app.demoScenario.publish-gate.cta'),
+      title: sampleScenarioContent[2].title,
+      body: sampleScenarioContent[2].body,
+      focus: sampleScenarioContent[2].focus,
+      artifacts: sampleScenarioContent[2].artifacts,
+      cta: sampleScenarioContent[2].cta,
       skillName: 'publish-approval-gate',
       primaryPath: 'demo/publish-approval/SKILL.md',
       text: `---
@@ -989,88 +1038,37 @@ npm run release:preview
       ],
       reviewPreset: {
         id: 'publish-gate',
-        title: t('app.demoScenario.publish-gate.title'),
-        focus: t('app.demoScenario.publish-gate.focus'),
-        nextStep: t('app.demoReviewPreset.publishGate.nextStep'),
-        reviewStatus: 'approved',
-        reviewSummary: t('app.demoReviewPreset.publishGate.summary'),
-        reviewerSignoff: 'release-reviewer',
-        reviewChecklist: {
-          modeConfirmed: true,
-          validationReviewed: true,
-          diffReviewed: true,
-          evidenceReady: true,
-        },
-        notes: [t('app.demoReviewPreset.publishGate.note')],
-        seedValidationRun: true,
-        seedConsistencyRun: true,
+        title: sampleScenarioContent[2].title,
+        focus: sampleScenarioContent[2].focus,
+        nextStep: sampleScenarioContent[2].preset.nextStep,
+        reviewStatus: sampleScenarioContent[2].preset.reviewStatus,
+        reviewSummary: sampleScenarioContent[2].preset.reviewSummary,
+        reviewerSignoff: sampleScenarioContent[2].preset.reviewerSignoff,
+        reviewChecklist: sampleScenarioContent[2].preset.reviewChecklist,
+        notes: [sampleScenarioContent[2].preset.note],
+        seedValidationRun: sampleScenarioContent[2].preset.seedValidationRun,
+        seedConsistencyRun: sampleScenarioContent[2].preset.seedConsistencyRun,
       },
-    },
-  ];
-  const landingWhy = [
-    {
-      title: t('app.demoWhyParserTitle'),
-      body: t('app.demoWhyParserBody'),
-    },
-    {
-      title: t('app.demoWhyEvidenceTitle'),
-      body: t('app.demoWhyEvidenceBody'),
-    },
-    {
-      title: t('app.demoWhyDocsTitle'),
-      body: t('app.demoWhyDocsBody'),
-    },
-  ];
-  const landingTrust = [
-    {
-      title: t('app.demoTrustModeTitle'),
-      body: t('app.demoTrustModeBody'),
-    },
-    {
-      title: t('app.demoTrustEquivalenceTitle'),
-      body: t('app.demoTrustEquivalenceBody'),
-    },
-    {
-      title: t('app.demoTrustDraftTitle'),
-      body: t('app.demoTrustDraftBody'),
     },
   ];
   const landingArtifacts = [
     {
-      title: t('app.demoArtifactReportTitle'),
-      body: t('app.demoArtifactReportBody'),
+      title: t('app.reviewOutputReportTitle'),
+      body: t('app.reviewOutputReportBody'),
     },
     {
-      title: t('app.demoArtifactJsonTitle'),
-      body: t('app.demoArtifactJsonBody'),
+      title: t('app.reviewOutputJsonTitle'),
+      body: t('app.reviewOutputJsonBody'),
     },
     {
-      title: t('app.demoArtifactSkillTitle'),
-      body: t('app.demoArtifactSkillBody'),
+      title: t('app.reviewOutputSkillTitle'),
+      body: t('app.reviewOutputSkillBody'),
     },
   ];
-  const artifactExamples = [
-    {
-      title: t('app.demoArtifactExampleReportTitle'),
-      body: t('app.demoArtifactExampleReportBody'),
-      snippet: t('app.demoArtifactExampleReportSnippet'),
-    },
-    {
-      title: t('app.demoArtifactExampleJsonTitle'),
-      body: t('app.demoArtifactExampleJsonBody'),
-      snippet: t('app.demoArtifactExampleJsonSnippet'),
-    },
-    {
-      title: t('app.demoArtifactExampleSkillTitle'),
-      body: t('app.demoArtifactExampleSkillBody'),
-      snippet: t('app.demoArtifactExampleSkillSnippet'),
-    },
-  ];
-
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
       <header className="frost-banner">
-        <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1980px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-[0_18px_40px_-24px_hsl(var(--foreground)/0.55)]">
               S0
@@ -1085,6 +1083,17 @@ npm run release:preview
           </div>
 
           <div className="flex items-center gap-2">
+            {data && (
+              <button
+                type="button"
+                onClick={handleResetWorkspace}
+                className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-medium text-muted-foreground backdrop-blur-xl transition-colors hover:border-primary/28 hover:text-foreground"
+                title={t('app.resetWorkspace')}
+              >
+                <RefreshCw size={16} />
+                <span className="hidden lg:inline">{t('app.resetWorkspace')}</span>
+              </button>
+            )}
             <div className={`hidden rounded-[1rem] border px-3 py-2 text-left backdrop-blur-xl sm:block ${
               bridgeStatus?.mode === 'skill-0'
                 ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
@@ -1120,7 +1129,7 @@ npm run release:preview
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1680px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <main className="mx-auto max-w-[1980px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {workspaceDraftSavedAt && (
           <div
             data-testid="workspace-draft-status"
@@ -1136,58 +1145,72 @@ npm run release:preview
           </div>
         )}
         {!data ? (
-          <div className="space-y-8">
-            <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-              <div className="flex items-center justify-end px-1 py-8 text-right sm:px-2 sm:py-10 xl:min-h-[430px]">
-                <div className="max-w-3xl space-y-5 text-right">
-                  <div className="space-y-3">
-                    <p className="text-pretty-wrap text-sm font-medium text-foreground/80">{t('app.demoEyebrow')}</p>
-                    <h2 className="text-pretty-wrap max-w-3xl text-3xl font-semibold leading-tight text-foreground sm:text-4xl sm:leading-tight">
-                      {t('app.demoTitle')}
-                    </h2>
-                    <p className="ml-auto max-w-2xl text-pretty text-sm leading-7 text-muted-foreground sm:text-base">
-                      {t('app.demoLead')}
-                    </p>
-                  </div>
+          <div className="space-y-6">
+            <section className="grid gap-6 2xl:grid-cols-[minmax(0,1.12fr)_minmax(30rem,0.88fr)]">
+              <div className="glass-panel-strong px-5 py-6 sm:px-7 sm:py-7">
+                <div className="space-y-6">
+                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)]">
+                    <div className="space-y-4">
+                      <p className="editorial-kicker">{t('app.landingEyebrow')}</p>
+                      <h2 className="display-serif max-w-4xl text-4xl leading-[0.95] text-foreground sm:text-[3.4rem]">
+                        {t('app.landingTitle')}
+                      </h2>
+                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
+                        {t('app.landingLead')}
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={loadExampleSkill}
+                          className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.7)] transition hover:bg-primary/92"
+                        >
+                          <PlayCircle size={16} />
+                          {t('app.landingPrimaryCta')}
+                        </button>
+                        <a
+                          href={DOCS_INDEX_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 rounded-full border border-border/60 bg-background/72 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                        >
+                          <BookOpen size={16} />
+                          {t('app.landingDocsCta')}
+                        </a>
+                      </div>
+                    </div>
 
-                  <div className="flex flex-wrap justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={loadExampleSkill}
-                      className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.7)] transition hover:bg-primary/92"
-                    >
-                      <PlayCircle size={16} />
-                      {t('app.demoPrimaryCta')}
-                    </button>
-                    <a
-                      href={DOCS_INDEX_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-border/60 bg-background/72 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
-                    >
-                      <BookOpen size={16} />
-                      {t('app.demoDocsCta')}
-                    </a>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {landingHighlights.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={item.title} className="rounded-[1.35rem] border border-border/55 bg-background/70 px-4 py-4 text-left backdrop-blur-xl">
-                          <div className="inline-flex rounded-2xl border border-border/55 bg-background/75 p-2 text-muted-foreground">
-                            <Icon size={18} />
-                          </div>
-                          <h3 className="mt-4 text-sm font-semibold text-foreground">{item.title}</h3>
-                          <p className="mt-2 text-xs leading-6 text-muted-foreground">{item.body}</p>
+                    <div className="grid gap-3">
+                      <div className="surface-panel px-4 py-4">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.bridgeMode')}</div>
+                        <div className="mt-2 text-base font-semibold text-foreground">{bridgeModeLabel}</div>
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">{bridgeReviewGuidance}</p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+                        <div className="surface-panel px-4 py-4">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.sampleScenariosKicker')}</div>
+                          <div className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{curatedScenarios.length}</div>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">{t('app.sampleScenariosTitle')}</p>
                         </div>
-                      );
-                    })}
+                        <div className="surface-panel px-4 py-4">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewOutputsKicker')}</div>
+                          <div className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{landingArtifacts.length}</div>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">{t('app.reviewOutputsTitle')}</p>
+                        </div>
+                        <div className="surface-panel px-4 py-4">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.workspace')}</div>
+                          <div className="mt-2 text-2xl font-semibold tracking-tight text-foreground">4</div>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            intake {'->'} analysis {'->'} review {'->'} export
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+
                 </div>
               </div>
 
-              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
+              <div className="glass-panel-strong px-5 py-5 sm:px-6 sm:py-6 2xl:sticky 2xl:top-28 2xl:self-start">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="editorial-kicker">{t('app.inputStudio')}</p>
@@ -1239,6 +1262,44 @@ npm run release:preview
                   ) : (
                     <div className="space-y-4">
                       <p className="text-sm leading-6 text-muted-foreground">{t('app.inputGuide')}</p>
+                      <div className="surface-panel px-4 py-4">
+                        <div className="flex flex-col gap-3">
+                          <div className="space-y-1">
+                            <label htmlFor="skill-url-input" className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                              {t('app.skillUrlLabel')}
+                            </label>
+                            <p className="text-xs leading-5 text-muted-foreground">{t('app.skillUrlHint')}</p>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                            <input
+                              id="skill-url-input"
+                              data-testid="skill-url-input"
+                              type="url"
+                              inputMode="url"
+                              value={skillUrlInput}
+                              onChange={(e) => setSkillUrlInput(e.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault();
+                                  void handleAnalyzeSkillUrl();
+                                }
+                              }}
+                              placeholder={t('app.skillUrlPlaceholder')}
+                              className="w-full rounded-[1.05rem] border border-input/75 bg-card/86 px-4 py-3 text-sm leading-6 shadow-inner outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/18"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void handleAnalyzeSkillUrl()}
+                              disabled={!skillUrlInput.trim()}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/80 px-5 py-3 text-sm font-medium text-foreground transition hover:border-primary/35 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <UploadCloud size={16} />
+                              {t('app.skillUrlCta')}
+                            </button>
+                          </div>
+                          <p className="text-[11px] leading-5 text-muted-foreground">{t('app.skillUrlSupported')}</p>
+                        </div>
+                      </div>
                       <div
                         data-testid="intake-review-readiness"
                         className={`rounded-[1.2rem] border px-4 py-3 backdrop-blur-xl ${reviewReadinessStyles}`}
@@ -1288,7 +1349,7 @@ npm run release:preview
                             {t('app.selectFolder')}
                           </button>
                           <button
-                            onClick={pendingUploadFiles.length > 0 ? handleAnalyzePendingUpload : handlePasteUrl}
+                            onClick={pendingUploadFiles.length > 0 ? handleAnalyzePendingUpload : () => void handleAnalyzeTextInput()}
                             disabled={pendingUploadFiles.length > 0 ? !pendingPrimaryPath : !inputText.trim()}
                             className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.7)] transition hover:bg-primary/92 disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -1393,28 +1454,41 @@ npm run release:preview
               </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.9fr)_minmax(0,0.95fr)]">
               <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="editorial-kicker">{t('app.demoPathKicker')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoPathTitle')}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoPathLead')}</p>
+                    <p className="editorial-kicker">{t('app.sampleScenariosKicker')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.sampleScenariosTitle')}</h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.sampleScenariosLead')}</p>
                   </div>
                   <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
                     <PlayCircle size={22} />
                   </div>
                 </div>
                 <div className="mt-5 grid gap-3">
-                  {landingPaths.map((item, index) => (
-                    <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                  {curatedScenarios.map((scenario) => (
+                    <div key={scenario.id} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="text-sm font-semibold text-foreground">{scenario.title}</div>
                         <div className="rounded-full border border-border/55 bg-background/72 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          {t('app.demoStepLabel')} {index + 1}
+                          {scenario.id}
                         </div>
                       </div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{scenario.body}</p>
+                      <div className="mt-3 space-y-2 text-xs leading-6 text-muted-foreground">
+                        <div><span className="font-semibold text-foreground">{t('app.sampleScenarioFocusLabel')}</span> {scenario.focus}</div>
+                        <div><span className="font-semibold text-foreground">{t('app.sampleScenarioArtifactsLabel')}</span> {scenario.artifacts}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => loadCuratedScenario(scenario)}
+                        data-testid={`sample-scenario-${scenario.id}`}
+                        className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                      >
+                        <PlayCircle size={14} />
+                        {scenario.cta}
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1423,9 +1497,9 @@ npm run release:preview
               <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="editorial-kicker">{t('app.demoDocsKicker')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoDocsTitle')}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoDocsLead')}</p>
+                    <p className="editorial-kicker">{t('app.resourcesKicker')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.resourcesTitle')}</h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.resourcesLead')}</p>
                   </div>
                   <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
                     <BookOpen size={22} />
@@ -1446,143 +1520,46 @@ npm run release:preview
                   ))}
                 </div>
               </div>
-            </section>
-
-            <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="editorial-kicker">{t('app.demoScenariosKicker')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoScenariosTitle')}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoScenariosLead')}</p>
-                  </div>
-                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
-                    <PlayCircle size={22} />
-                  </div>
-                </div>
-                <div className="mt-5 grid gap-3">
-                  {curatedScenarios.map((scenario) => (
-                    <div key={scenario.id} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
-                      <div className="text-sm font-semibold text-foreground">{scenario.title}</div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{scenario.body}</p>
-                      <div className="mt-3 space-y-2 text-xs leading-6 text-muted-foreground">
-                        <div><span className="font-semibold text-foreground">{t('app.demoScenarioFocusLabel')}</span> {scenario.focus}</div>
-                        <div><span className="font-semibold text-foreground">{t('app.demoScenarioArtifactsLabel')}</span> {scenario.artifacts}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => loadCuratedScenario(scenario)}
-                        className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
-                      >
-                        <PlayCircle size={14} />
-                        {scenario.cta}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
               <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="editorial-kicker">{t('app.demoWhyKicker')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoWhyTitle')}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoWhyLead')}</p>
+                    <p className="editorial-kicker">{t('app.reviewOutputsKicker')}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.reviewOutputsTitle')}</h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.reviewOutputsLead')}</p>
                   </div>
                   <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
-                    <Activity size={22} />
+                    <FileText size={22} />
                   </div>
                 </div>
-                <div className="mt-5 grid gap-3">
-                  {landingWhy.map((item) => (
+                <div className="mt-5 space-y-3">
+                  {landingArtifacts.map((item) => (
                     <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
                       <div className="text-sm font-semibold text-foreground">{item.title}</div>
                       <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="editorial-kicker">{t('app.demoTrustKicker')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoTrustTitle')}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">{t('app.demoTrustLead')}</p>
-                  </div>
-                  <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
-                    <ShieldCheck size={22} />
-                  </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <a
+                    href={README_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                  >
+                    <BookOpen size={14} />
+                    {t('app.reviewOutputsReadmeCta')}
+                  </a>
+                  <a
+                    href={MODE_CONTRACT_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
+                  >
+                    <ShieldCheck size={14} />
+                    {t('app.reviewOutputsContractCta')}
+                  </a>
                 </div>
-                <div className="mt-5 grid gap-3">
-                  {landingTrust.map((item) => (
-                    <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
-                      <div className="text-sm font-semibold text-foreground">{item.title}</div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-                    </div>
-                  ))}
-                </div>
-                <a
-                  href={MODE_CONTRACT_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
-                >
-                  <BookOpen size={14} />
-                  {t('app.demoTrustLinkLabel')}
-                </a>
-              </div>
-            </section>
-
-            <section className="glass-panel px-5 py-5 sm:px-6 sm:py-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="editorial-kicker">{t('app.demoArtifactsKicker')}</p>
-                  <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.demoArtifactsTitle')}</h3>
-                  <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">{t('app.demoArtifactsLead')}</p>
-                </div>
-                <div className="rounded-2xl border border-border/45 bg-background/45 p-3 text-muted-foreground shadow-inner backdrop-blur-xl">
-                  <FileText size={22} />
-                </div>
-              </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                {landingArtifacts.map((item) => (
-                  <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/68 px-4 py-4 backdrop-blur-xl">
-                    <div className="text-sm font-semibold text-foreground">{item.title}</div>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                {artifactExamples.map((item) => (
-                  <div key={item.title} className="rounded-[1.2rem] border border-border/55 bg-background/80 px-4 py-4 backdrop-blur-xl">
-                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{item.title}</div>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-                    <pre className="mt-3 overflow-x-auto rounded-[1rem] border border-border/50 bg-background/90 px-3 py-3 text-[11px] leading-5 text-foreground whitespace-pre-wrap">
-                      {item.snippet}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <a
-                  href={README_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
-                >
-                  <BookOpen size={14} />
-                  {t('app.demoArtifactsReadmeCta')}
-                </a>
-                <a
-                  href={MODE_CONTRACT_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/72 px-4 py-2 text-xs font-medium text-foreground transition hover:border-primary/32 hover:text-primary"
-                >
-                  <ShieldCheck size={14} />
-                  {t('app.demoArtifactsContractCta')}
-                </a>
               </div>
             </section>
           </div>

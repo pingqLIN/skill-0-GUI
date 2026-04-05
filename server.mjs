@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { createSkill0Bridge } from './bridge/skill0Bridge.mjs';
+import { resolveSkillUrlImport, serializeSkillUrlError } from './bridge/skillUrlResolver.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,28 @@ export function createServerApp({
       }));
     } catch (error) {
       res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown parser bridge error' });
+    }
+  });
+
+  app.post('/api/resolve-skill-url', async (req, res) => {
+    const url = String(req.body?.url || '');
+
+    if (!url.trim()) {
+      res.status(400).json({
+        error: 'missing_skill_url',
+        detail: 'Enter a valid HTTPS URL for a remote skill file.',
+      });
+      return;
+    }
+
+    try {
+      res.json(await resolveSkillUrlImport(url));
+    } catch (error) {
+      const payload = serializeSkillUrlError(error);
+      res.status(payload.status).json({
+        error: payload.error,
+        detail: payload.detail,
+      });
     }
   });
 

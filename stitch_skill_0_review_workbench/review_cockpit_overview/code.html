@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Skill-0 Review Studio | Cockpit</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Newsreader:ital,wght@0,400;0,600;0,700;1,400;1,700&amp;family=Roboto+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#e6e9e8",
+                        "on-primary-fixed-variant": "#5b5b5b",
+                        "surface-variant": "#dfe3e2",
+                        "secondary": "#625e5b",
+                        "on-surface-variant": "#5b605f",
+                        "on-error-container": "#752121",
+                        "tertiary-dim": "#58524d",
+                        "surface-container-highest": "#dfe3e2",
+                        "surface-bright": "#faf9f8",
+                        "surface": "#faf9f8",
+                        "on-tertiary-fixed": "#4e4944",
+                        "on-tertiary-fixed-variant": "#6b655f",
+                        "on-secondary": "#fef8f3",
+                        "on-tertiary": "#fff7f3",
+                        "outline-variant": "#aeb3b2",
+                        "surface-container": "#edeeed",
+                        "on-secondary-fixed": "#423f3b",
+                        "on-tertiary-container": "#615b55",
+                        "primary-dim": "#525252",
+                        "on-secondary-fixed-variant": "#5e5b57",
+                        "error-container": "#fe8983",
+                        "tertiary": "#645e59",
+                        "surface-tint": "#5e5e5e",
+                        "primary-container": "#e3e2e2",
+                        "tertiary-fixed-dim": "#ede4dd",
+                        "primary": "#5e5e5e",
+                        "inverse-surface": "#0d0e0e",
+                        "secondary-fixed-dim": "#d9d3ce",
+                        "on-error": "#fff7f6",
+                        "error": "#9f403d",
+                        "on-secondary-container": "#54514e",
+                        "surface-container-low": "#f3f4f3",
+                        "secondary-fixed": "#e7e1dc",
+                        "on-primary-fixed": "#3f3f3f",
+                        "inverse-on-surface": "#9d9d9c",
+                        "tertiary-fixed": "#fbf2eb",
+                        "on-primary-container": "#515252",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface": "#2f3333",
+                        "surface-dim": "#d6dbda",
+                        "on-primary": "#f9f7f7",
+                        "background": "#faf9f8",
+                        "on-background": "#2f3333"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"],
+                        "mono": ["Roboto Mono", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased selection:bg-primary-container">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-14 bg-[#faf9f8] border-b-0">
+<div class="flex items-center gap-8">
+<span class="text-lg font-serif font-bold italic text-[#2f3333]">Skill-0 Review Studio</span>
+<nav class="hidden md:flex items-center gap-6 h-14">
+<a class="text-[#5b605f] font-medium h-full flex items-center px-1 border-b-2 border-transparent hover:bg-[#edeeed] transition-colors" href="#">Entry Desk</a>
+<a class="text-[#2f3333] border-b-2 border-[#5e5e5e] font-bold h-full flex items-center px-1 active:scale-95 duration-150" href="#">Cockpit</a>
+<a class="text-[#5b605f] font-medium h-full flex items-center px-1 border-b-2 border-transparent hover:bg-[#edeeed] transition-colors" href="#">Pipeline</a>
+<a class="text-[#5b605f] font-medium h-full flex items-center px-1 border-b-2 border-transparent hover:bg-[#edeeed] transition-colors" href="#">Checks</a>
+<a class="text-[#5b605f] font-medium h-full flex items-center px-1 border-b-2 border-transparent hover:bg-[#edeeed] transition-colors" href="#">Sign-off</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-[#edeeed] transition-colors">account_tree</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-[#edeeed] transition-colors">rule</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-[#edeeed] transition-colors">terminal</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-[#edeeed] transition-colors">description</button>
+</div>
+</header>
+<!-- SideNavBar (Left Rail) -->
+<aside class="fixed left-0 top-14 bottom-0 w-20 flex flex-col items-center py-4 z-40 bg-[#f3f4f3] border-r-0">
+<div class="flex flex-col items-center gap-6 w-full">
+<div class="flex flex-col items-center gap-1 group cursor-pointer w-full py-2 hover:bg-[#edeeed] transition-all duration-200">
+<span class="material-symbols-outlined text-[#5b605f]">account_tree</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-[#5b605f]">Pipeline</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer w-full py-2 hover:bg-[#edeeed] transition-all duration-200">
+<span class="material-symbols-outlined text-[#5b605f]">show_chart</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-[#5b605f]">Vector</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer w-full py-2 bg-[#edeeed] border-l-4 border-[#5e5e5e]">
+<span class="material-symbols-outlined text-[#2f3333]">grid_view</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-[#2f3333]">Matrix</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer w-full py-2 hover:bg-[#edeeed] transition-all duration-200">
+<span class="material-symbols-outlined text-[#5b605f]">edit_note</span>
+<span class="font-sans text-[10px] uppercase tracking-widest text-[#5b605f]">Editor</span>
+</div>
+</div>
+<div class="mt-auto flex flex-col items-center gap-6 w-full">
+<div class="flex flex-col items-center gap-1 group cursor-pointer w-full py-2 hover:bg-[#edeeed]">
+<span class="material-symbols-outlined text-[#5b605f]">settings</span>
+</div>
+<img alt="Reviewer Profile" class="w-10 h-10 rounded-full object-cover grayscale brightness-90 hover:grayscale-0 transition-all cursor-pointer" data-alt="Professional headshot of a male reviewer in a minimalist office setting, clean lighting, high-end editorial style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnuHexZo2WHZZFem1ACWpjqpi5q8mWX-eSklQw4JXanvkRsJ49COf5_-Q0whKNro4mcLpRLZS2F0Pz0H1cYjZu6FJDnokSe-PVp1bnYzDdP66sisacNpyYT8B30PvhwecqOBLHDy7mYnzuvVRrlJasAPZXM-5hfcKo9OBv1Pr7QKgl2vX_wYeaxMnBhLLsW7VyYqnjU7KQCo37BkOW-Q8S30xUHioPkFb5Bs6OYENMRLUhpWywHpTaNk7Q8hB5DqcCxaxu2s_Pgm9b"/>
+</div>
+</aside>
+<!-- Top Truth Bar -->
+<div class="fixed top-14 left-20 right-80 h-12 bg-surface-container-low z-30 flex items-center px-6 gap-8 overflow-x-auto scrollbar-hide border-b border-outline-variant/10">
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-[10px] uppercase tracking-tighter font-semibold text-on-surface-variant">Parser Mode</span>
+<span class="font-mono text-xs font-bold text-on-surface bg-surface-container px-2 py-0.5">Standalone</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-[10px] uppercase tracking-tighter font-semibold text-on-surface-variant">Evidence</span>
+<span class="text-xs font-bold text-on-error-container bg-error-container/20 px-2 py-0.5 rounded-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span> Validation Needs Attention
+            </span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-[10px] uppercase tracking-tighter font-semibold text-on-surface-variant">State</span>
+<span class="text-xs font-bold text-on-surface-variant">Incomplete</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-[10px] uppercase tracking-tighter font-semibold text-on-surface-variant">Decision</span>
+<span class="text-xs font-bold text-primary italic">In Review</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-[10px] uppercase tracking-tighter font-semibold text-on-surface-variant">Export</span>
+<span class="text-xs font-bold text-on-error-container">Blocked</span>
+</div>
+</div>
+<!-- Main Content Canvas -->
+<main class="ml-20 mr-80 mt-26 p-10 min-h-screen">
+<div class="max-w-6xl mx-auto space-y-12">
+<!-- Header Section -->
+<header class="space-y-2 border-l-4 border-primary pl-8">
+<h1 class="font-headline text-6xl font-bold tracking-tight text-on-background">Bundle Intake Review Skill</h1>
+<p class="font-mono text-sm text-on-surface-variant">PROJECT_ID: CLAUDE__SKILL__BUNDLE_INTAKE_REVIEW // v2.4-auto</p>
+</header>
+<!-- Analytical Bento Grid -->
+<div class="grid grid-cols-12 gap-6 items-start">
+<!-- Primary Analysis Card -->
+<div class="col-span-8 bg-surface-container-low p-8 relative overflow-hidden group">
+<div class="relative z-10 space-y-6">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline text-2xl font-semibold mb-1">Analysis Result</h3>
+<p class="text-sm text-on-surface-variant max-w-md">Detailed diagnostic of the bundle intake manifest. Parser detected structural variance in submodule definitions.</p>
+</div>
+<span class="material-symbols-outlined text-4xl text-outline-variant/30 group-hover:text-primary transition-colors">analytics</span>
+</div>
+<div class="grid grid-cols-2 gap-y-6 gap-x-12 mt-8">
+<div class="space-y-1 border-t border-outline-variant/20 pt-4">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant">Target Project</span>
+<p class="font-mono text-xs font-medium">CLAUDE__SKILL__BUNDLE_INTAKE_REVIEW</p>
+</div>
+<div class="space-y-1 border-t border-outline-variant/20 pt-4">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant">Parser Engine</span>
+<p class="font-mono text-xs font-medium">skill-0 v2.4-auto</p>
+</div>
+<div class="space-y-1 border-t border-outline-variant/20 pt-4">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant">Analysis Level</span>
+<p class="font-mono text-xs font-medium uppercase">manifest</p>
+</div>
+<div class="space-y-1 border-t border-outline-variant/20 pt-4">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant">Schema Match</span>
+<p class="font-mono text-xs font-medium">94.2% Structural Integrity</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Risk Assessment -->
+<div class="col-span-4 bg-tertiary-container p-8 space-y-8">
+<div>
+<h3 class="font-headline text-2xl font-semibold mb-4">Risk Assessment</h3>
+<div class="inline-flex items-center gap-2 bg-background/50 px-3 py-1 rounded-sm">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-sm font-bold uppercase tracking-widest">Low Risk</span>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-end gap-2">
+<span class="text-6xl font-headline font-bold leading-none">C</span>
+<span class="text-sm font-medium pb-1">Phase Index</span>
+</div>
+<p class="text-xs text-on-tertiary-container italic">"Current bundle configuration aligns with Phase C safety constraints. No high-level blockers identified in behavioral modeling."</p>
+</div>
+</div>
+<!-- Metrics High Density Row -->
+<div class="col-span-12 grid grid-cols-4 gap-6">
+<div class="bg-surface-container p-6 flex flex-col justify-between h-40">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Delivery Time</span>
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-headline font-bold">1.8</span>
+<span class="text-lg text-on-surface-variant font-headline">s</span>
+</div>
+</div>
+<div class="bg-surface-container p-6 flex flex-col justify-between h-40">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Decision Confidence</span>
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-headline font-bold">90</span>
+<span class="text-lg text-on-surface-variant font-headline">%</span>
+</div>
+</div>
+<div class="bg-surface-container p-6 flex flex-col justify-between h-40">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Rework Rate</span>
+<div class="flex items-baseline gap-1 text-error">
+<span class="text-4xl font-headline font-bold">6</span>
+<span class="text-lg font-headline">%</span>
+</div>
+</div>
+<div class="bg-surface-container p-6 flex flex-col justify-between h-40 border-l-4 border-primary">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Goal Achievement</span>
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-headline font-bold">88</span>
+<span class="text-lg text-on-surface-variant font-headline">%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Meta -->
+<div class="flex justify-between items-center pt-8 border-t border-outline-variant/10 text-on-surface-variant font-mono text-[10px] uppercase">
+<span>Last Updated: 2023.10.24-14:32:01</span>
+<span>Review Session Active: #R-8829-01</span>
+</div>
+</div>
+</main>
+<!-- SideNavBar (Right Rail) -->
+<aside class="fixed right-0 top-14 bottom-0 w-80 flex flex-col z-40 bg-[#edeeed] border-l-0">
+<!-- Tabs Header -->
+<div class="flex border-b border-outline-variant/20">
+<button class="flex-1 py-3 text-xs font-semibold text-[#2f3333] border-b-2 border-[#5e5e5e] flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">rate_review</span> Review
+            </button>
+<button class="flex-1 py-3 text-xs font-semibold text-[#5b605f] hover:bg-[#f3f4f3] transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">fact_check</span> Checks
+            </button>
+<button class="flex-1 py-3 text-xs font-semibold text-[#5b605f] hover:bg-[#f3f4f3] transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">hub</span> Context
+            </button>
+</div>
+<div class="p-6 flex-1 flex flex-col gap-8 overflow-y-auto">
+<!-- Review Decision Section -->
+<section class="space-y-4">
+<h4 class="text-xs uppercase tracking-widest font-bold text-on-surface-variant">Decision Capture</h4>
+<div class="space-y-1 p-4 bg-surface-container-lowest shadow-sm">
+<p class="text-xs leading-relaxed text-on-surface">Capture the reviewer decision before exporting. The review packet keeps parser mode, equivalence framing, and reviewer notes together.</p>
+</div>
+<div class="space-y-4 pt-2">
+<div class="space-y-1">
+<label class="text-[10px] font-bold uppercase text-on-surface-variant">Reviewer</label>
+<div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-sm cursor-not-allowed">
+<div class="w-6 h-6 rounded-full bg-outline-variant/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">person</span>
+</div>
+<span class="text-sm italic text-on-surface-variant">Unassigned</span>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold uppercase text-on-surface-variant">Evidence Status</label>
+<div class="flex items-center gap-2 p-2 bg-error-container/10 border-l-2 border-error text-on-error-container">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+<span class="text-xs font-semibold">Validation needs attention</span>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold uppercase text-on-surface-variant">Parser Mode</label>
+<div class="flex items-center justify-between p-2 bg-primary/5 border border-primary/10">
+<span class="text-xs font-bold text-primary">Canonical</span>
+<span class="text-[10px] bg-primary text-on-primary px-1 font-bold">ACTIVE</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Decision Controls -->
+<section class="mt-auto space-y-3">
+<button class="w-full bg-surface-tint text-on-primary font-bold py-3 text-xs uppercase tracking-widest hover:opacity-90 transition-opacity">
+                    Approve Manifest
+                </button>
+<button class="w-full bg-secondary-container text-on-secondary-container font-bold py-3 text-xs uppercase tracking-widest hover:bg-surface-container-high transition-colors">
+                    Request Rework
+                </button>
+<div class="text-[10px] text-center text-on-surface-variant italic pt-2">
+                    Review locked until validation issues resolved.
+                </div>
+</section>
+</div>
+</aside>
+</body></html>

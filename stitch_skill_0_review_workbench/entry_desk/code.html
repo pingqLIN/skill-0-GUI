@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Skill-0 Review Studio | Entry Desk</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400;1,6..72,700&amp;family=Roboto+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#e6e9e8",
+                        "on-primary-fixed-variant": "#5b5b5b",
+                        "surface-variant": "#dfe3e2",
+                        "secondary": "#625e5b",
+                        "on-surface-variant": "#5b605f",
+                        "on-error-container": "#752121",
+                        "tertiary-dim": "#58524d",
+                        "surface-container-highest": "#dfe3e2",
+                        "surface-bright": "#faf9f8",
+                        "surface": "#faf9f8",
+                        "on-tertiary-fixed": "#4e4944",
+                        "on-tertiary-fixed-variant": "#6b655f",
+                        "on-secondary": "#fef8f3",
+                        "on-tertiary": "#fff7f3",
+                        "outline-variant": "#aeb3b2",
+                        "surface-container": "#edeeed",
+                        "on-secondary-fixed": "#423f3b",
+                        "on-tertiary-container": "#615b55",
+                        "primary-dim": "#525252",
+                        "on-secondary-fixed-variant": "#5e5b57",
+                        "error-container": "#fe8983",
+                        "tertiary": "#645e59",
+                        "surface-tint": "#5e5e5e",
+                        "primary-container": "#e3e2e2",
+                        "tertiary-fixed-dim": "#ede4dd",
+                        "primary": "#5e5e5e",
+                        "inverse-surface": "#0d0e0e",
+                        "secondary-fixed-dim": "#d9d3ce",
+                        "on-error": "#fff7f6",
+                        "error": "#9f403d",
+                        "on-secondary-container": "#54514e",
+                        "surface-container-low": "#f3f4f3",
+                        "secondary-dim": "#56534f",
+                        "background": "#faf9f8",
+                        "error-dim": "#4e0309",
+                        "primary-fixed": "#e3e2e2",
+                        "secondary-fixed": "#e7e1dc",
+                        "on-primary-fixed": "#3f3f3f",
+                        "inverse-on-surface": "#9d9d9c",
+                        "tertiary-container": "#fbf2eb",
+                        "secondary-container": "#e7e1dc",
+                        "primary-fixed-dim": "#d5d4d4",
+                        "outline": "#777c7b",
+                        "inverse-primary": "#ffffff",
+                        "on-background": "#2f3333",
+                        "tertiary-fixed": "#fbf2eb",
+                        "on-primary-container": "#515252",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface": "#2f3333",
+                        "surface-dim": "#d6dbda",
+                        "on-primary": "#f9f7f7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Newsreader"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["Roboto Mono"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Newsreader', serif; }
+        .data-text { font-family: 'Roboto Mono', monospace; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-14 bg-[#faf9f8] dark:bg-[#1a1c1c] text-[#2f3333] dark:text-[#faf9f8]">
+<div class="flex items-center gap-8">
+<span class="text-lg font-serif font-bold italic text-[#2f3333] dark:text-[#faf9f8]">Skill-0 Review Studio</span>
+<nav class="hidden md:flex gap-6 h-full items-center">
+<a class="h-full flex items-center px-1 text-[#2f3333] dark:text-[#faf9f8] border-b-2 border-[#5e5e5e] font-bold" href="#">Entry Desk</a>
+<a class="h-full flex items-center px-1 text-[#5b605f] dark:text-[#aeb3b2] font-medium hover:bg-[#edeeed] dark:hover:bg-[#2f3333] transition-colors" href="#">Cockpit</a>
+<a class="h-full flex items-center px-1 text-[#5b605f] dark:text-[#aeb3b2] font-medium hover:bg-[#edeeed] dark:hover:bg-[#2f3333] transition-colors" href="#">Pipeline</a>
+<a class="h-full flex items-center px-1 text-[#5b605f] dark:text-[#aeb3b2] font-medium hover:bg-[#edeeed] dark:hover:bg-[#2f3333] transition-colors" href="#">Checks</a>
+<a class="h-full flex items-center px-1 text-[#5b605f] dark:text-[#aeb3b2] font-medium hover:bg-[#edeeed] dark:hover:bg-[#2f3333] transition-colors" href="#">Sign-off</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-low rounded text-xs font-mono uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-green-600"></span>
+<span>Bridge: Connected</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-low rounded text-xs font-mono uppercase tracking-wider">
+<span class="text-on-surface-variant">Parser:</span>
+<span class="italic">Unknown</span>
+</div>
+<div class="flex gap-2 ml-4">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="account_tree">account_tree</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="rule">rule</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="terminal">terminal</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="description">description</span>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Left Rail) -->
+<aside class="fixed left-0 top-14 bottom-0 w-20 flex flex-col items-center py-4 z-40 bg-[#f3f4f3] dark:bg-[#1a1c1c] text-[#2f3333] dark:text-[#faf9f8] transition-all duration-200 ease-in-out">
+<div class="flex flex-col gap-6 items-center w-full">
+<button class="flex flex-col items-center gap-1 w-full py-3 text-[#5b605f] dark:text-[#aeb3b2] hover:bg-[#edeeed] dark:hover:bg-[#2f3333]">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="text-[10px] font-sans uppercase tracking-widest">Pipeline</span>
+</button>
+<button class="flex flex-col items-center gap-1 w-full py-3 text-[#5b605f] dark:text-[#aeb3b2] hover:bg-[#edeeed] dark:hover:bg-[#2f3333]">
+<span class="material-symbols-outlined" data-icon="show_chart">show_chart</span>
+<span class="text-[10px] font-sans uppercase tracking-widest">Vector</span>
+</button>
+<button class="flex flex-col items-center gap-1 w-full py-3 text-[#5b605f] dark:text-[#aeb3b2] hover:bg-[#edeeed] dark:hover:bg-[#2f3333]">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="text-[10px] font-sans uppercase tracking-widest">Matrix</span>
+</button>
+<button class="flex flex-col items-center gap-1 w-full py-3 text-[#5b605f] dark:text-[#aeb3b2] hover:bg-[#edeeed] dark:hover:bg-[#2f3333]">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+<span class="text-[10px] font-sans uppercase tracking-widest">Editor</span>
+</button>
+<button class="flex flex-col items-center gap-1 w-full py-3 text-[#5b605f] dark:text-[#aeb3b2] hover:bg-[#edeeed] dark:hover:bg-[#2f3333]">
+<span class="material-symbols-outlined" data-icon="ios_share">ios_share</span>
+<span class="text-[10px] font-sans uppercase tracking-widest">Export</span>
+</button>
+</div>
+<div class="mt-auto flex flex-col gap-4 items-center w-full">
+<button class="text-[#5b605f] dark:text-[#aeb3b2] hover:text-on-background">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="text-[#5b605f] dark:text-[#aeb3b2] hover:text-on-background">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-20 mt-14 p-8 max-w-[1400px]">
+<header class="mb-12">
+<h1 class="text-5xl font-bold text-on-background mb-2">Intake</h1>
+<p class="text-on-surface-variant max-w-2xl leading-relaxed">
+                Inspect parser mode, reviewer checks, and export flow before loading your own material. This workstation prioritizes structural integrity and technical precision for operational assets.
+            </p>
+</header>
+<div class="grid grid-cols-12 gap-8 items-start">
+<!-- Main Intake Section -->
+<section class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Skill URL Input -->
+<div class="bg-surface-container-low p-8 rounded-lg">
+<label class="block text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">Skill Resource URL</label>
+<div class="flex gap-4">
+<input class="flex-1 bg-surface-container-lowest border-b-2 border-outline-variant/20 focus:border-primary px-4 py-3 font-mono text-sm outline-none transition-all" placeholder="https://registry.skill-zero.io/v1/assets/..." type="text"/>
+<button class="bg-surface-tint text-on-primary px-8 py-3 font-semibold text-sm hover:opacity-90 transition-opacity">FETCH</button>
+</div>
+</div>
+<!-- Dual Intake: Paste and Upload -->
+<div class="grid md:grid-cols-2 gap-8">
+<!-- Paste Area -->
+<div class="bg-surface-container p-6 rounded-lg flex flex-col h-[400px]">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-xl font-bold italic">Manual Entry</h3>
+<span class="text-[10px] font-mono bg-tertiary-container px-2 py-0.5 rounded uppercase">JSON / TXT</span>
+</div>
+<textarea class="flex-1 bg-surface-container-lowest border-b border-outline-variant/20 p-4 font-mono text-xs resize-none outline-none focus:border-primary transition-all" placeholder="Paste SkillDocument JSON or raw skill text here..."></textarea>
+</div>
+<!-- Upload Zone -->
+<div class="bg-surface-container p-6 rounded-lg flex flex-col h-[400px]">
+<h3 class="text-xl font-bold italic mb-4">File Repository</h3>
+<div class="flex-1 border-2 border-dashed border-outline-variant/40 flex flex-col items-center justify-center p-8 text-center group cursor-pointer hover:border-primary transition-colors bg-surface-container-low/50">
+<span class="material-symbols-outlined text-4xl text-outline mb-4 group-hover:text-primary" data-icon="cloud_upload">cloud_upload</span>
+<p class="text-sm font-medium mb-1">Drag and drop assets or folder</p>
+<p class="text-xs text-on-surface-variant">Supports .skill, .json, .zip bundles</p>
+</div>
+</div>
+</div>
+<!-- Preview Grid -->
+<div class="space-y-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Pending Workspace</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Pending File Card -->
+<div class="bg-surface-container-lowest p-4 rounded border-l-4 border-primary flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+<div class="overflow-hidden">
+<p class="text-xs font-bold truncate">core_logic_v4.skill</p>
+<p class="text-[10px] text-on-surface-variant uppercase">34.2 KB • Ready</p>
+</div>
+</div>
+<!-- Supporting File Card -->
+<div class="bg-surface-container-low p-4 rounded border-l-4 border-outline-variant flex items-center gap-3 opacity-60">
+<span class="material-symbols-outlined text-outline" data-icon="account_tree">account_tree</span>
+<div class="overflow-hidden">
+<p class="text-xs font-bold truncate">dependency_tree.json</p>
+<p class="text-[10px] text-on-surface-variant uppercase">1.8 MB • Processing</p>
+</div>
+</div>
+<!-- Add Placeholder -->
+<div class="border border-dashed border-outline-variant/40 p-4 rounded flex items-center justify-center text-outline-variant cursor-pointer hover:text-primary hover:border-primary transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Ancillary & Secondary Section -->
+<aside class="col-span-12 lg:col-span-4 space-y-8">
+<!-- Sample Scenarios -->
+<div class="bg-surface-container-low p-6 space-y-6">
+<h2 class="text-2xl font-bold">Workbench Modes</h2>
+<div class="space-y-4">
+<div class="group cursor-pointer">
+<div class="flex items-center justify-between mb-1">
+<span class="text-sm font-bold uppercase tracking-tight">Bundle Intake Review</span>
+<span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100 transition-opacity" data-icon="arrow_forward">arrow_forward</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">Simulate a multi-file dependency check for composite skills.</p>
+</div>
+<div class="group cursor-pointer">
+<div class="flex items-center justify-between mb-1">
+<span class="text-sm font-bold uppercase tracking-tight">Publish Approval Gate</span>
+<span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100 transition-opacity" data-icon="arrow_forward">arrow_forward</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">Enforce strict validation rules before registry commit.</p>
+</div>
+<div class="group cursor-pointer">
+<div class="flex items-center justify-between mb-1">
+<span class="text-sm font-bold uppercase tracking-tight">Legacy Vector Mapping</span>
+<span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100 transition-opacity" data-icon="arrow_forward">arrow_forward</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">Map deprecated skill schemas to modern Studio formats.</p>
+</div>
+</div>
+</div>
+<!-- Docs / Resources -->
+<div class="p-6 bg-surface-container">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">Documentation</h3>
+<ul class="space-y-3">
+<li>
+<a class="text-sm font-serif italic text-on-background hover:underline flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-base" data-icon="menu_book">menu_book</span>
+                                The Reviewer’s Handbook (v2.0)
+                            </a>
+</li>
+<li>
+<a class="text-sm font-serif italic text-on-background hover:underline flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-base" data-icon="schema">schema</span>
+                                SkillDocument JSON Schema Specification
+                            </a>
+</li>
+<li>
+<a class="text-sm font-serif italic text-on-background hover:underline flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-base" data-icon="help_center">help_center</span>
+                                Troubleshooting Parser Anomalies
+                            </a>
+</li>
+</ul>
+</div>
+<!-- Export Overview -->
+<div class="bg-[#2f3333] text-[#faf9f8] p-6 rounded shadow-lg">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary-container" data-icon="bolt">bolt</span>
+<h3 class="text-xl font-bold italic">Quick Export</h3>
+</div>
+<p class="text-xs text-on-primary-fixed-variant mb-6 leading-relaxed">Ready to bypass review? You can push validated drafts directly to the staging pipeline if all local checks pass.</p>
+<div class="space-y-2">
+<button class="w-full text-left p-3 bg-surface-tint/20 hover:bg-surface-tint/40 transition-colors flex items-center justify-between">
+<span class="text-xs font-mono">Stage for Review</span>
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+<button class="w-full text-left p-3 bg-primary-container text-[#2f3333] hover:bg-on-primary transition-colors flex items-center justify-between font-bold">
+<span class="text-xs font-mono">Instant Commit</span>
+<span class="material-symbols-outlined text-sm" data-icon="send">send</span>
+</button>
+</div>
+</div>
+<!-- Visual Asset / Context -->
+<div class="rounded-lg overflow-hidden grayscale contrast-125">
+<img alt="Studio Overview" class="w-full h-48 object-cover" data-alt="Monochrome close-up of a high-end mechanical keyboard and technical blueprints on a wooden desk with sharp overhead lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_eXB9Irmudk_Z3LL1k2YpQctTSsfNDnngqJmqExejONc7bGFeGc4ec9MIzET52Eq8-1psfu4SSLdH_1R1AV1da9HVr8xTZ8BlxaA5hP90Jhjilhv_k43jI4gXijKdd9fCvqPK_d1IeInJh_9QWjetga8CrfhjxIbE0v0CUGKNAFMneEBZCZKhMJT1ihweMP0fUd3gd2NGvdSXRZMW-vqTP_zzSldLvsvCRGATvxMDi9Jx4gNMqC7r3gLUzZEvxlBrbllE82IEFJdR"/>
+<div class="p-2 bg-surface-container-highest">
+<p class="text-[10px] text-on-surface-variant italic text-right">Studio Session: Active Matrix Visualization</p>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Context Footer Info -->
+<footer class="ml-20 border-t border-outline-variant/10 p-8 flex flex-col md:flex-row justify-between items-center gap-4 text-on-surface-variant">
+<div class="flex gap-8 text-[10px] font-mono uppercase tracking-widest">
+<span>Terminal: ASSET_INTAKE_001</span>
+<span>Version: 0.12.4-STABLE</span>
+<span>Node: DC-EAST-BRIDGE</span>
+</div>
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-lg" data-icon="security">security</span>
+<span class="material-symbols-outlined text-lg" data-icon="verified_user">verified_user</span>
+</div>
+</footer>
+</body></html>

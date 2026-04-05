@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import App from '../App';
-import { analyzeSkillText } from '../services/parserBridgeService';
+import { analyzeSkillText, resolveSkillUrl } from '../services/parserBridgeService';
 import { fetchBridgeStatus } from '../services/bridgeStatusService';
 import JSZip from 'jszip';
 
@@ -35,6 +35,7 @@ vi.mock('../components/SideEditor', () => ({ SideEditor: () => null }));
 vi.mock('../components/DecompositionBoard', () => ({ DecompositionBoard: () => <div data-testid="decomposition-board" /> }));
 vi.mock('../services/parserBridgeService', () => ({
   analyzeSkillText: vi.fn(),
+  resolveSkillUrl: vi.fn(),
 }));
 vi.mock('../services/bridgeStatusService', () => ({
   fetchBridgeStatus: vi.fn().mockResolvedValue({
@@ -46,6 +47,7 @@ vi.mock('../services/bridgeStatusService', () => ({
 describe('App smoke test', () => {
   beforeEach(() => {
     vi.mocked(analyzeSkillText).mockReset();
+    vi.mocked(resolveSkillUrl).mockReset();
     vi.mocked(JSZip.loadAsync).mockReset();
     window.localStorage.clear();
     vi.mocked(fetchBridgeStatus).mockResolvedValue({
@@ -61,11 +63,11 @@ describe('App smoke test', () => {
 
     expect(await screen.findByText('app.title')).toBeInTheDocument();
     expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
-    expect(await screen.findByText('app.demoTitle')).toBeInTheDocument();
-    expect(await screen.findByText('app.demoPathTitle')).toBeInTheDocument();
-    expect(await screen.findByText('app.demoDocsTitle')).toBeInTheDocument();
-    expect(await screen.findByText('app.demoTrustTitle')).toBeInTheDocument();
-    expect(await screen.findByText('app.demoArtifactsTitle')).toBeInTheDocument();
+    expect(await screen.findByText('app.landingTitle')).toBeInTheDocument();
+    expect(await screen.findByText('app.skillUrlLabel')).toBeInTheDocument();
+    expect(await screen.findAllByText('app.sampleScenariosTitle')).not.toHaveLength(0);
+    expect(await screen.findByText('app.resourcesTitle')).toBeInTheDocument();
+    expect(await screen.findAllByText('app.reviewOutputsTitle')).not.toHaveLength(0);
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect(await screen.findAllByText('app.bridgeModeCanonical')).not.toHaveLength(0);
     const banner = await screen.findByTestId('intake-review-readiness');
@@ -85,7 +87,7 @@ describe('App smoke test', () => {
 
     const banner = await screen.findByTestId('intake-review-readiness');
     expect(banner).toHaveTextContent('app.reviewEvidenceStandalone');
-    expect(banner).toHaveTextContent('app.bridgeGuidanceStandalone');
+    expect(banner).toHaveTextContent('app.bridgeHelpStandalone');
   });
 
   it('surfaces bridge verification guidance when the bridge status request fails', async () => {
@@ -98,7 +100,7 @@ describe('App smoke test', () => {
     const banner = await screen.findByTestId('intake-review-readiness');
     expect(banner).toHaveTextContent('app.reviewEvidenceUnavailable');
     expect(banner).toHaveTextContent('Bridge down');
-    expect(banner).toHaveTextContent('app.bridgeGuidanceUnavailable');
+    expect(banner).toHaveTextContent('app.bridgeHelpUnavailable');
   });
 
   it('loads the review workspace after analysis completes', async () => {
@@ -127,6 +129,64 @@ describe('App smoke test', () => {
     expect(analyzeSkillText).toHaveBeenCalledWith('# demo skill', 'uploaded-skill', {});
   });
 
+  it('imports and analyzes a supported remote skill URL', async () => {
+    vi.mocked(resolveSkillUrl).mockResolvedValue({
+      contentType: 'text/plain',
+      fileName: 'SKILL.md',
+      primaryPath: 'owner/repo/main/SKILL.md',
+      resolvedUrl: 'https://raw.githubusercontent.com/owner/repo/main/SKILL.md',
+      sourceType: 'github-blob',
+      text: '# remote skill',
+      url: 'https://github.com/owner/repo/blob/main/SKILL.md',
+    });
+    vi.mocked(analyzeSkillText).mockResolvedValue({
+      projectId: 'remote-skill',
+      projectName: 'Remote Skill',
+      phases: [],
+      riskAssessment: { level: 'SAFE', details: '' },
+      threeClassification: { category: 'demo', granularity: 'task', operability: 90 },
+      parserResult: { decomposition: { actions: [], rules: [], directives: [] } },
+      globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    fireEvent.change(screen.getByTestId('skill-url-input'), {
+      target: { value: 'https://github.com/owner/repo/blob/main/SKILL.md' },
+    });
+    fireEvent.click(screen.getByText('app.skillUrlCta'));
+
+    await waitFor(() => {
+      expect(resolveSkillUrl).toHaveBeenCalledWith('https://github.com/owner/repo/blob/main/SKILL.md');
+    });
+    await waitFor(() => {
+      expect(analyzeSkillText).toHaveBeenCalledWith('# remote skill', 'SKILL.md', {
+        primaryPath: 'owner/repo/main/SKILL.md',
+      });
+    });
+  });
+
+  it('shows a clear message when the remote skill URL is unsupported', async () => {
+    vi.mocked(resolveSkillUrl).mockRejectedValue({
+      code: 'unsupported_url_host',
+      detail: 'Supported sources are GitHub blob URLs, raw.githubusercontent.com files, and raw gist URLs.',
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    fireEvent.change(screen.getByTestId('skill-url-input'), {
+      target: { value: 'https://example.com/skill.md' },
+    });
+    fireEvent.click(screen.getByText('app.skillUrlCta'));
+
+    expect(await screen.findByText('app.errorSkillUrlUnsupportedHost')).toBeInTheDocument();
+    expect(analyzeSkillText).not.toHaveBeenCalled();
+  });
+
   it('launches the curated bundle review scenario with supporting files', async () => {
     vi.mocked(analyzeSkillText).mockResolvedValue({
       projectId: 'bundle-intake-review',
@@ -142,7 +202,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
-    fireEvent.click(screen.getByText('app.demoScenario.bundle-review.cta'));
+    fireEvent.click(screen.getByTestId('sample-scenario-bundle-review'));
 
     await waitFor(() => {
       expect(analyzeSkillText).toHaveBeenCalledWith(

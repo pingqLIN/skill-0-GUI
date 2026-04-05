@@ -1,0 +1,107 @@
+Design a bold redesign of a desktop-first web app called “Skill-0 Review Studio”.
+
+This product is an evidence desk and reviewer cockpit for Skill-0 parser output. It is used to inspect parser results, validate consistency, review supporting evidence, record decisions, and sign off before export.
+
+Do not design this like a startup landing page or a BI dashboard. Design it like a rigorous editorial operations console with a strong point of view.
+
+Core loop:
+intake -> analysis -> review -> export
+
+Required functional coverage:
+- direct skill URL import
+- paste input for SKILL or SkillDocument JSON
+- file and folder upload
+- supporting files preview
+- parser mode visibility: canonical / standalone / unknown
+- sample workspaces:
+  - mode overview
+  - bundle intake review
+  - publish approval gate
+- workspace modes:
+  - pipeline
+  - vector
+  - matrix
+- reviewer notes, review status, review summary, reviewer signoff, decision log
+- validation, consistency, path-walk review
+- exports:
+  - .skill.md
+  - SkillDocument JSON
+  - review report
+  - review packet
+
+Audience and tone:
+- technical reviewers
+- cautious, detail-oriented, decision-making users
+- the interface should feel controlled, credible, and high-bandwidth
+- not playful, not glossy, not consumer-polished
+
+Visual direction:
+- light mode only
+- warm paper-like backgrounds
+- dark graphite structure
+- strong editorial typography
+- asymmetrical pane composition
+- tabbed evidence drawers
+- tighter density than a typical SaaS tool
+- amber, rust, slate, and muted green as state accents
+- emphasize text hierarchy and evidence framing over decorative icons
+
+Design 5 connected screens/states:
+
+1. Entry desk
+- A homepage/intake hybrid that immediately feels like an operational review desk
+- Intake is the primary surface
+- Sample workspaces, docs, and outputs are docked around it, not presented like feature marketing cards
+- Parser mode and bridge status should feel authoritative
+
+2. Review cockpit overview
+- Persistent left rail
+- Large center analytical surface
+- Persistent right reviewer/evidence rail
+- Sticky top truth bar with parser mode, evidence status, equivalence status, export readiness
+
+3. Pipeline evidence screen
+- Decomposition board and derived workflow as the main analytical surface
+- Phase navigation should feel like following an evidence trail
+- Phase details should feel like a working document, not a modal
+
+4. Checks and evidence screen
+- Validation and consistency are highly legible
+- Dense issue lists, grouped by severity and review relevance
+- Supporting files, command references, findings, and path-walk state stay visible
+- Clear distinction between blocked, attention, and clean
+
+5. Sign-off and export screen
+- Sign-off should feel consequential
+- Show reviewer summary, reviewer signoff, checklist completion, decision log, and export actions together
+- Include a preview area for review packet / report outputs
+- This screen should feel like a release gate, not a generic settings form
+
+Sample content:
+- supporting files such as docs/policy.md and scripts/run.py
+- reviewer statuses: draft, in review, changes requested, approved
+- checklist items:
+  - mode confirmed
+  - validation reviewed
+  - diff reviewed
+  - evidence ready
+- evidence concepts:
+  - parser version
+  - schema version
+  - skill id
+  - missing references
+  - command references
+  - supporting files
+  - analysis findings
+  - review packet
+
+Hard constraints:
+- do not invent multi-user collaboration
+- do not invent chat assistants inside the product
+- do not invent project management or ticketing features
+- do not hide key truth signals behind overlays
+- do not use decorative charts unless they communicate review state
+- do not use a card grid as the dominant layout language
+
+Quality bar:
+The result should look like a premium, dense, desktop review console for a serious internal tool. Preserve every major function from the current Skill-0 Review Studio, but recompose them into a more memorable, more authoritative, and more cohesive UI system.

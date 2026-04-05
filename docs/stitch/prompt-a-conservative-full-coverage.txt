@@ -1,0 +1,112 @@
+Design a desktop-first web application called “Skill-0 Review Studio”.
+
+This is a reviewer-first operational workbench, not a marketing site and not a generic analytics dashboard.
+
+Users:
+- Reviewers and operators inspecting Skill-0 parser output before approval, export, or external sharing
+- They work in a focused desktop context and need high information density without losing clarity
+
+Product purpose:
+- Turn parser output into a trustworthy review workflow
+- Preserve the sequence: intake -> analysis -> review -> export
+- Keep parser mode, evidence quality, validation state, and review decision visible at all times
+
+Visual direction:
+- Dense editorial workbench
+- Light mode first
+- Warm neutral surfaces, dark slate structure, restrained amber and green accents
+- Strong typography, explicit grouping, restrained motion
+- Avoid startup landing page aesthetics, KPI dashboard patterns, and decorative glassmorphism
+
+Generate a complete multi-screen web app concept with realistic populated content.
+
+Screen 1: Homepage + intake
+Include:
+- Header with product name, parser mode status, local draft status, language toggle, docs links
+- Intro area that explains the workbench in operational terms, not marketing language
+- Primary intake surface with:
+  - direct skill URL input
+  - multiline paste area for SKILL content or SkillDocument JSON
+  - drag-and-drop upload zone
+  - pending file preview
+  - supporting files preview
+  - review readiness / bridge status panel
+- Sample scenarios section:
+  - mode overview
+  - bundle intake review
+  - publish approval gate
+- Docs/resources section
+- Export outputs section:
+  - review report
+  - SkillDocument JSON
+  - .skill.md export
+
+Screen 2: Review workspace overview
+Include:
+- Left docked rail for navigation and quick actions
+- Main center review surface
+- Persistent right rail for reviewer state and evidence
+- Sticky truth bar with parser mode, evidence status, equivalence status, and export readiness
+
+Workspace modes:
+- pipeline
+- vector
+- matrix
+
+Quick actions:
+- open global editor
+- open structured editor
+- open JSON editor
+- export .skill.md
+- export JSON
+- export review report
+- export review packet
+- reset workspace
+- undo if modified
+
+Main review content:
+- project name
+- parser version
+- analysis level
+- parser mode guidance
+- review decision summary
+- stat strip for actions, rules, directives, supporting files, command references, findings
+
+Checks and evidence:
+- schema validation
+- consistency checks
+- warnings and errors
+- path walk history
+- supporting files
+- command references
+- analysis findings
+- diff summary
+
+Reviewer controls:
+- reviewer name
+- reviewer notes
+- review summary
+- reviewer signoff
+- review status: draft, in review, changes requested, approved
+- decision log
+- 4 sign-off gates:
+  - mode confirmed
+  - validation reviewed
+  - diff reviewed
+  - evidence ready
+
+Export coverage:
+- review report
+- review packet
+- SkillDocument JSON
+- .skill.md
+
+Constraints:
+- Preserve all major current product functions
+- Do not invent multi-user collaboration, comments, cloud sync, or AI copilots
+- Do not imply standalone mode is canonical proof
+- Do not hide key truth signals behind modals
+- Optimize for dense desktop reviewer readability
+
+Output goal:
+Create a credible, production-minded, high-density review workbench that fully covers the existing Skill-0 Review Studio functionality while looking cleaner, more intentional, and more complete than the current version.

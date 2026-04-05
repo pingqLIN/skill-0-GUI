@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sign-off &amp; Export | Skill-0 Review Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Newsreader:ital,wght@0,400;0,700;1,400;1,700&amp;family=Roboto+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-high": "#e6e9e8",
+                      "on-primary-fixed-variant": "#5b5b5b",
+                      "surface-variant": "#dfe3e2",
+                      "secondary": "#625e5b",
+                      "on-surface-variant": "#5b605f",
+                      "on-error-container": "#752121",
+                      "tertiary-dim": "#58524d",
+                      "surface-container-highest": "#dfe3e2",
+                      "surface-bright": "#faf9f8",
+                      "surface": "#faf9f8",
+                      "on-tertiary-fixed": "#4e4944",
+                      "on-tertiary-fixed-variant": "#6b655f",
+                      "on-secondary": "#fef8f3",
+                      "on-tertiary": "#fff7f3",
+                      "outline-variant": "#aeb3b2",
+                      "surface-container": "#edeeed",
+                      "on-secondary-fixed": "#423f3b",
+                      "on-tertiary-container": "#615b55",
+                      "primary-dim": "#525252",
+                      "on-secondary-fixed-variant": "#5e5b57",
+                      "error-container": "#fe8983",
+                      "tertiary": "#645e59",
+                      "surface-tint": "#5e5e5e",
+                      "primary-container": "#e3e2e2",
+                      "tertiary-fixed-dim": "#ede4dd",
+                      "primary": "#5e5e5e",
+                      "inverse-surface": "#0d0e0e",
+                      "secondary-fixed-dim": "#d9d3ce",
+                      "on-error": "#fff7f6",
+                      "error": "#9f403d",
+                      "on-secondary-container": "#54514e",
+                      "surface-container-low": "#f3f4f3",
+                      "secondary-dim": "#56534f",
+                      "background": "#faf9f8",
+                      "error-dim": "#4e0309",
+                      "primary-fixed": "#e3e2e2",
+                      "secondary-fixed": "#e7e1dc",
+                      "on-primary-fixed": "#3f3f3f",
+                      "inverse-on-surface": "#9d9d9c",
+                      "tertiary-container": "#fbf2eb",
+                      "secondary-container": "#e7e1dc",
+                      "primary-fixed-dim": "#d5d4d4",
+                      "outline": "#777c7b",
+                      "inverse-primary": "#ffffff",
+                      "on-background": "#2f3333",
+                      "tertiary-fixed": "#fbf2eb",
+                      "on-primary-container": "#515252",
+                      "surface-container-lowest": "#ffffff",
+                      "on-surface": "#2f3333",
+                      "surface-dim": "#d6dbda",
+                      "on-primary": "#f9f7f7"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Newsreader", "serif"],
+                      "body": ["Inter", "sans-serif"],
+                      "label": ["Inter", "sans-serif"],
+                      "mono": ["Roboto Mono", "monospace"]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif { font-family: 'Newsreader', serif; }
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- TopNavBar (Fixed) -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-14 bg-[#faf9f8] dark:bg-[#1a1c1c] tonal shift separation">
+<div class="flex items-center gap-8">
+<span class="text-lg font-serif font-bold italic text-[#2f3333] dark:text-[#faf9f8]">Skill-0 Review Studio</span>
+<nav class="hidden md:flex items-center gap-6 h-14">
+<a class="text-[#5b605f] dark:text-[#aeb3b2] font-medium px-1 h-full flex items-center hover:bg-[#edeeed] transition-colors" href="#">Entry Desk</a>
+<a class="text-[#5b605f] dark:text-[#aeb3b2] font-medium px-1 h-full flex items-center hover:bg-[#edeeed] transition-colors" href="#">Cockpit</a>
+<a class="text-[#5b605f] dark:text-[#aeb3b2] font-medium px-1 h-full flex items-center hover:bg-[#edeeed] transition-colors" href="#">Pipeline</a>
+<a class="text-[#5b605f] dark:text-[#aeb3b2] font-medium px-1 h-full flex items-center hover:bg-[#edeeed] transition-colors" href="#">Checks</a>
+<a class="text-[#2f3333] dark:text-[#faf9f8] border-b-2 border-[#5e5e5e] font-bold px-1 h-full flex items-center active:scale-95 duration-150" href="#">Sign-off</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-tertiary-container px-3 py-1 rounded-sm border border-outline/10">
+<span class="material-symbols-outlined text-sm text-on-tertiary-container" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-xs font-bold uppercase tracking-widest text-on-tertiary-container">Publish Approval Gate: APPROVED</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 hover:bg-[#edeeed] dark:hover:bg-[#2f3333] transition-colors" title="account_tree"><span class="material-symbols-outlined text-[#2f3333] dark:text-[#faf9f8]" data-icon="account_tree">account_tree</span></button>
+<button class="p-2 hover:bg-[#edeeed] dark:hover:bg-[#2f3333] transition-colors" title="rule"><span class="material-symbols-outlined text-[#2f3333] dark:text-[#faf9f8]" data-icon="rule">rule</span></button>
+<button class="p-2 hover:bg-[#edeeed] dark:hover:bg-[#2f3333] transition-colors" title="terminal"><span class="material-symbols-outlined text-[#2f3333] dark:text-[#faf9f8]" data-icon="terminal">terminal</span></button>
+<button class="p-2 hover:bg-[#edeeed] dark:hover:bg-[#2f3333] transition-colors" title="description"><span class="material-symbols-outlined text-[#2f3333] dark:text-[#faf9f8]" data-icon="description">description</span></button>
+</div>
+</div>
+</header>
+<!-- Layout Container -->
+<div class="flex pt-14 h-screen">
+<!-- SideNavBar (Left) -->
+<aside class="fixed left-0 top-14 bottom-0 w-20 flex flex-col items-center py-4 z-40 bg-[#f3f4f3] dark:bg-[#1a1c1c] tonal shift using surface_container_low">
+<div class="flex flex-col items-center gap-8 w-full">
+<div class="group flex flex-col items-center gap-1 w-full py-2 cursor-pointer hover:bg-[#edeeed] text-[#5b605f]">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="text-[10px] uppercase tracking-widest">Pipeline</span>
+</div>
+<div class="group flex flex-col items-center gap-1 w-full py-2 cursor-pointer hover:bg-[#edeeed] text-[#5b605f]">
+<span class="material-symbols-outlined" data-icon="show_chart">show_chart</span>
+<span class="text-[10px] uppercase tracking-widest">Vector</span>
+</div>
+<div class="group flex flex-col items-center gap-1 w-full py-2 cursor-pointer hover:bg-[#edeeed] text-[#5b605f]">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="text-[10px] uppercase tracking-widest">Matrix</span>
+</div>
+<div class="group flex flex-col items-center gap-1 w-full py-2 cursor-pointer hover:bg-[#edeeed] text-[#5b605f]">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+<span class="text-[10px] uppercase tracking-widest">Editor</span>
+</div>
+<div class="group flex flex-col items-center gap-1 w-full py-2 cursor-pointer bg-[#edeeed] dark:bg-[#2f3333] text-[#2f3333] dark:text-[#ffffff] border-l-4 border-[#5e5e5e]">
+<span class="material-symbols-outlined" data-icon="ios_share">ios_share</span>
+<span class="text-[10px] uppercase tracking-widest font-bold">Export</span>
+</div>
+</div>
+<div class="mt-auto flex flex-col items-center gap-6 w-full">
+<button class="text-[#5b605f] hover:text-on-background"><span class="material-symbols-outlined" data-icon="settings">settings</span></button>
+<button class="text-[#5b605f] hover:text-on-background"><span class="material-symbols-outlined" data-icon="help_outline">help_outline</span></button>
+<div class="w-10 h-10 bg-surface-container-high rounded-full overflow-hidden border border-outline/20">
+<img class="w-full h-full object-cover" data-alt="professional male reviewer portrait in a clinical minimalist setting with neutral tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuADTdcxCgbb1gahoukOGY2JrX8C-mWkWqm9IrZleWx1hEgzvHyLuVSClWhrfn2-zqCJ93DI1ZFJD-xxbOmceNaUB2aWhU78N8NGMOkqYHT9yGpSe3sJxyxNFHDZ0X3M0TOkRkIvVWHZ9KrydLQ28gCuzT9wE1gglOKK1ANlW8sF8rGborl0y_GKOS3t6wuNMwhjeaQABUKVBKVEUCkNPK_E4SuT7zi81Q4inJ-Y6DwsXuFMyZlLnk4MYSFAYU83q9TyvwmQ-ft-2ts2"/>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-20 mr-80 flex-1 overflow-y-auto bg-surface-container-low p-8">
+<div class="max-w-4xl mx-auto space-y-12 pb-20">
+<!-- Release Handoff Framing -->
+<section class="space-y-6">
+<div class="border-b border-outline-variant/30 pb-4">
+<h1 class="text-4xl font-serif font-bold text-on-background">Final Approval Release</h1>
+<p class="text-on-surface-variant font-mono text-sm mt-2">UUID: 8f2d-491c-b2e1-77a8c902b3f1 // TAG: V2.4-STABLE</p>
+</div>
+<!-- Reviewer Summary -->
+<div class="bg-surface-container-lowest p-8 shadow-sm border-l-4 border-primary">
+<h2 class="text-xl font-serif font-bold mb-4 italic">Lead Reviewer's Assessment</h2>
+<div class="prose prose-sm text-on-background leading-relaxed font-body space-y-4">
+<p>
+                                The skill document submitted for the 'Publish Approval Gate' has undergone rigorous multi-stage validation. Based on the automated test suite results and manual oversight, the document architecture adheres to all specified schema constraints. The logic flow demonstrates complete coverage of edge-case handling, particularly in the error recovery sub-routines identified in the previous version.
+                            </p>
+<p>
+                                All vector mappings have been cross-verified against the global ontology matrix. The linguistic weights applied to the semantic engine are within the +2/-2 sigma range of the standard benchmark, ensuring consistent performance across all deployment clusters. No critical blockers remain. The transition from 'In Review' to 'Approved' is justified and verified.
+                            </p>
+<p class="font-bold italic">— Senior Architect, AI Alignment Division</p>
+</div>
+</div>
+</section>
+<!-- Decision Log -->
+<section class="space-y-4">
+<h3 class="text-xs font-sans font-bold uppercase tracking-widest text-on-surface-variant">Decision Log &amp; Timeline</h3>
+<div class="space-y-1">
+<div class="flex items-center gap-4 bg-surface p-4 border-l-2 border-outline-variant">
+<span class="font-mono text-xs text-on-surface-variant">2023-10-24 09:12</span>
+<span class="material-symbols-outlined text-sm" data-icon="history">history</span>
+<span class="text-sm font-medium">Status initialized: <span class="font-bold uppercase">Draft</span></span>
+<span class="ml-auto text-xs italic text-on-surface-variant">Author: System</span>
+</div>
+<div class="flex items-center gap-4 bg-surface p-4 border-l-2 border-outline-variant">
+<span class="font-mono text-xs text-on-surface-variant">2023-10-25 14:30</span>
+<span class="material-symbols-outlined text-sm" data-icon="pending">pending</span>
+<span class="text-sm font-medium">Status changed: <span class="font-bold uppercase">In Review</span></span>
+<span class="ml-auto text-xs italic text-on-surface-variant">Action: Validation Submission</span>
+</div>
+<div class="flex items-center gap-4 bg-tertiary-container/30 p-4 border-l-2 border-primary">
+<span class="font-mono text-xs text-on-surface-variant">2023-10-27 11:05</span>
+<span class="material-symbols-outlined text-sm text-primary" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="text-sm font-bold text-primary">Final Status: APPROVED</span>
+<span class="ml-auto text-xs italic text-on-surface-variant">Signee: Lead_Reviewer_01</span>
+</div>
+</div>
+</section>
+<!-- Output Preview -->
+<section class="space-y-4">
+<div class="flex justify-between items-end">
+<h3 class="text-xs font-sans font-bold uppercase tracking-widest text-on-surface-variant">Output Preview (SkillDocument JSON)</h3>
+<span class="text-[10px] font-mono bg-surface-variant px-2 py-0.5">READ-ONLY_VERSION_02</span>
+</div>
+<div class="bg-on-background text-surface-container-low p-6 font-mono text-sm leading-relaxed rounded-sm overflow-x-auto shadow-inner">
+<pre><code>{
+  "header": {
+    "version": "2.4.0",
+    "status": "APPROVED",
+    "checksum": "sha256:d8e8f822..."
+  },
+  "content": {
+    "skill_id": "publish_approval_gate",
+    "vectors": [0.23, 0.45, 0.89, -0.12],
+    "logic_gate": "terminal_state_handoff",
+    "metadata": {
+      "release_ready": true,
+      "export_hash": "e93f_882c"
+    }
+  }
+}</code></pre>
+</div>
+</section>
+</div>
+</main>
+<!-- Reviewer Rail (Right SideNavBar) -->
+<aside class="fixed right-0 top-14 bottom-0 w-80 flex flex-col z-40 bg-[#edeeed] dark:bg-[#252828] tonal shift using surface_container">
+<div class="p-6 border-b border-outline-variant/20">
+<div class="flex items-center gap-3 mb-1">
+<span class="material-symbols-outlined text-primary" data-icon="rate_review" style="font-variation-settings: 'FILL' 1;">rate_review</span>
+<h4 class="text-xs font-sans font-bold uppercase tracking-widest">Reviewer Rail</h4>
+</div>
+<p class="text-[10px] text-on-surface-variant">Active Task: Multi-tab Analysis &amp; Approval</p>
+</div>
+<nav class="flex border-b border-outline-variant/20">
+<button class="flex-1 py-3 text-xs font-semibold text-[#2f3333] border-b-2 border-[#5e5e5e]">Review</button>
+<button class="flex-1 py-3 text-xs font-semibold text-[#5b605f] hover:bg-[#f3f4f3]">Checks</button>
+<button class="flex-1 py-3 text-xs font-semibold text-[#5b605f] hover:bg-[#f3f4f3]">Context</button>
+</nav>
+<div class="flex-1 overflow-y-auto p-6 space-y-8">
+<!-- Sign-off Checklist -->
+<div class="space-y-4">
+<h5 class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant flex items-center justify-between">
+                        Sign-off Checklist
+                        <span class="text-primary font-bold">4/4</span>
+</h5>
+<ul class="space-y-3">
+<li class="flex items-center gap-3 text-sm text-on-background">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="check_box" style="font-variation-settings: 'FILL' 1;">check_box</span>
+<span>Mode confirmed</span>
+</li>
+<li class="flex items-center gap-3 text-sm text-on-background">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="check_box" style="font-variation-settings: 'FILL' 1;">check_box</span>
+<span>Validation reviewed</span>
+</li>
+<li class="flex items-center gap-3 text-sm text-on-background">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="check_box" style="font-variation-settings: 'FILL' 1;">check_box</span>
+<span>Diff reviewed</span>
+</li>
+<li class="flex items-center gap-3 text-sm text-on-background">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="check_box" style="font-variation-settings: 'FILL' 1;">check_box</span>
+<span>Evidence ready</span>
+</li>
+</ul>
+</div>
+<!-- Reviewer Signoff -->
+<div class="space-y-4">
+<h5 class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Reviewer Signoff</h5>
+<div class="bg-surface-container-lowest p-4 rounded-sm border border-outline-variant/20 space-y-3">
+<div class="border-b border-on-surface/10 pb-2">
+<p class="font-serif italic text-lg leading-none">Jameson R. Thorne</p>
+</div>
+<div class="flex justify-between items-center text-[10px] font-mono text-on-surface-variant">
+<span>SIGNATURE_ID: #44012</span>
+<span>2023-OCT-27</span>
+</div>
+</div>
+</div>
+<!-- Export Actions -->
+<div class="space-y-4 pt-4 border-t border-outline-variant/20">
+<h5 class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Export Actions</h5>
+<div class="grid grid-cols-1 gap-2">
+<button class="w-full bg-primary text-on-primary py-2 px-4 text-xs font-bold uppercase tracking-widest flex items-center justify-between hover:bg-on-background transition-colors group">
+                            Review Report
+                            <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="file_download">file_download</span>
+</button>
+<button class="w-full bg-primary text-on-primary py-2 px-4 text-xs font-bold uppercase tracking-widest flex items-center justify-between hover:bg-on-background transition-colors group">
+                            Review Packet
+                            <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="folder_zip">folder_zip</span>
+</button>
+<button class="w-full bg-secondary-container text-on-secondary-container py-2 px-4 text-xs font-bold uppercase tracking-widest flex items-center justify-between hover:bg-surface-container-highest transition-colors group">
+                            SkillDocument JSON
+                            <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="code">code</span>
+</button>
+<button class="w-full bg-secondary-container text-on-secondary-container py-2 px-4 text-xs font-bold uppercase tracking-widest flex items-center justify-between hover:bg-surface-container-highest transition-colors group">
+                            .skill.md
+                            <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="description">description</span>
+</button>
+</div>
+</div>
+</div>
+<div class="p-6 mt-auto bg-surface-container-high border-t border-outline-variant/30 text-center">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Verification Level: Tier 1 Gold</span>
+</div>
+</aside>
+</div>
+</body></html>

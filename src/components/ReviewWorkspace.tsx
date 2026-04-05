@@ -148,6 +148,7 @@ export function ReviewWorkspace({
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<WorkspaceTabId>('pipeline');
   const [activePhase, setActivePhase] = useState<string | null>(null);
+  const [activeInsightTab, setActiveInsightTab] = useState<'review' | 'checks' | 'context'>('review');
   const [isWorkspaceFocusMode, setIsWorkspaceFocusMode] = useState(false);
   const [isDerivedWorkflowOpen, setIsDerivedWorkflowOpen] = useState(false);
   const [showActions, setShowActions] = useState(false);
@@ -206,7 +207,6 @@ export function ReviewWorkspace({
       meta: `${decisionCount} ${t('app.totalDecisions')}`,
     },
   ];
-
   const bridgeModeLabel = bridgeStatus?.mode === 'skill-0'
     ? t('app.bridgeModeCanonical')
     : bridgeStatus?.mode === 'standalone'
@@ -222,10 +222,10 @@ export function ReviewWorkspace({
       ? t('app.bridgeModeStandaloneShort')
       : t('app.bridgeModeUnavailableShort');
   const bridgeReviewGuidance = bridgeStatus?.mode === 'skill-0'
-    ? t('app.bridgeGuidanceCanonical')
+    ? t('app.bridgeHelpCanonical')
     : bridgeStatus?.mode === 'standalone'
-      ? t('app.bridgeGuidanceStandalone')
-      : t('app.bridgeGuidanceUnavailable');
+      ? t('app.bridgeHelpStandalone')
+      : t('app.bridgeHelpUnavailable');
   const reviewReadinessLabel = bridgeStatus?.mode === 'skill-0'
     ? t('app.reviewEvidenceCanonical')
     : bridgeStatus?.mode === 'standalone'
@@ -250,6 +250,11 @@ export function ReviewWorkspace({
   const consistencyIssues = consistencyResult?.issues ?? [];
   const consistencyErrors = consistencyIssues.filter((issue) => issue.severity === 'error');
   const consistencyWarnings = consistencyIssues.filter((issue) => issue.severity === 'warning');
+  const insightTabs = [
+    { id: 'review' as const, label: t('app.reviewDecisionPanel'), meta: `${decisionLog.length} ${t('app.decisionCount')}` },
+    { id: 'checks' as const, label: t('app.detailsPanel'), meta: `${validationErrors.length + consistencyErrors.length} ${t('app.validationErrors')}` },
+    { id: 'context' as const, label: t('app.projectSummary'), meta: `${parserSupportingFiles.length} ${t('app.supportingFiles')}` },
+  ];
   const noteTargets = [
     { label: t('app.noteTargetGlobal'), value: 'global' },
     ...skillDocument.decomposition.actions.map((action) => ({
@@ -1062,7 +1067,7 @@ export function ReviewWorkspace({
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.demoReviewGuide')}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.sampleGuide')}</div>
               <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">{demoPreset.title}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{demoPreset.focus}</p>
             </div>
@@ -1072,22 +1077,22 @@ export function ReviewWorkspace({
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.demoReviewNextStep')}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.sampleNextStep')}</div>
               <div className="mt-2 text-sm leading-6 text-foreground">{demoPreset.nextStep}</div>
             </div>
             <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.demoReviewPrefilled')}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.samplePrefilled')}</div>
               <div className="mt-2 text-sm leading-6 text-foreground">{reviewerSignoff || t('app.reviewerSignoffPending')}</div>
             </div>
             <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.demoReviewChecklist')}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.sampleChecklist')}</div>
               <div className="mt-2 text-sm leading-6 text-foreground">{checklistCompletedCount}/4</div>
             </div>
           </div>
         </motion.div>
       )}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid gap-7 xl:grid-cols-[16rem_minmax(0,1fr)_20rem]">
-        <aside className="xl:sticky xl:top-28 xl:self-start">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid gap-5 xl:grid-cols-[15rem_minmax(0,1fr)] 2xl:grid-cols-[15rem_minmax(0,1fr)_24rem]">
+        <aside className="space-y-4 xl:sticky xl:top-28 xl:self-start">
           <div className="glass-panel space-y-5 p-4 sm:p-5">
             <div>
               <p className="editorial-kicker">{t('app.workspace')}</p>
@@ -1270,7 +1275,7 @@ export function ReviewWorkspace({
           </div>
         </aside>
 
-        <section className="min-w-0 space-y-7">
+        <section className="min-w-0 space-y-5">
           {!isWorkspaceFocusMode && (
             <Suspense fallback={<PanelFallback heightClassName="min-h-[220px]" />}>
               <Dashboard data={data} onNavigatePhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} modifiedPaths={modifiedPaths} />
@@ -1279,12 +1284,12 @@ export function ReviewWorkspace({
 
           <div className="glass-panel-strong relative overflow-hidden px-5 py-5 sm:px-6">
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
               <div>
                 {!isWorkspaceFocusMode && (
                   <>
                     <p className="editorial-kicker">{t('app.analysisResult')}</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <div className="mt-3 flex flex-wrap items-center gap-2.5">
                       <span className="rounded-full border border-border/55 bg-background/70 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-muted-foreground backdrop-blur-lg">
                         {t('app.project')}: {data.projectId}
                       </span>
@@ -1296,65 +1301,24 @@ export function ReviewWorkspace({
                           {t('app.analysisLevel')}: {parserManifest.analysis_level}
                         </span>
                       )}
-                      {modifiedPaths.size > 0 && (
-                        <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-700">
-                          {modifiedPaths.size} {t('app.modifiedCount')}
-                        </span>
-                      )}
                     </div>
                   </>
                 )}
                 <div
-                  className={`${isWorkspaceFocusMode ? '' : 'mt-4'} flex w-fit cursor-pointer items-center gap-2 group`}
+                  className={`${isWorkspaceFocusMode ? '' : 'mt-4'} group flex w-fit cursor-pointer items-center gap-2`}
                   onClick={() => setEditorConfig({ type: 'global', payload: data })}
                   title={t('editor.editGlobal')}
                 >
-                  <h2 className={`text-3xl font-semibold tracking-tight sm:text-[2.1rem] ${modifiedPaths.has('projectName') ? 'text-amber-600' : 'text-foreground'}`}>
+                  <h2 className={`display-serif text-[2.3rem] leading-none sm:text-[2.8rem] ${modifiedPaths.has('projectName') ? 'text-amber-600' : 'text-foreground'}`}>
                     {data.projectName}
                   </h2>
                   <Edit2 size={16} className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{bridgeReviewGuidance}</p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
-                <StatPill label={t('app.totalActions')} value={String(parserActions.length)} />
-                <StatPill label={t('app.totalRules')} value={String(parserRules.length)} />
-                <StatPill label={t('app.totalDirectives')} value={String(parserDirectives.length)} accent={parserDirectives.length > 8 ? 'warn' : 'default'} />
-                <StatPill label={t('app.supportingFiles')} value={String(parserSupportingFiles.length)} />
-                <StatPill label={t('app.commandReferences')} value={String(parserCommandReferences.length)} accent={parserCommandReferences.length > 0 ? 'warn' : 'default'} />
-                <StatPill label={t('app.analysisFindings')} value={String(parserAnalysisFindings.length)} accent={parserAnalysisFindings.length > 0 ? 'danger' : 'default'} />
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-panel px-4 py-4 sm:px-5">
-            <div
-              data-testid="review-truth-banner"
-              className={`mb-4 rounded-[1.1rem] border px-4 py-4 backdrop-blur-xl ${bridgeToneClass}`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="editorial-kicker">{t('app.reviewTruthPanel')}</p>
-                  <h3 className="mt-2 text-base font-semibold tracking-tight">{bridgeModeLabel}</h3>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
-                    {bridgeModeSummary}
-                  </span>
-                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
-                    {t('app.equivalenceStatus')}: {reviewEquivalenceLabel}
-                  </span>
-                </div>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-current/80">{bridgeReviewGuidance}</p>
-              <p className="mt-2 text-xs leading-5 text-current/75">
-                {t('app.bridgeSource')}: {bridgeModeDetail}
-              </p>
-            </div>
-
-            <div data-testid="review-decision-panel" className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]">
-              <div className="rounded-[1.1rem] border border-border/55 bg-background/75 px-4 py-4 backdrop-blur-xl">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+              <div data-testid="review-decision-panel" className="rounded-[1.1rem] border border-border/55 bg-background/75 px-4 py-4 backdrop-blur-xl">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="editorial-kicker">{t('app.reviewDecisionPanel')}</p>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('app.reviewPacketHint')}</p>
@@ -1363,74 +1327,49 @@ export function ReviewWorkspace({
                     {reviewStatusLabel}
                   </span>
                 </div>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className="grid gap-1.5 text-sm text-foreground" htmlFor="reviewer-name">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewerName')}</span>
-                    <input
-                      id="reviewer-name"
-                      value={reviewerName}
-                      onChange={(event) => setReviewerName(event.target.value)}
-                      placeholder={t('app.reviewerNamePlaceholder')}
-                      className="rounded-xl border border-border/60 bg-white/70 px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
-                    />
-                  </label>
-
-                  <label className="grid gap-1.5 text-sm text-foreground" htmlFor="review-status">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewDecision')}</span>
-                    <select
-                      id="review-status"
-                      value={reviewStatus}
-                      onChange={(event) => setReviewStatus(event.target.value as ReviewState['reviewStatus'])}
-                      className="rounded-xl border border-border/60 bg-white/70 px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
-                    >
-                      <option value="draft">{t('app.reviewStatusDraft')}</option>
-                      <option value="in_review">{t('app.reviewStatusInReview')}</option>
-                      <option value="changes_requested">{t('app.reviewStatusChangesRequested')}</option>
-                      <option value="approved">{t('app.reviewStatusApproved')}</option>
-                    </select>
-                  </label>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <MiniMetric label={t('app.reviewerName')} value={reviewerName.trim() || t('app.reviewerUnassigned')} highlight={Boolean(reviewerName.trim())} />
+                  <MiniMetric label={t('app.validationEvidence')} value={validationStatusLabel} highlight={!validationHasErrors} />
+                  <MiniMetric label={t('app.bridgeMode')} value={bridgeModeSummary} highlight={bridgeStatus?.mode === 'skill-0'} />
+                  <MiniMetric label={t('app.equivalenceStatus')} value={reviewEquivalenceLabel} highlight={reviewEquivalenceLabel === t('app.equivalenceImplementationIdentity')} />
                 </div>
-
-                <label className="mt-3 grid gap-1.5 text-sm text-foreground" htmlFor="review-notes">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.reviewNotes')}</span>
-                  <textarea
-                    id="review-notes"
-                    value={reviewerNotes}
-                    onChange={(event) => setReviewerNotes(event.target.value)}
-                    placeholder={t('app.reviewNotesPlaceholder')}
-                    className="min-h-28 rounded-[1.15rem] border border-border/60 bg-white/70 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/35 focus:ring-2 focus:ring-primary/12"
-                  />
-                </label>
-              </div>
-
-              <div className="rounded-[1.1rem] border border-border/55 bg-background/75 px-4 py-4 backdrop-blur-xl">
-                <p className="editorial-kicker">{t('app.reviewPacketSummary')}</p>
-                <div className="mt-3 space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    <span className="font-medium text-foreground">{t('app.reviewDecision')}:</span> {reviewStatusLabel}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">{t('app.reviewerName')}:</span> {reviewerName.trim() || t('app.reviewerUnassigned')}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">{t('app.bridgeMode')}:</span> {bridgeModeLabel}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">{t('app.validationEvidence')}:</span> {validationStatusLabel}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">{t('app.equivalenceStatus')}:</span> {reviewEquivalenceLabel}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">{t('app.modifiedCount')}:</span> {modifiedPaths.size}
-                  </p>
-                  <p className="text-xs leading-5">{reviewerNotes.trim() || t('app.reviewNotesEmpty')}</p>
-                </div>
+                {reviewerNotes.trim() && (
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{reviewerNotes.trim()}</p>
+                )}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div data-testid="review-truth-banner" className={`mt-4 rounded-[1.1rem] border px-4 py-4 backdrop-blur-xl ${bridgeToneClass}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={15} className="shrink-0" />
+                  <p className="editorial-kicker text-current/80">{t('app.reviewTruthPanel')}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">{bridgeModeSummary}</span>
+                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
+                    {t('app.reviewEvidenceStatus')}: {reviewReadinessLabel}
+                  </span>
+                  <span className="rounded-full border border-current/15 bg-white/55 px-3 py-1 font-medium">
+                    {t('app.equivalenceStatus')}: {reviewEquivalenceLabel}
+                  </span>
+                </div>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-current/75">{t('app.bridgeSource')}: {bridgeModeDetail}</p>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+              <StatPill label={t('app.totalActions')} value={String(parserActions.length)} />
+              <StatPill label={t('app.totalRules')} value={String(parserRules.length)} />
+              <StatPill label={t('app.totalDirectives')} value={String(parserDirectives.length)} accent={parserDirectives.length > 8 ? 'warn' : 'default'} />
+              <StatPill label={t('app.supportingFiles')} value={String(parserSupportingFiles.length)} />
+              <StatPill label={t('app.commandReferences')} value={String(parserCommandReferences.length)} accent={parserCommandReferences.length > 0 ? 'warn' : 'default'} />
+              <StatPill label={t('app.analysisFindings')} value={String(parserAnalysisFindings.length)} accent={parserAnalysisFindings.length > 0 ? 'danger' : 'default'} />
+            </div>
+          </div>
+
+          <div className="glass-panel px-4 py-4 sm:px-5">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <p className="editorial-kicker">{t('app.workspaceViews')}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{t('app.phaseFlowHint')}</p>
@@ -1445,23 +1384,23 @@ export function ReviewWorkspace({
                     {t('app.returnToOverview')}
                   </button>
                 )}
-                <div className="flex items-center gap-1 rounded-[1rem] border border-border/45 bg-white/46 p-1 backdrop-blur-xl">
-                {workspaceTabs.map((view) => (
-                  <button
-                    key={view.id}
-                    onClick={() => {
-                      setActiveTab(view.id);
-                      setIsWorkspaceFocusMode(true);
-                    }}
-                    className={`rounded-xl px-4 py-2 text-xs font-medium transition-all ${
-                      activeTab === view.id
-                        ? 'border border-border/50 bg-background/78 text-foreground shadow-sm backdrop-blur-xl'
-                        : 'text-muted-foreground hover:bg-background/54 hover:text-foreground'
-                    }`}
-                  >
-                    {view.label}
-                  </button>
-                ))}
+                <div className="flex flex-wrap items-center gap-1 rounded-[1rem] border border-border/45 bg-white/46 p-1 backdrop-blur-xl">
+                  {workspaceTabs.map((view) => (
+                    <button
+                      key={view.id}
+                      onClick={() => {
+                        setActiveTab(view.id);
+                        setIsWorkspaceFocusMode(true);
+                      }}
+                      className={`rounded-xl px-4 py-2 text-xs font-medium transition-all ${
+                        activeTab === view.id
+                          ? 'border border-border/50 bg-background/78 text-foreground shadow-sm backdrop-blur-xl'
+                          : 'text-muted-foreground hover:bg-background/54 hover:text-foreground'
+                      }`}
+                    >
+                      {view.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1563,685 +1502,741 @@ export function ReviewWorkspace({
           </AnimatePresence>
         </section>
 
-        <aside className="xl:sticky xl:top-28 xl:self-start">
-          <div className="space-y-5">
-            <InsightBlock
-              kicker={t('app.detailsPanel')}
-              title={t('app.schemaValidation')}
-              summary={validationResult
-                ? validationErrors.length > 0
-                  ? `${t('app.validationInvalid')} · ${validationErrors.length} ${t('app.validationErrors')}`
-                  : validationWarnings.length > 0
-                    ? `${t('app.validationValid')} · ${validationWarnings.length} ${t('app.validationWarnings')}`
-                    : t('app.validationValid')
-                : t('app.validationUnavailable')}
-              accent={validationErrors.length > 0 ? 'rose' : validationWarnings.length > 0 ? 'default' : 'emerald'}
-              defaultOpen
-            >
-              {validationResult ? (
-                <div className="space-y-3">
-                  <div className="grid gap-2">
-                    <MiniMetric label={t('app.validationStatus')} value={validationResult.valid ? t('app.validationValid') : t('app.validationInvalid')} />
-                    <MiniMetric label={t('app.validationSchema')} value={validationResult.schemaLabel} />
-                    <MiniMetric label={t('app.validationErrors')} value={String(validationErrors.length)} highlight={validationErrors.length > 0} />
-                    <MiniMetric label={t('app.validationWarnings')} value={String(validationWarnings.length)} highlight={validationWarnings.length > 0} />
-                  </div>
-                  {validationIssues.length > 0 ? (
-                    <div className="space-y-2">
-                      {validationIssues.slice(0, 5).map((issue) => {
-                        const focusPath = resolveValidationIssueFieldPath(issue);
-                        return (
-                          <div key={`${issue.code}-${issue.path}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="font-medium text-foreground">{issue.code}</span>
-                              <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                                issue.severity === 'error'
-                                  ? 'bg-destructive/12 text-destructive'
-                                  : 'bg-amber-500/12 text-amber-700'
-                              }`}>
-                                {issue.severity}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.path}</p>
-                            <p className="mt-2">{issue.message}</p>
-                            {focusPath && (
-                              <button
-                                type="button"
-                                onClick={() => openSkillDocumentEditor(focusPath)}
-                                className="mt-3 inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
-                              >
-                                {t('app.openIssueInEditor')}
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
-                      {t('app.validationNoIssues')}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                  {t('app.validationUnavailable')}
-                </div>
-              )}
-            </InsightBlock>
-
-            <InsightBlock
-              kicker={t('app.detailsPanel')}
-              title={t('app.consistencyChecks')}
-              summary={consistencyResult
-                ? consistencyErrors.length > 0
-                  ? `${t('app.consistencyInvalid')} · ${consistencyErrors.length} ${t('app.consistencyErrors')}`
-                  : consistencyWarnings.length > 0
-                    ? `${t('app.consistencyValid')} · ${consistencyWarnings.length} ${t('app.consistencyWarnings')}`
-                    : t('app.consistencyValid')
-                : t('app.consistencyUnavailable')}
-              accent={consistencyErrors.length > 0 ? 'rose' : consistencyWarnings.length > 0 ? 'default' : 'emerald'}
-              defaultOpen
-            >
-              {consistencyResult ? (
-                <div className="space-y-3">
-                  <div className="grid gap-2">
-                    <MiniMetric label={t('app.consistencyStatus')} value={consistencyResult.valid ? t('app.consistencyValid') : t('app.consistencyInvalid')} />
-                    <MiniMetric label={t('app.consistencyErrors')} value={String(consistencyErrors.length)} highlight={consistencyErrors.length > 0} />
-                    <MiniMetric label={t('app.consistencyWarnings')} value={String(consistencyWarnings.length)} highlight={consistencyWarnings.length > 0} />
-                  </div>
-                  {consistencyIssues.length > 0 ? (
-                    <div className="space-y-2">
-                      {consistencyIssues.slice(0, 5).map((issue, index) => {
-                        const focusPath = skillDocument ? resolveConsistencyIssueFieldPath(skillDocument, issue) : null;
-                        return (
-                          <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="font-medium text-foreground">{issue.type}</span>
-                              <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                                issue.severity === 'error'
-                                  ? 'bg-destructive/12 text-destructive'
-                                  : 'bg-amber-500/12 text-amber-700'
-                              }`}>
-                                {issue.severity}
-                              </span>
-                            </div>
-                            {issue.targetId && (
-                              <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.targetId}</p>
-                            )}
-                            <p className="mt-2">{issue.message}</p>
-                            {focusPath && (
-                              <button
-                                type="button"
-                                onClick={() => openSkillDocumentEditor(focusPath)}
-                                className="mt-3 inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
-                              >
-                                {t('app.openIssueInEditor')}
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
-                      {t('app.consistencyNoIssues')}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                  {t('app.consistencyUnavailable')}
-                </div>
-              )}
-            </InsightBlock>
-
-            <InsightBlock
-              kicker={t('app.detailsPanel')}
-              title={t('app.reviewStatus')}
-              summary={t(reviewStatusLabelKey(reviewStatus))}
-              accent={reviewStatus === 'approved' ? 'emerald' : reviewStatus === 'changes_requested' ? 'rose' : 'default'}
-              defaultOpen
-            >
-              <div className="space-y-3">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <MiniMetric label={t('app.reviewStatus')} value={t(reviewStatusLabelKey(reviewStatus))} highlight={reviewStatus !== 'draft'} />
-                  <MiniMetric label={t('app.reviewDecisionLog')} value={`${decisionLog.length} ${t('app.decisionCount')}`} highlight={decisionLog.length > 0} />
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <MiniMetric
-                    label={t('app.reviewChecklist')}
-                    value={`${checklistCompletedCount}/4`}
-                    highlight={checklistCompletedCount === 4}
-                  />
-                  <MiniMetric
-                    label={t('app.reviewerSignoffLabel')}
-                    value={reviewerSignoff || t('app.reviewerSignoffPending')}
-                    highlight={Boolean(reviewerSignoff)}
-                  />
-                </div>
-                {reviewDraftSavedAt && (
-                  <div
-                    data-testid="review-draft-status"
-                    className="rounded-[1.05rem] border border-border/55 bg-background/68 px-3 py-3 text-sm text-foreground backdrop-blur-xl"
+        <aside className="order-last 2xl:sticky 2xl:top-28 2xl:self-start">
+          <div className="space-y-4">
+            <div className="glass-panel p-3">
+              <div className="flex flex-wrap items-center gap-1 rounded-[1rem] border border-border/45 bg-white/46 p-1 backdrop-blur-xl">
+                {insightTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveInsightTab(tab.id)}
+                    className={`flex-1 rounded-xl px-3 py-2 text-left transition ${
+                      activeInsightTab === tab.id
+                        ? 'border border-border/50 bg-background/78 text-foreground shadow-sm backdrop-blur-xl'
+                        : 'text-muted-foreground hover:bg-background/54 hover:text-foreground'
+                    }`}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{t('app.localDraft')}</div>
-                        <div className="mt-1 font-medium">
-                          {reviewDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved')}
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">{tab.id}</div>
+                    <div className="mt-1 text-sm font-medium">{tab.label}</div>
+                    <div className="mt-1 text-[11px] opacity-75">{tab.meta}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {activeInsightTab === 'review' && (
+              <>
+                <InsightBlock
+                  kicker={t('app.detailsPanel')}
+                  title={t('app.reviewStatus')}
+                  summary={t(reviewStatusLabelKey(reviewStatus))}
+                  accent={reviewStatus === 'approved' ? 'emerald' : reviewStatus === 'changes_requested' ? 'rose' : 'default'}
+                  defaultOpen
+                >
+                  <div className="space-y-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <MiniMetric label={t('app.reviewStatus')} value={t(reviewStatusLabelKey(reviewStatus))} highlight={reviewStatus !== 'draft'} />
+                      <MiniMetric label={t('app.reviewDecisionLog')} value={`${decisionLog.length} ${t('app.decisionCount')}`} highlight={decisionLog.length > 0} />
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <MiniMetric label={t('app.reviewChecklist')} value={`${checklistCompletedCount}/4`} highlight={checklistCompletedCount === 4} />
+                      <MiniMetric
+                        label={t('app.reviewerSignoffLabel')}
+                        value={reviewerSignoff || t('app.reviewerSignoffPending')}
+                        highlight={Boolean(reviewerSignoff)}
+                      />
+                    </div>
+                    {reviewDraftSavedAt && (
+                      <div
+                        data-testid="review-draft-status"
+                        className="rounded-[1.05rem] border border-border/55 bg-background/68 px-3 py-3 text-sm text-foreground backdrop-blur-xl"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{t('app.localDraft')}</div>
+                            <div className="mt-1 font-medium">
+                              {reviewDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved')}
+                            </div>
+                          </div>
+                          <div className="text-xs font-mono text-muted-foreground">{formatDraftTimestamp(reviewDraftSavedAt)}</div>
                         </div>
                       </div>
-                      <div className="text-xs font-mono text-muted-foreground">{formatDraftTimestamp(reviewDraftSavedAt)}</div>
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <textarea
-                    value={reviewSummaryDraft}
-                    onChange={(event) => setReviewSummaryDraft(event.target.value)}
-                    placeholder={t('app.reviewSummaryPlaceholder')}
-                    className="min-h-24 w-full resize-none rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
-                  />
-                  <input
-                    type="text"
-                    value={reviewerSignoff}
-                    onChange={(event) => setReviewerSignoff(event.target.value)}
-                    placeholder={t('app.reviewerSignoffPlaceholder')}
-                    className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
-                  />
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <ChecklistToggle
-                    label={t('app.reviewChecklistModeConfirmed')}
-                    checked={reviewChecklist.modeConfirmed}
-                    onToggle={() => toggleReviewChecklist('modeConfirmed')}
-                  />
-                  <ChecklistToggle
-                    label={t('app.reviewChecklistValidationReviewed')}
-                    checked={reviewChecklist.validationReviewed}
-                    onToggle={() => toggleReviewChecklist('validationReviewed')}
-                  />
-                  <ChecklistToggle
-                    label={t('app.reviewChecklistDiffReviewed')}
-                    checked={reviewChecklist.diffReviewed}
-                    onToggle={() => toggleReviewChecklist('diffReviewed')}
-                  />
-                  <ChecklistToggle
-                    label={t('app.reviewChecklistEvidenceReady')}
-                    checked={reviewChecklist.evidenceReady}
-                    onToggle={() => toggleReviewChecklist('evidenceReady')}
-                  />
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => updateReviewStatus('draft')}
-                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
-                  >
-                    {t('app.returnToDraft')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateReviewStatus('in_review')}
-                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
-                  >
-                    {t('app.markInReview')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateReviewStatus('approved')}
-                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
-                  >
-                    {t('app.markApproved')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateReviewStatus('changes_requested')}
-                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
-                  >
-                    {t('app.requestChanges')}
-                  </button>
-                </div>
-                {decisionLog.length > 0 ? (
-                  <div className="space-y-2">
-                    {decisionLog.map((decision) => (
-                      <div key={decision.id}>
-                        <DecisionCard
-                          action={decision.action}
-                          summary={decision.summary}
-                          timestamp={decision.timestamp}
+                    )}
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label htmlFor="reviewer-name-input" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          {t('app.reviewerName')}
+                        </label>
+                        <input
+                          id="reviewer-name-input"
+                          type="text"
+                          value={reviewerName}
+                          onChange={(event) => setReviewerName(event.target.value)}
+                          placeholder={t('app.reviewerNamePlaceholder')}
+                          className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
                         />
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                    {t('app.reviewDecisionLogEmpty')}
-                  </div>
-                )}
-              </div>
-            </InsightBlock>
-
-            <InsightBlock
-              kicker={t('app.detailsPanel')}
-              title={t('app.reviewerNotes')}
-              summary={globalNotes.length + elementNotes.length > 0 ? `${globalNotes.length + elementNotes.length} ${t('app.notesCount')}` : t('app.reviewerNotesIdleShort')}
-              defaultOpen
-            >
-              <div className="space-y-3">
-                <select
-                  value={noteTarget}
-                  onChange={(event) => setNoteTarget(event.target.value)}
-                  className="w-full rounded-[1.1rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
-                >
-                  {noteTargets.map((target) => (
-                    <option key={target.value} value={target.value}>
-                      {target.label}
-                    </option>
-                  ))}
-                </select>
-                <textarea
-                  value={noteDraft}
-                  onChange={(event) => setNoteDraft(event.target.value)}
-                  placeholder={t('app.reviewerNotesPlaceholder')}
-                  className="min-h-28 w-full resize-none rounded-[1.2rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
-                />
-                <button
-                  type="button"
-                  onClick={addReviewNote}
-                  disabled={!noteDraft.trim()}
-                  className="w-full rounded-[1.1rem] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/92 disabled:cursor-not-allowed disabled:opacity-55"
-                >
-                  {t('app.addReviewerNote')}
-                </button>
-
-                {(globalNotes.length > 0 || elementNotes.length > 0) ? (
-                  <div className="space-y-2">
-                    {globalNotes.map((note) => (
-                      <div key={note.id}>
-                        <NoteCard
-                          label={t('app.noteTargetGlobal')}
-                          timestamp={note.createdAt}
-                          content={note.content}
+                      <div className="space-y-1">
+                        <label htmlFor="reviewer-notes-input" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          {t('app.reviewNotes')}
+                        </label>
+                        <textarea
+                          id="reviewer-notes-input"
+                          value={reviewerNotes}
+                          onChange={(event) => setReviewerNotes(event.target.value)}
+                          className="min-h-20 w-full resize-none rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
                         />
                       </div>
-                    ))}
-                    {elementNotes.map((note) => (
-                      <div key={note.id}>
-                        <NoteCard
-                          label={`${t(`app.noteTarget${capitalizeNoteType(note.elementType)}`)} · ${note.elementId}`}
-                          timestamp={note.createdAt}
-                          content={note.content}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                    {t('app.reviewerNotesIdle')}
-                  </div>
-                )}
-              </div>
-            </InsightBlock>
-
-            <InsightBlock
-              kicker={t('app.detailsPanel')}
-              title={t('app.diffSummary')}
-              summary={diffSummary ? summarizeDiffSummary(t, diffSummary) : t('app.diffSummaryUnavailable')}
-              defaultOpen
-            >
-              {diffSummary ? (
-                <div className="space-y-3">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <MiniMetric label={t('app.diffAdded')} value={String(diffSummary.added.length)} highlight={diffSummary.added.length > 0} />
-                    <MiniMetric label={t('app.diffRemoved')} value={String(diffSummary.removed.length)} highlight={diffSummary.removed.length > 0} />
-                    <MiniMetric label={t('app.diffChanged')} value={String(diffSummary.changed.length)} highlight={diffSummary.changed.length > 0} />
-                    <MiniMetric label={t('app.diffFieldsChanged')} value={String(diffSummary.stats.fieldsChanged)} highlight={diffSummary.stats.fieldsChanged > 0} />
-                  </div>
-                  <DiffList title={t('app.diffAdded')} items={diffSummary.added} emptyLabel={t('app.diffNone')} />
-                  <DiffList title={t('app.diffRemoved')} items={diffSummary.removed} emptyLabel={t('app.diffNone')} />
-                  <DiffList title={t('app.diffChanged')} items={diffSummary.changed} emptyLabel={t('app.diffNone')} />
-                </div>
-              ) : (
-                <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                  {t('app.diffSummaryUnavailable')}
-                </div>
-              )}
-            </InsightBlock>
-
-            <InsightBlock
-              kicker={t('app.detailsPanel')}
-              title={t('app.reviewerTests')}
-              summary={summarizeTestPanel(t, latestValidationRun, latestConsistencyRun, latestPathTestRun)}
-              accent={
-                latestValidationRun?.status === 'failed' || latestConsistencyRun?.status === 'failed' || latestPathTestRun?.status === 'failed'
-                  ? 'rose'
-                  : latestValidationRun || latestConsistencyRun || latestPathTestRun
-                    ? 'emerald'
-                    : 'default'
-              }
-              defaultOpen
-            >
-              <div className="space-y-3">
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={addValidationRun}
-                    disabled={!skillDocument}
-                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                      {t('app.reviewerTests')}
                     </div>
-                    <div className="mt-2 font-medium">{t('app.runValidation')}</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={addConsistencyRun}
-                    disabled={!skillDocument}
-                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                      {t('app.reviewerTests')}
-                    </div>
-                    <div className="mt-2 font-medium">{t('app.runConsistency')}</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={addPathTestRun}
-                    disabled={!skillDocument}
-                    className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                      {t('app.reviewerTests')}
-                    </div>
-                    <div className="mt-2 font-medium">{t('app.runPathWalk')}</div>
-                  </button>
-                </div>
-
-                {(latestValidationRun || latestConsistencyRun || latestPathTestRun) ? (
-                  <div className="space-y-2">
-                    {latestValidationRun && (
-                      <RunCard
-                        label={t('app.runValidation')}
-                        status={latestValidationRun.status}
-                        timestamp={latestValidationRun.finishedAt || latestValidationRun.startedAt}
-                        summary={`${latestValidationRun.errors.length} ${t('app.validationErrors')} · ${(latestValidationRun.warnings ?? []).length} ${t('app.validationWarnings')}`}
+                    <div className="space-y-2">
+                      <textarea
+                        value={reviewSummaryDraft}
+                        onChange={(event) => setReviewSummaryDraft(event.target.value)}
+                        placeholder={t('app.reviewSummaryPlaceholder')}
+                        className="min-h-24 w-full resize-none rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
                       />
-                    )}
-                    {latestConsistencyRun && (
-                      <RunCard
-                        label={t('app.runConsistency')}
-                        status={latestConsistencyRun.status}
-                        timestamp={latestConsistencyRun.finishedAt || latestConsistencyRun.startedAt}
-                        summary={`${latestConsistencyRun.issues.length} ${t('app.consistencyErrors')} · ${(latestConsistencyRun.warnings ?? []).length} ${t('app.consistencyWarnings')}`}
+                      <input
+                        type="text"
+                        value={reviewerSignoff}
+                        onChange={(event) => setReviewerSignoff(event.target.value)}
+                        placeholder={t('app.reviewerSignoffPlaceholder')}
+                        className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
                       />
-                    )}
-                    {latestPathTestRun && (
-                      <RunCard
-                        label={t('app.runPathWalk')}
-                        status={latestPathTestRun.status}
-                        timestamp={latestPathTestRun.finishedAt || latestPathTestRun.startedAt}
-                        summary={latestPathTestRun.message || ((latestPathTestRun.actualPath ?? []).join(' -> ') || t('app.pathWalkIdle'))}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                    {t('app.reviewerTestsIdle')}
-                  </div>
-                )}
-              </div>
-            </InsightBlock>
-
-            <InsightBlock
-              kicker={t('app.detailsPanel')}
-              title={t('dashboard.riskAssessment')}
-              summary={`${data.riskAssessment.level} · ${scanScore}`}
-              accent={data.riskAssessment.level === 'SAFE' || data.riskAssessment.level === 'LOW' ? 'emerald' : 'rose'}
-              defaultOpen
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert size={16} className={data.riskAssessment.level === 'SAFE' || data.riskAssessment.level === 'LOW' ? 'text-emerald-500' : 'text-destructive'} />
-                    <span className={`text-lg font-semibold tracking-tight ${modifiedPaths.has('riskAssessment.level') ? 'text-amber-600' : 'text-foreground'}`}>
-                      {data.riskAssessment.level}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{data.riskAssessment.details}</p>
-                </div>
-                <span className="rounded-full border border-border/55 bg-background/76 px-3 py-1 text-[11px] font-mono text-muted-foreground backdrop-blur-lg">
-                  {scanScore}
-                </span>
-              </div>
-            </InsightBlock>
-            <InsightBlock
-              kicker={t('app.bridgeMode')}
-              title={bridgeModeLabel}
-              summary={bridgeModeSummary}
-              accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : bridgeStatus?.mode === 'standalone' ? 'default' : 'rose'}
-            >
-              <div className="grid gap-3">
-                <MiniMetric label={t('app.bridgeMode')} value={bridgeModeLabel} />
-                <MiniMetric label={t('app.bridgeSource')} value={bridgeModeDetail} />
-                <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                  {bridgeReviewGuidance}
-                </div>
-              </div>
-            </InsightBlock>
-
-            <InsightBlock
-              kicker={t('app.validationEvidence')}
-              title={validationStatusLabel}
-              summary={validationEvidence?.provenance.schemaVersion || 'n/a'}
-              accent={validationHasErrors ? 'rose' : validationHasWarnings ? 'default' : 'emerald'}
-              defaultOpen
-            >
-              <div data-testid="validation-evidence-panel" className="space-y-3">
-                {validationEvidence ? (
-                  <>
-                    <div className="grid gap-2">
-                      <MiniMetric label={t('app.schemaVersion')} value={validationEvidence.provenance.schemaVersion} />
-                      <MiniMetric label={t('app.parserVersion')} value={validationEvidence.provenance.parserVersion} />
-                      <MiniMetric label={t('app.reviewMode')} value={reviewMode} />
-                      <MiniMetric label={t('app.source')} value={validationEvidence.provenance.source} />
                     </div>
-
-                    {validationEvidence.evidenceWarnings.length > 0 && (
-                      <div className="rounded-[1.25rem] border border-amber-500/25 bg-amber-500/8 p-3 text-sm leading-6 text-amber-900">
-                        {validationEvidence.evidenceWarnings.map((warning) => (
-                          <p key={warning}>{t(warning)}</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <ChecklistToggle
+                        label={t('app.reviewChecklistModeConfirmed')}
+                        checked={reviewChecklist.modeConfirmed}
+                        onToggle={() => toggleReviewChecklist('modeConfirmed')}
+                      />
+                      <ChecklistToggle
+                        label={t('app.reviewChecklistValidationReviewed')}
+                        checked={reviewChecklist.validationReviewed}
+                        onToggle={() => toggleReviewChecklist('validationReviewed')}
+                      />
+                      <ChecklistToggle
+                        label={t('app.reviewChecklistDiffReviewed')}
+                        checked={reviewChecklist.diffReviewed}
+                        onToggle={() => toggleReviewChecklist('diffReviewed')}
+                      />
+                      <ChecklistToggle
+                        label={t('app.reviewChecklistEvidenceReady')}
+                        checked={reviewChecklist.evidenceReady}
+                        onToggle={() => toggleReviewChecklist('evidenceReady')}
+                      />
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => updateReviewStatus('draft')}
+                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                      >
+                        {t('app.returnToDraft')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateReviewStatus('in_review')}
+                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                      >
+                        {t('app.markInReview')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateReviewStatus('approved')}
+                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                      >
+                        {t('app.markApproved')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateReviewStatus('changes_requested')}
+                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                      >
+                        {t('app.requestChanges')}
+                      </button>
+                    </div>
+                    {decisionLog.length > 0 ? (
+                      <div className="space-y-2">
+                        {decisionLog.map((decision) => (
+                          <div key={decision.id}>
+                            <DecisionCard
+                              action={decision.action}
+                              summary={decision.summary}
+                              timestamp={decision.timestamp}
+                            />
+                          </div>
                         ))}
                       </div>
-                    )}
-
-                    {validationEvidence.validationRun.errors.length > 0 && (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                          {t('app.validationIssues')}
-                        </div>
-                        <div className="mt-3 space-y-2">
-                          {validationEvidence.validationRun.errors.map((issue) => (
-                            <div key={`${issue.code}-${issue.path}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
-                              <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
-                              <div>{issue.path}</div>
-                            </div>
-                          ))}
-                        </div>
+                    ) : (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.reviewDecisionLogEmpty')}
                       </div>
                     )}
+                  </div>
+                </InsightBlock>
 
-                    {validationEvidence.consistencyRun.issues.length > 0 && (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                          {t('app.consistencyIssues')}
-                        </div>
-                        <div className="mt-3 space-y-2">
-                          {validationEvidence.consistencyRun.issues.map((issue, index) => (
-                            <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
-                              <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
-                              {issue.targetId && <div>{issue.targetId}</div>}
-                            </div>
-                          ))}
-                        </div>
+                <InsightBlock
+                  kicker={t('app.detailsPanel')}
+                  title={t('app.reviewerNotes')}
+                  summary={globalNotes.length + elementNotes.length > 0 ? `${globalNotes.length + elementNotes.length} ${t('app.notesCount')}` : t('app.reviewerNotesIdleShort')}
+                  defaultOpen
+                >
+                  <div className="space-y-3">
+                    <select
+                      value={noteTarget}
+                      onChange={(event) => setNoteTarget(event.target.value)}
+                      className="w-full rounded-[1.1rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                    >
+                      {noteTargets.map((target) => (
+                        <option key={target.value} value={target.value}>
+                          {target.label}
+                        </option>
+                      ))}
+                    </select>
+                    <textarea
+                      value={noteDraft}
+                      onChange={(event) => setNoteDraft(event.target.value)}
+                      placeholder={t('app.reviewerNotesPlaceholder')}
+                      className="min-h-28 w-full resize-none rounded-[1.2rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={addReviewNote}
+                      disabled={!noteDraft.trim()}
+                      className="w-full rounded-[1.1rem] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/92 disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      {t('app.addReviewerNote')}
+                    </button>
+
+                    {globalNotes.length > 0 || elementNotes.length > 0 ? (
+                      <div className="space-y-2">
+                        {globalNotes.map((note) => (
+                          <div key={note.id}>
+                            <NoteCard
+                              label={t('app.noteTargetGlobal')}
+                              timestamp={note.createdAt}
+                              content={note.content}
+                            />
+                          </div>
+                        ))}
+                        {elementNotes.map((note) => (
+                          <div key={note.id}>
+                            <NoteCard
+                              label={`${t(`app.noteTarget${capitalizeNoteType(note.elementType)}`)} · ${note.elementId}`}
+                              timestamp={note.createdAt}
+                              content={note.content}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.reviewerNotesIdle')}
                       </div>
                     )}
+                  </div>
+                </InsightBlock>
 
-                    {validationEvidence.validationRun.errors.length === 0
-                      && validationEvidence.consistencyRun.issues.length === 0
-                      && validationEvidence.evidenceWarnings.length === 0 && (
-                        <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-900">
+                <InsightBlock
+                  kicker={t('app.detailsPanel')}
+                  title={t('app.diffSummary')}
+                  summary={diffSummary ? summarizeDiffSummary(t, diffSummary) : t('app.diffSummaryUnavailable')}
+                  defaultOpen
+                >
+                  {diffSummary ? (
+                    <div className="space-y-3">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <MiniMetric label={t('app.diffAdded')} value={String(diffSummary.added.length)} highlight={diffSummary.added.length > 0} />
+                        <MiniMetric label={t('app.diffRemoved')} value={String(diffSummary.removed.length)} highlight={diffSummary.removed.length > 0} />
+                        <MiniMetric label={t('app.diffChanged')} value={String(diffSummary.changed.length)} highlight={diffSummary.changed.length > 0} />
+                        <MiniMetric label={t('app.diffFieldsChanged')} value={String(diffSummary.stats.fieldsChanged)} highlight={diffSummary.stats.fieldsChanged > 0} />
+                      </div>
+                      <DiffList title={t('app.diffAdded')} items={diffSummary.added} emptyLabel={t('app.diffNone')} />
+                      <DiffList title={t('app.diffRemoved')} items={diffSummary.removed} emptyLabel={t('app.diffNone')} />
+                      <DiffList title={t('app.diffChanged')} items={diffSummary.changed} emptyLabel={t('app.diffNone')} />
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      {t('app.diffSummaryUnavailable')}
+                    </div>
+                  )}
+                </InsightBlock>
+              </>
+            )}
+
+            {activeInsightTab === 'checks' && (
+              <>
+                <InsightBlock
+                  kicker={t('app.detailsPanel')}
+                  title={t('app.schemaValidation')}
+                  summary={validationResult
+                    ? validationErrors.length > 0
+                      ? `${t('app.validationInvalid')} · ${validationErrors.length} ${t('app.validationErrors')}`
+                      : validationWarnings.length > 0
+                        ? `${t('app.validationValid')} · ${validationWarnings.length} ${t('app.validationWarnings')}`
+                        : t('app.validationValid')
+                    : t('app.validationUnavailable')}
+                  accent={validationErrors.length > 0 ? 'rose' : validationWarnings.length > 0 ? 'default' : 'emerald'}
+                  defaultOpen
+                >
+                  {validationResult ? (
+                    <div className="space-y-3">
+                      <div className="grid gap-2">
+                        <MiniMetric label={t('app.validationStatus')} value={validationResult.valid ? t('app.validationValid') : t('app.validationInvalid')} />
+                        <MiniMetric label={t('app.validationSchema')} value={validationResult.schemaLabel} />
+                        <MiniMetric label={t('app.validationErrors')} value={String(validationErrors.length)} highlight={validationErrors.length > 0} />
+                        <MiniMetric label={t('app.validationWarnings')} value={String(validationWarnings.length)} highlight={validationWarnings.length > 0} />
+                      </div>
+                      {validationIssues.length > 0 ? (
+                        <div className="space-y-2">
+                          {validationIssues.slice(0, 5).map((issue) => {
+                            const focusPath = resolveValidationIssueFieldPath(issue);
+                            return (
+                              <div key={`${issue.code}-${issue.path}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="font-medium text-foreground">{issue.code}</span>
+                                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                    issue.severity === 'error'
+                                      ? 'bg-destructive/12 text-destructive'
+                                      : 'bg-amber-500/12 text-amber-700'
+                                  }`}>
+                                    {issue.severity}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.path}</p>
+                                <p className="mt-2">{issue.message}</p>
+                                {focusPath && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openSkillDocumentEditor(focusPath)}
+                                    className="mt-3 inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
+                                  >
+                                    {t('app.openIssueInEditor')}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
                           {t('app.validationNoIssues')}
                         </div>
                       )}
-                  </>
-                ) : (
-                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                    {t('app.validationUnavailable')}
-                  </div>
-                )}
-              </div>
-            </InsightBlock>
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      {t('app.validationUnavailable')}
+                    </div>
+                  )}
+                </InsightBlock>
 
-            <InsightBlock
-              kicker={t('app.projectSummary')}
-              title={t('app.securityScan')}
-              summary={firstFinding ? firstFinding.ruleName : t('securityMatrix.auditLogSummary')}
-            >
-              {firstFinding || operatorReminders.length > 0 ? (
-                <div className="space-y-3">
-                  {firstFinding && (
-                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-foreground">{firstFinding.ruleName}</p>
-                        <span className="rounded-full bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive">
-                          {firstFinding.adjustedSeverity}
+                <InsightBlock
+                  kicker={t('app.detailsPanel')}
+                  title={t('app.consistencyChecks')}
+                  summary={consistencyResult
+                    ? consistencyErrors.length > 0
+                      ? `${t('app.consistencyInvalid')} · ${consistencyErrors.length} ${t('app.consistencyErrors')}`
+                      : consistencyWarnings.length > 0
+                        ? `${t('app.consistencyValid')} · ${consistencyWarnings.length} ${t('app.consistencyWarnings')}`
+                        : t('app.consistencyValid')
+                    : t('app.consistencyUnavailable')}
+                  accent={consistencyErrors.length > 0 ? 'rose' : consistencyWarnings.length > 0 ? 'default' : 'emerald'}
+                  defaultOpen
+                >
+                  {consistencyResult ? (
+                    <div className="space-y-3">
+                      <div className="grid gap-2">
+                        <MiniMetric label={t('app.consistencyStatus')} value={consistencyResult.valid ? t('app.consistencyValid') : t('app.consistencyInvalid')} />
+                        <MiniMetric label={t('app.consistencyErrors')} value={String(consistencyErrors.length)} highlight={consistencyErrors.length > 0} />
+                        <MiniMetric label={t('app.consistencyWarnings')} value={String(consistencyWarnings.length)} highlight={consistencyWarnings.length > 0} />
+                      </div>
+                      {consistencyIssues.length > 0 ? (
+                        <div className="space-y-2">
+                          {consistencyIssues.slice(0, 5).map((issue, index) => {
+                            const focusPath = skillDocument ? resolveConsistencyIssueFieldPath(skillDocument, issue) : null;
+                            return (
+                              <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="font-medium text-foreground">{issue.type}</span>
+                                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                    issue.severity === 'error'
+                                      ? 'bg-destructive/12 text-destructive'
+                                      : 'bg-amber-500/12 text-amber-700'
+                                  }`}>
+                                    {issue.severity}
+                                  </span>
+                                </div>
+                                {issue.targetId && (
+                                  <p className="mt-2 text-xs font-mono text-muted-foreground">{issue.targetId}</p>
+                                )}
+                                <p className="mt-2">{issue.message}</p>
+                                {focusPath && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openSkillDocumentEditor(focusPath)}
+                                    className="mt-3 inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
+                                  >
+                                    {t('app.openIssueInEditor')}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
+                          {t('app.consistencyNoIssues')}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      {t('app.consistencyUnavailable')}
+                    </div>
+                  )}
+                </InsightBlock>
+
+                <InsightBlock
+                  kicker={t('app.detailsPanel')}
+                  title={t('app.reviewerTests')}
+                  summary={summarizeTestPanel(t, latestValidationRun, latestConsistencyRun, latestPathTestRun)}
+                  accent={
+                    latestValidationRun?.status === 'failed' || latestConsistencyRun?.status === 'failed' || latestPathTestRun?.status === 'failed'
+                      ? 'rose'
+                      : latestValidationRun || latestConsistencyRun || latestPathTestRun
+                        ? 'emerald'
+                        : 'default'
+                  }
+                  defaultOpen
+                >
+                  <div className="space-y-3">
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <button
+                        type="button"
+                        onClick={addValidationRun}
+                        disabled={!skillDocument}
+                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                      >
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          {t('app.reviewerTests')}
+                        </div>
+                        <div className="mt-2 font-medium">{t('app.runValidation')}</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={addConsistencyRun}
+                        disabled={!skillDocument}
+                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                      >
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          {t('app.reviewerTests')}
+                        </div>
+                        <div className="mt-2 font-medium">{t('app.runConsistency')}</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={addPathTestRun}
+                        disabled={!skillDocument}
+                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                      >
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          {t('app.reviewerTests')}
+                        </div>
+                        <div className="mt-2 font-medium">{t('app.runPathWalk')}</div>
+                      </button>
+                    </div>
+
+                    {latestValidationRun || latestConsistencyRun || latestPathTestRun ? (
+                      <div className="space-y-2">
+                        {latestValidationRun && (
+                          <RunCard
+                            label={t('app.runValidation')}
+                            status={latestValidationRun.status}
+                            timestamp={latestValidationRun.finishedAt || latestValidationRun.startedAt}
+                            summary={`${latestValidationRun.errors.length} ${t('app.validationErrors')} · ${(latestValidationRun.warnings ?? []).length} ${t('app.validationWarnings')}`}
+                          />
+                        )}
+                        {latestConsistencyRun && (
+                          <RunCard
+                            label={t('app.runConsistency')}
+                            status={latestConsistencyRun.status}
+                            timestamp={latestConsistencyRun.finishedAt || latestConsistencyRun.startedAt}
+                            summary={`${latestConsistencyRun.issues.length} ${t('app.consistencyErrors')} · ${(latestConsistencyRun.warnings ?? []).length} ${t('app.consistencyWarnings')}`}
+                          />
+                        )}
+                        {latestPathTestRun && (
+                          <RunCard
+                            label={t('app.runPathWalk')}
+                            status={latestPathTestRun.status}
+                            timestamp={latestPathTestRun.finishedAt || latestPathTestRun.startedAt}
+                            summary={latestPathTestRun.message || ((latestPathTestRun.actualPath ?? []).join(' -> ') || t('app.pathWalkIdle'))}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.reviewerTestsIdle')}
+                      </div>
+                    )}
+                  </div>
+                </InsightBlock>
+
+                <InsightBlock
+                  kicker={t('app.validationEvidence')}
+                  title={validationStatusLabel}
+                  summary={validationEvidence?.provenance.schemaVersion || 'n/a'}
+                  accent={validationHasErrors ? 'rose' : validationHasWarnings ? 'default' : 'emerald'}
+                  defaultOpen
+                >
+                  <div data-testid="validation-evidence-panel" className="space-y-3">
+                    {validationEvidence ? (
+                      <>
+                        <div className="grid gap-2">
+                          <MiniMetric label={t('app.schemaVersion')} value={validationEvidence.provenance.schemaVersion} />
+                          <MiniMetric label={t('app.parserVersion')} value={validationEvidence.provenance.parserVersion} />
+                          <MiniMetric label={t('app.reviewMode')} value={reviewMode} />
+                          <MiniMetric label={t('app.source')} value={validationEvidence.provenance.source} />
+                        </div>
+
+                        {validationEvidence.evidenceWarnings.length > 0 && (
+                          <div className="rounded-[1.25rem] border border-amber-500/25 bg-amber-500/8 p-3 text-sm leading-6 text-amber-900">
+                            {validationEvidence.evidenceWarnings.map((warning) => (
+                              <p key={warning}>{t(warning)}</p>
+                            ))}
+                          </div>
+                        )}
+
+                        {validationEvidence.validationRun.errors.length > 0 && (
+                          <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                              {t('app.validationIssues')}
+                            </div>
+                            <div className="mt-3 space-y-2">
+                              {validationEvidence.validationRun.errors.map((issue) => (
+                                <div key={`${issue.code}-${issue.path}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                                  <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
+                                  <div>{issue.path}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {validationEvidence.consistencyRun.issues.length > 0 && (
+                          <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                              {t('app.consistencyIssues')}
+                            </div>
+                            <div className="mt-3 space-y-2">
+                              {validationEvidence.consistencyRun.issues.map((issue, index) => (
+                                <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                                  <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
+                                  {issue.targetId && <div>{issue.targetId}</div>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {validationEvidence.validationRun.errors.length === 0
+                          && validationEvidence.consistencyRun.issues.length === 0
+                          && validationEvidence.evidenceWarnings.length === 0 && (
+                            <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-900">
+                              {t('app.validationNoIssues')}
+                            </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.validationUnavailable')}
+                      </div>
+                    )}
+                  </div>
+                </InsightBlock>
+              </>
+            )}
+
+            {activeInsightTab === 'context' && (
+              <>
+                <InsightBlock
+                  kicker={t('app.detailsPanel')}
+                  title={t('dashboard.riskAssessment')}
+                  summary={`${data.riskAssessment.level} · ${scanScore}`}
+                  accent={data.riskAssessment.level === 'SAFE' || data.riskAssessment.level === 'LOW' ? 'emerald' : 'rose'}
+                  defaultOpen
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert size={16} className={data.riskAssessment.level === 'SAFE' || data.riskAssessment.level === 'LOW' ? 'text-emerald-500' : 'text-destructive'} />
+                        <span className={`text-lg font-semibold tracking-tight ${modifiedPaths.has('riskAssessment.level') ? 'text-amber-600' : 'text-foreground'}`}>
+                          {data.riskAssessment.level}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{firstFinding.description}</p>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{data.riskAssessment.details}</p>
                     </div>
-                  )}
-                  <div className="grid gap-2">
-                    {firstFinding && (
-                      <MiniMetric label={t('app.firstFinding')} value={`${firstFinding.ruleId} · L${firstFinding.lineNumber}`} />
-                    )}
-                    <MiniMetric label={t('app.scanScore')} value={String(scanScore)} />
+                    <span className="rounded-full border border-border/55 bg-background/76 px-3 py-1 text-[11px] font-mono text-muted-foreground backdrop-blur-lg">
+                      {scanScore}
+                    </span>
                   </div>
-                  {operatorReminders.length > 0 && (
-                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                        {t('app.operatorReminders')}
-                      </div>
-                      <div className="mt-3 space-y-3">
-                        {operatorReminders.map((reminder: any) => (
-                          <div key={reminder.id} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="text-sm font-medium text-foreground">{reminder.label}</div>
-                              <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                                reminder.level === 'high'
-                                  ? 'bg-destructive/12 text-destructive'
-                                  : reminder.level === 'medium'
-                                    ? 'bg-amber-500/12 text-amber-700'
-                                    : 'bg-background/70 text-muted-foreground'
-                              }`}>
-                                {reminder.level}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-xs leading-6 text-muted-foreground">{reminder.detail}</p>
-                            <p className="mt-2 text-xs font-medium leading-6 text-foreground">{reminder.action}</p>
+                </InsightBlock>
+
+                <InsightBlock
+                  kicker={t('app.bridgeMode')}
+                  title={bridgeModeLabel}
+                  summary={bridgeModeSummary}
+                  accent={bridgeStatus?.mode === 'skill-0' ? 'emerald' : bridgeStatus?.mode === 'standalone' ? 'default' : 'rose'}
+                >
+                  <div className="grid gap-3">
+                    <MiniMetric label={t('app.bridgeMode')} value={bridgeModeLabel} />
+                    <MiniMetric label={t('app.bridgeSource')} value={bridgeModeDetail} />
+                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      {bridgeReviewGuidance}
+                    </div>
+                  </div>
+                </InsightBlock>
+
+                <InsightBlock
+                  kicker={t('app.projectSummary')}
+                  title={t('app.securityScan')}
+                  summary={firstFinding ? firstFinding.ruleName : t('securityMatrix.auditLogSummary')}
+                >
+                  {firstFinding || operatorReminders.length > 0 ? (
+                    <div className="space-y-3">
+                      {firstFinding && (
+                        <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-medium text-foreground">{firstFinding.ruleName}</p>
+                            <span className="rounded-full bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive">
+                              {firstFinding.adjustedSeverity}
+                            </span>
                           </div>
-                        ))}
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{firstFinding.description}</p>
+                        </div>
+                      )}
+                      <div className="grid gap-2">
+                        {firstFinding && (
+                          <MiniMetric label={t('app.firstFinding')} value={`${firstFinding.ruleId} · L${firstFinding.lineNumber}`} />
+                        )}
+                        <MiniMetric label={t('app.scanScore')} value={String(scanScore)} />
                       </div>
+                      {operatorReminders.length > 0 && (
+                        <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                            {t('app.operatorReminders')}
+                          </div>
+                          <div className="mt-3 space-y-3">
+                            {operatorReminders.map((reminder: any) => (
+                              <div key={reminder.id} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="text-sm font-medium text-foreground">{reminder.label}</div>
+                                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                                    reminder.level === 'high'
+                                      ? 'bg-destructive/12 text-destructive'
+                                      : reminder.level === 'medium'
+                                        ? 'bg-amber-500/12 text-amber-700'
+                                        : 'bg-background/70 text-muted-foreground'
+                                  }`}>
+                                    {reminder.level}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-xs leading-6 text-muted-foreground">{reminder.detail}</p>
+                                <p className="mt-2 text-xs font-medium leading-6 text-foreground">{reminder.action}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      {t('securityMatrix.auditLogSummaryText')}
                     </div>
                   )}
-                </div>
-              ) : (
-                <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                  {t('securityMatrix.auditLogSummaryText')}
-                </div>
-              )}
-            </InsightBlock>
+                </InsightBlock>
 
-            <InsightBlock
-              kicker={t('app.projectSummary')}
-              title={t('dashboard.threeClassification')}
-              summary={`${data.threeClassification.category} · ${data.threeClassification.granularity}`}
-            >
-              <div className="grid gap-3">
-                <MiniMetric label={t('dashboard.category')} value={data.threeClassification.category} highlight={modifiedPaths.has('threeClassification.category')} />
-                <MiniMetric label={t('dashboard.granularity')} value={data.threeClassification.granularity} />
-                <MiniMetric label={t('vector.operability')} value={`${data.threeClassification.operability}%`} />
-                <MiniMetric label={t('app.modifiedCount')} value={String(modifiedPaths.size)} highlight={modifiedPaths.size > 0} />
-              </div>
-            </InsightBlock>
-
-            <InsightBlock
-              kicker={t('app.collaborationContext')}
-              title={t('app.sourceDefinition')}
-              summary={parserManifest
-                ? `${parserSupportingFiles.length} ${t('app.supportingFiles')} · ${parserManifest.unresolved_references_count || 0} ${t('app.unresolvedReferences')}`
-                : supportFiles.length > 0
-                  ? `${supportFiles.length} ${t('app.contextFiles')}`
-                  : t('app.noContextFiles')}
-            >
-              <div className="space-y-2">
-                {parserManifest && (
-                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                    {t('app.analysisLevel')}: <span className="font-medium text-foreground">{parserManifest.analysis_level}</span>
-                    {' · '}
-                    {t('app.resolved')}: <span className="font-medium text-foreground">{parserSupportingFiles.filter((file: any) => file.resolved).length}</span>
-                    {' · '}
-                    {t('app.unresolved')}: <span className="font-medium text-foreground">{parserManifest.unresolved_references_count || 0}</span>
-                  </div>
-                )}
-                {supportFiles.length > 0 ? supportFiles.map((file) => (
-                  <button
-                    key={`${file.path}-${file.size}`}
-                    type="button"
-                    onClick={() => onSelectContextPath(file.path)}
-                    className={`w-full rounded-[1.25rem] border px-4 py-3 text-left backdrop-blur-xl transition ${
-                      selectedContextPath === file.path ? 'border-primary/35 bg-primary/8' : 'border-border/55 bg-background/72'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-medium text-foreground">{file.name}</span>
-                      <span className="text-[11px] text-muted-foreground">{formatBytes(file.size)}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{file.type}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{file.path}</p>
-                  </button>
-                )) : (
-                  <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
-                    {t('app.noContextFiles')}
-                  </div>
-                )}
-              </div>
-            </InsightBlock>
-
-            <InsightBlock kicker={t('app.sourceLinks')} title={t('app.projectSummary')} summary="GitHub">
-              <div className="space-y-2">
-                <a
-                  href={guiRepoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/30"
+                <InsightBlock
+                  kicker={t('app.projectSummary')}
+                  title={t('dashboard.threeClassification')}
+                  summary={`${data.threeClassification.category} · ${data.threeClassification.granularity}`}
                 >
-                  <span>{t('app.guiRepo')}</span>
-                  <Github size={15} className="text-muted-foreground" />
-                </a>
-                <a
-                  href={engineRepoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/30"
+                  <div className="grid gap-3">
+                    <MiniMetric label={t('dashboard.category')} value={data.threeClassification.category} highlight={modifiedPaths.has('threeClassification.category')} />
+                    <MiniMetric label={t('dashboard.granularity')} value={data.threeClassification.granularity} />
+                    <MiniMetric label={t('vector.operability')} value={`${data.threeClassification.operability}%`} />
+                    <MiniMetric label={t('app.modifiedCount')} value={String(modifiedPaths.size)} highlight={modifiedPaths.size > 0} />
+                  </div>
+                </InsightBlock>
+
+                <InsightBlock
+                  kicker={t('app.collaborationContext')}
+                  title={t('app.sourceDefinition')}
+                  summary={parserManifest
+                    ? `${parserSupportingFiles.length} ${t('app.supportingFiles')} · ${parserManifest.unresolved_references_count || 0} ${t('app.unresolvedReferences')}`
+                    : supportFiles.length > 0
+                      ? `${supportFiles.length} ${t('app.contextFiles')}`
+                      : t('app.noContextFiles')}
                 >
-                  <span>{t('app.engineRepo')}</span>
-                  <FileCode2 size={15} className="text-muted-foreground" />
-                </a>
-              </div>
-            </InsightBlock>
+                  <div className="space-y-2">
+                    {parserManifest && (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.analysisLevel')}: <span className="font-medium text-foreground">{parserManifest.analysis_level}</span>
+                        {' · '}
+                        {t('app.resolved')}: <span className="font-medium text-foreground">{parserSupportingFiles.filter((file: any) => file.resolved).length}</span>
+                        {' · '}
+                        {t('app.unresolved')}: <span className="font-medium text-foreground">{parserManifest.unresolved_references_count || 0}</span>
+                      </div>
+                    )}
+                    {supportFiles.length > 0 ? supportFiles.map((file) => (
+                      <button
+                        key={`${file.path}-${file.size}`}
+                        type="button"
+                        onClick={() => onSelectContextPath(file.path)}
+                        className={`w-full rounded-[1.25rem] border px-4 py-3 text-left backdrop-blur-xl transition ${
+                          selectedContextPath === file.path ? 'border-primary/35 bg-primary/8' : 'border-border/55 bg-background/72'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium text-foreground">{file.name}</span>
+                          <span className="text-[11px] text-muted-foreground">{formatBytes(file.size)}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">{file.type}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">{file.path}</p>
+                      </button>
+                    )) : (
+                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                        {t('app.noContextFiles')}
+                      </div>
+                    )}
+                  </div>
+                </InsightBlock>
+
+                <InsightBlock kicker={t('app.sourceLinks')} title={t('app.projectSummary')} summary="GitHub">
+                  <div className="space-y-2">
+                    <a
+                      href={guiRepoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/30"
+                    >
+                      <span>{t('app.guiRepo')}</span>
+                      <Github size={15} className="text-muted-foreground" />
+                    </a>
+                    <a
+                      href={engineRepoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/30"
+                    >
+                      <span>{t('app.engineRepo')}</span>
+                      <FileCode2 size={15} className="text-muted-foreground" />
+                    </a>
+                  </div>
+                </InsightBlock>
+              </>
+            )}
           </div>
         </aside>
       </motion.div>
@@ -2464,13 +2459,13 @@ function buildDemoPresetDecisionLog(
           ? 'requested_changes'
           : 'review_status_updated',
       id: `demo-decision-${demoPreset.id}-status`,
-      summary: `Demo preset loaded with review status ${demoPreset.reviewStatus}.`,
+      summary: `Sample workspace loaded with review status ${demoPreset.reviewStatus}.`,
       timestamp,
     },
     {
       action: 'review_status_updated',
       id: `demo-decision-${demoPreset.id}-checklist`,
-      summary: `Demo preset seeded ${Object.values(demoPreset.reviewChecklist).filter(Boolean).length}/4 sign-off gates.`,
+      summary: `Sample workspace seeded ${Object.values(demoPreset.reviewChecklist).filter(Boolean).length}/4 sign-off gates.`,
       timestamp,
     },
   ];
@@ -2479,7 +2474,7 @@ function buildDemoPresetDecisionLog(
     decisions.unshift({
       action: 'validated',
       id: `demo-decision-${demoPreset.id}-validation`,
-      summary: `Demo preset seeded validation run ${validationRuns[0].status}.`,
+      summary: `Sample workspace seeded validation run ${validationRuns[0].status}.`,
       timestamp,
     });
   }
@@ -2487,7 +2482,7 @@ function buildDemoPresetDecisionLog(
     decisions.unshift({
       action: 'tested',
       id: `demo-decision-${demoPreset.id}-consistency`,
-      summary: `Demo preset seeded consistency run ${consistencyRuns[0].status}.`,
+      summary: `Sample workspace seeded consistency run ${consistencyRuns[0].status}.`,
       timestamp,
     });
   }
@@ -2495,7 +2490,7 @@ function buildDemoPresetDecisionLog(
     decisions.unshift({
       action: 'tested',
       id: `demo-decision-${demoPreset.id}-path`,
-      summary: `Demo preset seeded path walk ${pathTestRuns[0].status}.`,
+      summary: `Sample workspace seeded path walk ${pathTestRuns[0].status}.`,
       timestamp,
     });
   }

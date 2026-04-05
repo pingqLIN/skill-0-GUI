@@ -75,6 +75,10 @@ function createProps() {
   };
 }
 
+async function openInsightTab(name: 'review' | 'checks' | 'context') {
+  fireEvent.click(await screen.findByRole('button', { name: new RegExp(`\\b${name}\\b`, 'i') }));
+}
+
 describe('ReviewWorkspace', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -97,6 +101,7 @@ describe('ReviewWorkspace', () => {
   it('renders schema validation warnings for the current SkillDocument projection', async () => {
     render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
+    await openInsightTab('checks');
     expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
     expect(screen.getByText('app.validationValid')).toBeInTheDocument();
     expect(screen.getByText('SCHEMA_ORIGINAL_DEFINITION_RECOMMENDED')).toBeInTheDocument();
@@ -119,6 +124,7 @@ describe('ReviewWorkspace', () => {
 
     render(<ReviewWorkspace data={inconsistentData} {...createProps()} />);
 
+    await openInsightTab('checks');
     expect(await screen.findByText('app.consistencyChecks')).toBeInTheDocument();
     expect(screen.getByText('app.consistencyInvalid')).toBeInTheDocument();
     expect(screen.getByText('missing_reference')).toBeInTheDocument();
@@ -136,6 +142,7 @@ describe('ReviewWorkspace', () => {
 
     render(<ReviewWorkspace data={malformedData} {...createProps()} />);
 
+    await openInsightTab('checks');
     expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
     expect(screen.getByText('app.validationInvalid')).toBeInTheDocument();
     expect(screen.getByText('SCHEMA_PATH_ID')).toBeInTheDocument();
@@ -153,6 +160,7 @@ describe('ReviewWorkspace', () => {
 
     render(<ReviewWorkspace data={malformedData} {...createProps()} />);
 
+    await openInsightTab('checks');
     fireEvent.click(await screen.findByText('app.openIssueInEditor'));
 
     expect(screen.getByTestId('side-editor-config')).toHaveTextContent('skillDocument:execution_paths[0].id');
@@ -175,6 +183,7 @@ describe('ReviewWorkspace', () => {
 
     render(<ReviewWorkspace data={inconsistentData} {...createProps()} />);
 
+    await openInsightTab('checks');
     const buttons = await screen.findAllByText('app.openIssueInEditor');
     fireEvent.click(buttons[buttons.length - 1]);
 
@@ -193,6 +202,7 @@ describe('ReviewWorkspace', () => {
   it('records a reviewer-facing validation run from the test panel', async () => {
     render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
+    await openInsightTab('checks');
     fireEvent.click(await screen.findByText('app.runValidation'));
 
     expect(screen.getByText('0 app.validationErrors · 1 app.validationWarnings')).toBeInTheDocument();
@@ -284,7 +294,9 @@ describe('ReviewWorkspace', () => {
     render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
     expect(await screen.findByText('Persisted note')).toBeInTheDocument();
+    await openInsightTab('checks');
     expect(screen.getByText('0 app.validationErrors · 1 app.validationWarnings')).toBeInTheDocument();
+    await openInsightTab('review');
     expect(screen.getAllByText('app.reviewStatusApproved').length).toBeGreaterThan(0);
     expect(screen.getByText('Review status changed to approved.')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Final review summary')).toBeInTheDocument();
@@ -342,8 +354,8 @@ describe('ReviewWorkspace', () => {
     expect(screen.getByText('Preset note for the bundle review demo.')).toBeInTheDocument();
     expect(screen.getAllByText('app.reviewStatusChangesRequested').length).toBeGreaterThan(0);
     expect(within(demoPreset).getByText('3/4')).toBeInTheDocument();
-    expect(screen.getByText('Demo preset loaded with review status changes_requested.')).toBeInTheDocument();
-    expect(screen.getByText(/Demo preset seeded validation run/)).toBeInTheDocument();
+    expect(screen.getByText('Sample workspace loaded with review status changes_requested.')).toBeInTheDocument();
+    expect(screen.getByText(/Sample workspace seeded validation run/)).toBeInTheDocument();
   });
 
   it('does not override a persisted reviewer draft with a demo preset', async () => {
@@ -418,7 +430,7 @@ describe('ReviewWorkspace', () => {
 
     expect(readinessBanner).toHaveTextContent('app.reviewEvidenceStatus');
     expect(readinessBanner).toHaveTextContent('app.reviewEvidenceStandalone');
-    expect(readinessBanner).toHaveTextContent('app.bridgeGuidanceStandalone');
+    expect(readinessBanner).toHaveTextContent('app.bridgeHelpStandalone');
     expect(truthBanner).toHaveTextContent('app.reviewTruthPanel');
     expect(truthBanner).toHaveTextContent('app.equivalenceStatus: app.equivalenceUnverified');
     expect(screen.getAllByText('app.bridgeModeBundled')).not.toHaveLength(0);
@@ -435,6 +447,7 @@ describe('ReviewWorkspace', () => {
       />,
     );
 
+    await openInsightTab('checks');
     const panel = await screen.findByTestId('validation-evidence-panel');
     expect(panel).toHaveTextContent('app.validationStandaloneWarning');
     expect(panel).toHaveTextContent('app.validationMissingSchemaVersion');
@@ -461,8 +474,8 @@ describe('ReviewWorkspace', () => {
     );
 
     fireEvent.change(screen.getByLabelText('app.reviewerName'), { target: { value: 'Miles' } });
-    fireEvent.change(screen.getByLabelText('app.reviewDecision'), { target: { value: 'approved' } });
     fireEvent.change(screen.getByLabelText('app.reviewNotes'), { target: { value: 'Ready for merge after canonical verification.' } });
+    fireEvent.click(screen.getByText('app.markApproved'));
 
     const reviewDecisionPanel = screen.getByTestId('review-decision-panel');
     expect(reviewDecisionPanel).toHaveTextContent('app.reviewStatusApproved');
@@ -581,7 +594,9 @@ describe('ReviewWorkspace', () => {
     fireEvent.click(screen.getByText('app.reviewChecklistValidationReviewed'));
     fireEvent.click(screen.getByText('app.reviewChecklistDiffReviewed'));
     fireEvent.click(screen.getByText('app.reviewChecklistEvidenceReady'));
+    await openInsightTab('checks');
     fireEvent.click(screen.getByText('app.runValidation'));
+    await openInsightTab('review');
     fireEvent.click(screen.getByText('app.markApproved'));
     fireEvent.click(screen.getByText('app.actionsTray'));
     fireEvent.click(screen.getByText('app.exportReviewReport'));

@@ -1,0 +1,143 @@
+Refine the uploaded Skill-0 Review Studio concept into a more faithful, production-minded redesign.
+
+Use the uploaded references as follows:
+- keep the editorial workbench visual language from the design strategy reference
+- keep the strongest layout cues from the homepage intake and review workspace references
+- ignore the weaker top-nav-only variation unless it improves the shell without weakening the reviewer cockpit structure
+
+This is not a marketing site and not a BI dashboard. It is a desktop-first reviewer workbench for inspecting Skill-0 parser output before approval, export, or external sharing.
+
+Core workflow:
+intake -> analysis -> review -> export
+
+Primary users:
+- reviewers
+- operators
+
+The interface should feel:
+- reviewer-first
+- honest
+- operational
+- rigorous
+- high-density
+- editorial
+
+Preserve this visual direction:
+- warm paper-like light surfaces
+- dark graphite or slate structure
+- strong editorial serif for major headings
+- efficient sans-serif for UI
+- small radii, crisp edges
+- tonal separation instead of heavy borders
+- asymmetric layout
+- persistent left rail, center work surface, right reviewer rail
+
+Do not regress into:
+- startup landing page
+- generic card grid
+- KPI dashboard
+- collaborative SaaS product
+- glassmorphism-heavy UI
+
+Non-negotiable product coverage:
+- direct skill URL input
+- paste area for SKILL text or SkillDocument JSON
+- file and folder upload
+- pending file preview
+- supporting files preview
+- parser mode visibility: canonical / standalone / unknown
+- sample scenarios:
+  - Mode overview
+  - Bundle intake review
+  - Publish approval gate
+- workspace modes:
+  - pipeline
+  - vector
+  - matrix
+- right rail tabs:
+  - review
+  - checks
+  - context
+- reviewer notes
+- review status
+- review summary
+- reviewer signoff
+- decision log
+- sign-off checklist:
+  - mode confirmed
+  - validation reviewed
+  - diff reviewed
+  - evidence ready
+- exports:
+  - review report
+  - review packet
+  - SkillDocument JSON
+  - .skill.md
+
+Key truth signals must remain visible and authoritative:
+- parser mode
+- evidence status
+- validation state
+- review decision
+- export readiness
+
+Generate 5 connected screens:
+
+1. Entry desk
+- intake is the primary surface
+- sample scenarios, docs, and outputs are secondary but still visible
+- parser mode and bridge status should feel authoritative
+
+2. Review cockpit overview
+- persistent left rail
+- large center analytical surface
+- persistent right reviewer rail
+- sticky truth bar for parser mode, evidence status, validation state, review decision, export readiness
+
+3. Pipeline analysis screen
+- decomposition board
+- derived workflow or flowchart
+- phase navigation
+- phase details
+- parser-native entities such as actions, rules, directives, execution paths
+
+4. Checks and context screen
+- schema validation
+- consistency checks
+- warnings and errors
+- path walk or test history
+- diff summary
+- supporting files
+- command references
+- analysis findings
+- explicit grouping for blocked, attention, and clean states
+
+5. Sign-off and export screen
+- reviewer summary
+- reviewer signoff
+- checklist completion
+- decision log
+- export actions
+- output preview or release handoff framing
+
+Content requirements:
+- use real labels from a parser review product, not generic analytics copy
+- show realistic supporting files such as docs/policy.md and scripts/run.py
+- use real review statuses:
+  - draft
+  - in review
+  - changes requested
+  - approved
+- make Bundle intake review feel evidence-heavy
+- make Publish approval gate feel release-ready
+
+Hard constraints:
+- do not invent collaboration
+- do not invent chat assistants
+- do not invent cloud sync workflows
+- do not invent project management features
+- do not imply standalone mode is canonical proof
+- do not hide key truth signals behind modals or overlays
+
+Output goal:
+Create a more faithful version of the uploaded editorial concept that fully reflects the actual Skill-0 Review Studio product structure, information density, and reviewer workflow.
