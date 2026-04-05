@@ -190,3 +190,27 @@ Avoid a full rewrite unless at least one of these becomes true:
 - the restored source tree can no longer evolve safely
 - M2 and M3 repeatedly stall on structural coupling instead of feature work
 - the current interaction model proves incompatible with reviewer workflows in real usage
+
+## 13.13 Stitch Donor Strategy
+
+The current rebuild should treat the Stitch exploration as a style and layout donor, not as the product source of truth.
+
+Keep:
+
+- editorial palette and type direction
+- intake desk framing
+- checks and sign-off grouping patterns
+- higher-density reviewer surfaces
+
+Do not inherit blindly:
+
+- generic analytics KPI cards
+- duplicated navigation systems
+- invented enterprise prose
+- any content that drifts away from the real `intake -> analysis -> review -> export` contract
+
+Definition of done for the donor strategy:
+
+- the rebuilt UI feels materially sharper than the current baseline
+- parser mode, evidence, checks, sign-off, and export remain product-authentic
+- style borrowing never overrides workflow fidelity

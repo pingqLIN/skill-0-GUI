@@ -6,6 +6,7 @@ Related chapters:
 - [02-runtime-and-system-architecture.md](./02-runtime-and-system-architecture.md)
 - [04-bridge-parser-and-analysis.md](./04-bridge-parser-and-analysis.md)
 - [08-development-status-risks-and-roadmap.md](./08-development-status-risks-and-roadmap.md)
+- [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
 
 ## 6.1 Scripts
 
@@ -29,6 +30,12 @@ Defined in [../package.json](../package.json):
 - `npm run lint`
   Runs TypeScript no-emit checking.
 
+- `npm run build:public`
+  Builds the deployable public profile with `VITE_ENABLE_3D=false`.
+
+- `npm run verify:public-build`
+  Verifies the public-build output profile.
+
 ## 6.2 Environment Variables
 
 Defined or documented in [../.env.example](../.env.example):
@@ -50,6 +57,9 @@ Defined or documented in [../.env.example](../.env.example):
 
 - `VITE_ENABLE_3D`
   Build-time flag for the optional 3D vector workspace. Set to `false` for lighter public builds.
+
+- `SKILL0_API_BODY_LIMIT`
+  Optional JSON payload limit for uploaded review bundles.
 
 ## 6.3 Recommended Deployment Modes
 
@@ -75,6 +85,25 @@ Recommended:
 
 This prevents filesystem assumptions about `/home/miles/...`.
 
+### Render-first public deployment
+
+This repository now includes a Render Blueprint in [../render.yaml](../render.yaml).
+
+Recommended first hosted profile:
+
+- `SKILL0_MODE=standalone`
+- omit `SKILL0_PARSER_ROOT`
+- omit `SKILL0_ROOT`
+- `VITE_ENABLE_3D=false`
+- `npm ci && npm run build:public`
+- `npm start`
+
+Operational intent:
+
+- keep the first public deployment self-contained
+- do not vendor canonical parser source into this repository in this phase
+- reserve canonical parser bridging for controlled internal environments
+
 ## 6.4 GitHub Platform Strategy
 
 GitHub is appropriate for:
@@ -99,9 +128,11 @@ Recommended GitHub-facing production pattern:
 
 Runtime endpoints:
 
+- `GET /healthz`
 - `GET /api/bridge-status`
 - `GET /api/example-skill`
 - `POST /api/parse-skill`
+- `POST /api/resolve-skill-url`
 
 These endpoints behave consistently in:
 
@@ -117,7 +148,46 @@ The current deployable server serves:
 
 This makes the project hostable as a single web process.
 
-## 6.7 Validation Performed
+## 6.7 Persistence Posture
+
+Public hosting should assume ephemeral server storage.
+
+Recommended stance:
+
+- do not rely on uploaded files remaining on disk after restart
+- do not rely on server-local draft or session history
+- keep draft persistence browser-local unless a later server-backed persistence layer is added explicitly
+
+This is especially important for Render Free, where the service can spin down and restart.
+
+## 6.8 Render Free Validation Checklist
+
+Before calling the deployment acceptable, verify all of the following on Render Free:
+
+- the service builds from a clean clone using `render.yaml`
+- the site loads without boot errors
+- `GET /healthz` returns `ok: true`
+- `GET /api/bridge-status` reports standalone mode
+- `GET /api/example-skill` returns the bundled sample
+- paste intake parses successfully through `POST /api/parse-skill`
+- skill URL import succeeds for a supported remote source or fails with a clear user-facing explanation
+- sample scenarios still produce coherent review flows
+- review summary, sign-off, and export actions remain available end to end
+- the app still recovers cleanly after a cold start
+
+## 6.9 Render Starter Upgrade Path
+
+After Render Free validation is complete:
+
+1. change the service instance type from `free` to `starter`
+2. keep the same build and start commands
+3. keep `SKILL0_MODE=standalone` as the public default
+4. add `SKILL0_PARSER_ROOT` only for a separate internal deployment that intentionally exposes canonical parser behavior
+5. add persistent disk only if a later feature truly requires server-retained files
+
+This keeps the first public deployment simple while leaving room for a stricter internal profile later.
+
+## 6.10 Validation Performed
 
 The following verification was completed during this update:
 
@@ -140,7 +210,7 @@ Validated outcomes:
 - parser requests succeed through canonical `auto_parse.py`
 - standalone mode returns bundled sample and fallback parser output
 
-## 6.8 CI Workflow
+## 6.11 CI Workflow
 
 The repository includes a GitHub Actions workflow at [../.github/workflows/ci.yml](../.github/workflows/ci.yml).
 
@@ -158,7 +228,7 @@ It currently validates:
 - tests with `npm test`
 - production build with `npm run build`
 
-## 6.9 Operational Caveat
+## 6.12 Operational Caveat
 
 The deployable runtime is ready, and the source-driven frontend baseline is now restored in the working tree. Operationally, this means:
 
@@ -167,12 +237,12 @@ The deployable runtime is ready, and the source-driven frontend baseline is now 
 - ongoing UI maintenance can now happen in source, but still needs further hardening
 - public deployments can remove the 3D vector workspace without affecting parser, bridge, or review-map functionality
 
-## 6.10 Recommended Operator Checklist
+## 6.13 Recommended Operator Checklist
 
 1. Decide whether deployment should be canonical-bridge or standalone.
 2. Set `SKILL0_MODE` explicitly.
 3. If canonical mode is required, set `SKILL0_PARSER_ROOT` explicitly.
 4. Build and serve `dist/`.
-5. Smoke-test all three API endpoints.
+5. Smoke-test `/healthz` plus all API endpoints.
 6. Record whether results are coming from canonical or fallback mode.
 7. Decide whether the deployment should expose the optional 3D vector workspace; default public posture is `VITE_ENABLE_3D=false`.

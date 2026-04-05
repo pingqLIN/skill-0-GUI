@@ -45,6 +45,21 @@ export default defineConfig(({ mode }) => {
       {
         name: 'skill-0-bridge',
         configureServer(server) {
+          server.middlewares.use('/healthz', (req, res, next) => {
+            if (req.method !== 'GET') {
+              next();
+              return;
+            }
+
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+              ok: true,
+              mode: env.SKILL0_MODE || 'auto',
+              parserRootConfigured: Boolean(env.SKILL0_PARSER_ROOT || env.SKILL0_ROOT),
+            }));
+          });
+
           server.middlewares.use('/api/bridge-status', async (_req, res) => {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');

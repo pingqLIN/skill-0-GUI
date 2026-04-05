@@ -8,6 +8,7 @@ Related docs:
 - [08-development-status-risks-and-roadmap.md](./08-development-status-risks-and-roadmap.md)
 - [github-hosting-strategy-2026-03-23.md](./github-hosting-strategy-2026-03-23.md)
 - [shared/02-mode-and-equivalence-contract.md](./shared/02-mode-and-equivalence-contract.md)
+- [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
 
 ## 20.1 Goal
 
@@ -36,6 +37,7 @@ Why this profile first:
 - lower risk than a canonical-bridge external deployment
 - easier to explain to new users
 - lighter bundle and simpler support posture
+- matches the current Render Free validation target
 
 ## 20.3 Demo Audience
 
@@ -115,6 +117,7 @@ The demo must clearly state:
 
 - choose hosting target
 - confirm standalone public deployment profile
+- keep the Stitch-inspired rebuild aligned to the real review workflow
 - prepare demo-safe seed content
 - write mode/fidelity copy for the landing experience
 - add obvious links to documentation
@@ -157,21 +160,29 @@ For the first online demo:
 - disable 3D
 - prioritize stability, clarity, and small operational surface
 
+Current recommendation:
+
+- validate first on Render Free using the bundled `render.yaml`
+- upgrade to Render Starter only after the standalone flow and exports are verified
+
 This is consistent with:
 
 - [github-hosting-strategy-2026-03-23.md](./github-hosting-strategy-2026-03-23.md)
 - [06-deployment-operations-and-configuration.md](./06-deployment-operations-and-configuration.md)
+- [../render.yaml](../render.yaml)
 
 ## 20.10 Execution Checklist
 
 - [ ] choose hosting provider
 - [ ] lock demo environment variables
+- [ ] confirm `render.yaml` matches the public standalone profile
 - [ ] prepare demo-safe sample content
 - [ ] write landing-page copy
 - [ ] add documentation links from the demo surface
 - [ ] smoke-test standalone mode end to end
 - [ ] verify exported artifacts from the demo flow
 - [ ] capture screenshots or a short walkthrough for reviewers
+- [ ] verify `/healthz` and cold-start recovery on the deployed host
 
 ## 20.11 Recommended Next Slice
 

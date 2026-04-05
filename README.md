@@ -25,6 +25,19 @@ This project focuses on the missing layer:
 If you need the parser itself, see the upstream `skill-0` repository.
 If you need the reviewer-facing workspace around that parser output, this repository is the right entry point.
 
+## Current Rebuild Direction
+
+The active rebuild tracks two constraints at the same time:
+
+- reuse the strongest layout and visual ideas from the Stitch exploration as a style donor
+- keep the real product contract intact: `intake -> analysis -> review -> export`
+
+What that means in practice:
+
+- Stitch output informs tone, grouping, and density decisions
+- the React app remains the source of truth for workflow, parser-mode wording, checks, sign-off, and exports
+- generic analytics cockpit patterns are intentionally rejected when they conflict with reviewer workflows
+
 ## What You Can Do Today
 
 ### For first-time users
@@ -107,6 +120,7 @@ If you want to understand deployment and hosting:
 1. [Deployment, operations, and configuration](docs/06-deployment-operations-and-configuration.md)
 2. [GitHub hosting strategy](docs/github-hosting-strategy-2026-03-23.md)
 3. [Online demo plan](docs/20-online-demo-plan-2026-04-03.md)
+4. [UI rebuild backlog](docs/13-ui-rebuild-backlog.md)
 
 If you want the current execution status:
 
@@ -161,6 +175,31 @@ For detailed runtime behavior, see:
 
 - [Deployment, operations, and configuration](docs/06-deployment-operations-and-configuration.md)
 - [Bridge parser and analysis](docs/04-bridge-parser-and-analysis.md)
+
+## Render Deployment
+
+The first hosted profile is intentionally conservative:
+
+- use a Node-capable host
+- deploy `server.mjs`, not a static-only export
+- run in `SKILL0_MODE=standalone`
+- build with `VITE_ENABLE_3D=false`
+- do not set `SKILL0_PARSER_ROOT` or `SKILL0_ROOT`
+
+This repository now includes a starter Render Blueprint:
+
+- [render.yaml](render.yaml)
+
+Recommended rollout:
+
+1. validate the standalone public profile on Render Free
+2. keep browser-local drafts and treat server storage as ephemeral
+3. upgrade to Render Starter only after the standalone review flow is stable
+
+Detailed instructions live in:
+
+- [Deployment, operations, and configuration](docs/06-deployment-operations-and-configuration.md)
+- [Online demo plan](docs/20-online-demo-plan-2026-04-03.md)
 
 ## Documentation Map
 

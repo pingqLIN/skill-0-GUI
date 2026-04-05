@@ -119,6 +119,24 @@ describe('Vite dev middleware API parity', () => {
     runtime = null;
   });
 
+  it('serves a parity health endpoint in standalone mode', async () => {
+    runtime = await startDevRuntime({
+      SKILL0_MODE: 'standalone',
+      SKILL0_PARSER_ROOT: undefined,
+      SKILL0_ROOT: undefined,
+    });
+
+    const response = await fetch(`${runtime.baseUrl}/healthz`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual({
+      ok: true,
+      mode: 'standalone',
+      parserRootConfigured: false,
+    });
+  });
+
   it('serves the bridge endpoints in standalone mode', async () => {
     runtime = await startDevRuntime({
       SKILL0_MODE: 'standalone',

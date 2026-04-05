@@ -23,6 +23,14 @@ export function createServerApp({
 
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
+  app.get('/healthz', (_req, res) => {
+    res.json({
+      ok: true,
+      mode,
+      parserRootConfigured: Boolean(explicitRoot),
+    });
+  });
+
   app.get('/api/bridge-status', async (_req, res) => {
     res.json(await bridge.getBridgeStatus());
   });

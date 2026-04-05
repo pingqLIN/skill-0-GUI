@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: skill-0-review-studio
+    runtime: node
+    plan: free
+    autoDeploy: true
+    buildCommand: npm ci && npm run build:public
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SKILL0_MODE
+        value: standalone
+      - key: VITE_ENABLE_3D
+        value: "false"

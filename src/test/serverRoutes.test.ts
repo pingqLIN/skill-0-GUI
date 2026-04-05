@@ -52,6 +52,21 @@ afterEach(async () => {
 });
 
 describe('server runtime routes', () => {
+  it('serves a deployment-safe health endpoint without touching parser state', async () => {
+    const runtime = await startTestServer();
+    activeServer = runtime.server;
+
+    const response = await fetch(`${runtime.url}/healthz`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual({
+      ok: true,
+      mode: 'standalone',
+      parserRootConfigured: false,
+    });
+  });
+
   it('serves bridge status and example skill endpoints in standalone mode', async () => {
     const runtime = await startTestServer();
     activeServer = runtime.server;
