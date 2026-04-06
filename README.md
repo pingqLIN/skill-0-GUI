@@ -104,13 +104,14 @@ Important: standalone mode is compatibility-oriented. It should not be presented
 
 ### LLM-assisted fallback
 
-When `SKILL0_LLM_MODE=fallback` is configured with a supported server-side provider, the app can promote failed or too-sparse deterministic parses into an `llm-assisted` recovery path.
+When `SKILL0_LLM_MODE=fallback` is configured with a supported server-side provider, the app can promote failed or too-sparse deterministic parses into an `llm-assisted` recovery path. A testing-only `SKILL0_LLM_MODE=force` profile is also available to bypass deterministic parsing and run the AI recovery adapter first.
 
 Important:
 
 - this path is `draft-only`
 - it is useful for unknown or future formats
 - it must not be presented as final equivalence evidence
+- `force` mode is for AI-priority testing and should not be the public default
 - the in-app `AI settings` console can inspect or adjust the server-side runtime when `SKILL0_RUNTIME_CONFIG_MUTABLE=true`
 
 Advanced contract:
@@ -205,6 +206,7 @@ The first hosted profile is intentionally conservative:
 - deploy `server.mjs`, not a static-only export
 - run in `SKILL0_MODE=standalone`
 - set `SKILL0_LLM_MODE=fallback` if you want server-side recovery for unknown formats
+- use `SKILL0_LLM_MODE=force` only when you intentionally want AI-priority parsing for testing
 - build with `VITE_ENABLE_3D=false`
 - do not set `SKILL0_PARSER_ROOT` or `SKILL0_ROOT`
 

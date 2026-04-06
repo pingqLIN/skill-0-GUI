@@ -57,7 +57,7 @@ vi.mock('../services/llmSettingsService', () => ({
       llmSupportsReasoning: false,
     },
     options: {
-      modeValues: ['disabled', 'fallback'],
+      modeValues: ['disabled', 'fallback', 'force'],
       providerValues: ['openai', 'gemini', 'anthropic'],
     },
     settings: {
@@ -84,14 +84,14 @@ vi.mock('../services/llmSettingsService', () => ({
       llmSupportsReasoning: true,
     },
     options: {
-      modeValues: ['disabled', 'fallback'],
+      modeValues: ['disabled', 'fallback', 'force'],
       providerValues: ['openai', 'gemini', 'anthropic'],
     },
     settings: {
       apiKeyConfigured: true,
       apiKeySource: 'runtime',
       maxInputChars: 12000,
-      mode: 'fallback',
+      mode: 'force',
       model: 'gpt-4o-mini',
       mutable: true,
       provider: 'openai',
@@ -193,6 +193,9 @@ describe('App smoke test', () => {
     fireEvent.change(screen.getByDisplayValue('gpt-4o-mini'), {
       target: { value: 'gpt-4.1-mini' },
     });
+    fireEvent.change(screen.getByDisplayValue('app.llmAdminModeDisabled'), {
+      target: { value: 'force' },
+    });
     fireEvent.change(await screen.findByPlaceholderText('app.llmAdminApiKeyPlaceholder'), {
       target: { value: 'sk-test-1234' },
     });
@@ -203,7 +206,7 @@ describe('App smoke test', () => {
         apiKey: 'sk-test-1234',
         clearApiKey: false,
         maxInputChars: 12000,
-        mode: 'disabled',
+        mode: 'force',
         model: 'gpt-4.1-mini',
         provider: 'openai',
         timeoutMs: 15000,

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity,
   AlertCircle,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { LlmSettingsDialog } from './components/LlmSettingsDialog';
+import { ReviewWorkspace } from './components/ReviewWorkspace';
 import { analyzeSkillText, resolveSkillUrl } from './services/parserBridgeService';
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
@@ -22,8 +23,6 @@ import { getSampleScenarioContent } from './content/sampleScenarios';
 import type { PreparedUploadFile, UploadedContextFile } from './types/intake';
 import type { ReviewChecklist, SkillDocument } from './types/skillDocument';
 import type { EditorConfig } from './types/workspace';
-
-const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((module) => ({ default: module.ReviewWorkspace })));
 
 const GUI_REPO_URL = 'https://github.com/pingqLIN/skill-0-review-studio';
 const ENGINE_REPO_URL = 'https://github.com/pingqLIN/skill-0';
@@ -1545,15 +1544,8 @@ npm run release:preview
             </section>
           </div>
         ) : (
-          <Suspense
-            fallback={(
-              <div className="glass-panel flex min-h-[420px] items-center justify-center px-4 py-6 text-sm text-muted-foreground">
-                {t('app.loadingWorkspaceModule')}
-              </div>
-            )}
-          >
+          <React.Fragment key={analysisSessionId}>
             <ReviewWorkspace
-              key={analysisSessionId}
               data={data}
               originalData={originalData}
               demoPreset={activeDemoPreset}
@@ -1570,7 +1562,7 @@ npm run release:preview
               onUndo={handleUndo}
               onResetWorkspace={handleResetWorkspace}
             />
-          </Suspense>
+          </React.Fragment>
         )}
       </main>
       <LlmSettingsDialog

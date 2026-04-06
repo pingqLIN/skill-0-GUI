@@ -226,7 +226,7 @@ describe('server runtime routes', () => {
     const llmAdmin = {
       getPublicSettings: () => ({
         options: {
-          modeValues: ['disabled', 'fallback'],
+          modeValues: ['disabled', 'fallback', 'force'],
           providerValues: ['openai', 'gemini', 'anthropic'],
         },
         settings: {
@@ -252,23 +252,23 @@ describe('server runtime routes', () => {
       updateRuntimeConfig: (input: Record<string, unknown> = {}) => {
         currentBridgeStatus = {
           ...currentBridgeStatus,
-          llmFallbackAvailable: input.mode === 'fallback',
+          llmFallbackAvailable: input.mode === 'fallback' || input.mode === 'force',
           llmModel: typeof input.model === 'string' ? input.model : 'gpt-4o-mini',
           llmProvider: typeof input.provider === 'string' ? input.provider : 'openai',
-          llmReason: input.mode === 'fallback' ? null : 'LLM fallback mode is disabled.',
+          llmReason: input.mode === 'fallback' || input.mode === 'force' ? null : 'LLM fallback mode is disabled.',
           llmSupportsJsonSchema: input.provider === 'openai',
           llmSupportsReasoning: input.provider === 'openai',
         };
         return {
           options: {
-            modeValues: ['disabled', 'fallback'],
+            modeValues: ['disabled', 'fallback', 'force'],
             providerValues: ['openai', 'gemini', 'anthropic'],
           },
           settings: {
             apiKeyConfigured: Boolean(input.apiKey),
             apiKeySource: input.apiKey ? 'runtime' : 'none',
             maxInputChars: Number(input.maxInputChars || 12000),
-            mode: input.mode === 'fallback' ? 'fallback' : 'disabled',
+            mode: input.mode === 'fallback' || input.mode === 'force' ? input.mode : 'disabled',
             model: typeof input.model === 'string' ? input.model : 'gpt-4o-mini',
             mutable: true,
             provider: typeof input.provider === 'string' ? input.provider : 'openai',
@@ -311,7 +311,7 @@ describe('server runtime routes', () => {
       body: JSON.stringify({
         apiKey: 'sk-runtime-test',
         maxInputChars: 16000,
-        mode: 'fallback',
+        mode: 'force',
         model: 'gpt-4.1-mini',
         provider: 'openai',
         timeoutMs: 18000,
@@ -323,7 +323,7 @@ describe('server runtime routes', () => {
     expect(updatePayload.settings).toMatchObject({
       apiKeyConfigured: true,
       apiKeySource: 'runtime',
-      mode: 'fallback',
+      mode: 'force',
       model: 'gpt-4.1-mini',
       provider: 'openai',
       timeoutMs: 18000,

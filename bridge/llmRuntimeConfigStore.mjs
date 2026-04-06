@@ -2,7 +2,7 @@ const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_MAX_INPUT_CHARS = 12000;
 const SUPPORTED_PROVIDERS = ['openai', 'gemini', 'anthropic'];
-const SUPPORTED_MODES = ['disabled', 'fallback'];
+const SUPPORTED_MODES = ['disabled', 'fallback', 'force'];
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));

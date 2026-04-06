@@ -186,6 +186,7 @@ describe('Vite dev middleware API parity', () => {
       mutable: true,
       provider: 'openai',
     });
+    expect(payload.options.modeValues).toEqual(['disabled', 'fallback', 'force']);
     expect(payload.bridgeStatus).toMatchObject({
       mode: 'standalone',
     });

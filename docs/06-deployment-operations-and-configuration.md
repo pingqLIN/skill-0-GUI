@@ -65,7 +65,7 @@ Defined or documented in [../.env.example](../.env.example):
   End-to-end timeout for a single parse request.
 
 - `SKILL0_LLM_MODE`
-  `disabled` or `fallback` for the server-side recovery adapter.
+  `disabled`, `fallback`, or `force` for the server-side recovery adapter. Use `force` only for test-only AI-priority parsing.
 
 - `SKILL0_LLM_PROVIDER`
   Provider-neutral selector for the LLM recovery adapter.

@@ -4,7 +4,7 @@ export type LlmSettings = {
   apiKeyConfigured: boolean;
   apiKeySource: 'env' | 'runtime' | 'none';
   maxInputChars: number;
-  mode: 'disabled' | 'fallback';
+  mode: 'disabled' | 'fallback' | 'force';
   model: string;
   mutable: boolean;
   provider: 'openai' | 'gemini' | 'anthropic' | null;
@@ -15,7 +15,7 @@ export type LlmSettings = {
 export type LlmSettingsResponse = {
   bridgeStatus: BridgeStatus;
   options: {
-    modeValues: Array<'disabled' | 'fallback'>;
+    modeValues: Array<'disabled' | 'fallback' | 'force'>;
     providerValues: Array<'openai' | 'gemini' | 'anthropic'>;
   };
   settings: LlmSettings;
@@ -25,7 +25,7 @@ export type LlmSettingsUpdateInput = {
   apiKey?: string;
   clearApiKey?: boolean;
   maxInputChars: number;
-  mode: 'disabled' | 'fallback';
+  mode: 'disabled' | 'fallback' | 'force';
   model: string;
   provider: 'openai' | 'gemini' | 'anthropic';
   timeoutMs: number;
@@ -55,12 +55,14 @@ function mapSettingsResponse(payload: any): LlmSettingsResponse {
   const apiKeySource = payload.settings.apiKeySource === 'env' || payload.settings.apiKeySource === 'runtime'
     ? payload.settings.apiKeySource
     : 'none';
-  const mode = payload.settings.mode === 'fallback' ? 'fallback' : 'disabled';
+  const mode = payload.settings.mode === 'fallback' || payload.settings.mode === 'force'
+    ? payload.settings.mode
+    : 'disabled';
 
   return {
     bridgeStatus: mapBridgeStatus(payload.bridgeStatus),
     options: {
-      modeValues: Array.isArray(payload.options?.modeValues) ? payload.options.modeValues : ['disabled', 'fallback'],
+      modeValues: Array.isArray(payload.options?.modeValues) ? payload.options.modeValues : ['disabled', 'fallback', 'force'],
       providerValues: Array.isArray(payload.options?.providerValues) ? payload.options.providerValues : ['openai', 'gemini', 'anthropic'],
     },
     settings: {

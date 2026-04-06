@@ -999,6 +999,55 @@ function assessParserResultForFallback(parserResult, { contextFiles, primaryPath
   };
 }
 
+function buildLLMRecoveryUnavailableError(capabilities, fallbackReason) {
+  const recoveryMode = capabilities.mode === 'force' ? 'force' : 'fallback';
+  const recoveryLabel = recoveryMode === 'force' ? 'LLM force mode' : 'LLM fallback';
+  const error = new Error(
+    `${recoveryLabel} is required but unavailable. ${fallbackReason}${capabilities.reason ? ` ${capabilities.reason}` : ''}`,
+  );
+  error.code = recoveryMode === 'force' ? 'llm_force_required_unavailable' : 'llm_fallback_required_unavailable';
+  error.detail = fallbackReason;
+  error.statusCode = 503;
+  return error;
+}
+
+async function runLLMRecovery({
+  bridgeBase,
+  contextFiles,
+  fallbackReason,
+  llmAdapter,
+  primaryPath,
+  schemaPath,
+  skillName,
+  text,
+}) {
+  const capabilities = llmAdapter.getCapabilities();
+
+  if (!capabilities.enabled || !capabilities.provider || !capabilities.model) {
+    throw buildLLMRecoveryUnavailableError(capabilities, fallbackReason);
+  }
+
+  const llmRecovered = await llmAdapter.parseUnknownSkill({
+    contextFiles,
+    fallbackReason,
+    primaryPath,
+    schemaPath,
+    skillName,
+    text,
+  });
+
+  return transformParserResult(llmRecovered.parserResult, {
+    draft_only: true,
+    error: fallbackReason,
+    fallback_reason: fallbackReason,
+    mode: 'llm-assisted',
+    model: capabilities.model,
+    provider: capabilities.provider,
+    schema_validation: llmRecovered.schemaValidation,
+    skill0Root: bridgeBase.skill0Root ?? null,
+  });
+}
+
 async function maybePromoteToLLMFallback({
   bridgeBase,
   contextFiles,
@@ -1019,37 +1068,15 @@ async function maybePromoteToLLMFallback({
     return transformParserResult(parserResult, bridgeBase);
   }
 
-  const capabilities = llmAdapter.getCapabilities();
-
-  if (!capabilities.enabled || !capabilities.provider || !capabilities.model) {
-    const fallbackError = new Error(
-      `LLM fallback is required but unavailable. ${assessment.reason}${capabilities.reason ? ` ${capabilities.reason}` : ''}`,
-    );
-    fallbackError.code = 'llm_fallback_required_unavailable';
-    fallbackError.detail = assessment.reason;
-    fallbackError.statusCode = 503;
-    throw fallbackError;
-  }
-
-  const fallbackReason = assessment.reason;
-  const llmRecovered = await llmAdapter.parseUnknownSkill({
+  return await runLLMRecovery({
+    bridgeBase,
     contextFiles,
-    fallbackReason,
+    fallbackReason: assessment.reason,
+    llmAdapter,
     primaryPath,
     schemaPath,
     skillName,
     text,
-  });
-
-  return transformParserResult(llmRecovered.parserResult, {
-    draft_only: true,
-    error: fallbackReason,
-    fallback_reason: fallbackReason,
-    mode: 'llm-assisted',
-    model: capabilities.model,
-    provider: capabilities.provider,
-    schema_validation: llmRecovered.schemaValidation,
-    skill0Root: bridgeBase.skill0Root ?? null,
   });
 }
 
@@ -1462,12 +1489,32 @@ export function createSkill0Bridge({
       ? options.primaryPath.trim()
       : null;
     const packageMode = contextFiles.length > 0 || Boolean(primaryPath);
+    const llmCapabilities = llmAdapter.getCapabilities();
+    const forceLLMRecovery = llmCapabilities.mode === 'force';
 
     let virtualPackage = null;
-    if (packageMode) {
+    if (packageMode && !forceLLMRecovery) {
       virtualPackage = await createVirtualSkillPackage({
         contextFiles,
         primaryPath,
+        text,
+      });
+    }
+
+    if (forceLLMRecovery) {
+      const forcedReason = 'LLM force mode is enabled. Deterministic parsing was bypassed for a test-only AI-priority run.';
+      return await runLLMRecovery({
+        bridgeBase: {
+          error: forcedReason,
+          mode: skill0Root ? 'skill-0' : 'standalone',
+          skill0Root,
+        },
+        contextFiles,
+        fallbackReason: forcedReason,
+        llmAdapter,
+        primaryPath,
+        schemaPath: standaloneSchemaPath,
+        skillName: normalizedSkillName,
         text,
       });
     }

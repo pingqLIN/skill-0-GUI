@@ -213,7 +213,7 @@ function normalizeProvider(value) {
 }
 
 function normalizeMode(value) {
-  return value === 'fallback' ? 'fallback' : 'disabled';
+  return value === 'fallback' || value === 'force' ? value : 'disabled';
 }
 
 function normalizePositiveInteger(value, fallback, max = 120000) {
@@ -750,7 +750,7 @@ export function createLLMParserAdapter({
   function getCapabilities() {
     const config = resolveRuntimeConfig();
 
-    if (config.mode !== 'fallback') {
+    if (config.mode !== 'fallback' && config.mode !== 'force') {
       return buildCapabilities({
         enabled: false,
         mode: config.mode,
@@ -766,7 +766,9 @@ export function createLLMParserAdapter({
         mode: config.mode,
         model: null,
         provider: null,
-        reason: 'LLM fallback provider is not configured.',
+        reason: config.mode === 'force'
+          ? 'LLM force mode requires a configured provider.'
+          : 'LLM fallback provider is not configured.',
       });
     }
 
@@ -776,7 +778,9 @@ export function createLLMParserAdapter({
         mode: config.mode,
         model: config.model || null,
         provider: config.provider,
-        reason: 'LLM fallback API key is not configured.',
+        reason: config.mode === 'force'
+          ? 'LLM force mode requires an API key.'
+          : 'LLM fallback API key is not configured.',
       });
     }
 
@@ -786,7 +790,9 @@ export function createLLMParserAdapter({
         mode: config.mode,
         model: config.model || null,
         provider: config.provider,
-        reason: `${config.provider} fallback is not implemented in this build.`,
+        reason: config.mode === 'force'
+          ? `${config.provider} force mode is not implemented in this build.`
+          : `${config.provider} fallback is not implemented in this build.`,
       });
     }
 

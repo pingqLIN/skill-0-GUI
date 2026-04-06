@@ -375,6 +375,86 @@ describe('createSkill0Bridge', () => {
     expect(parsed.reviewerSummary.equivalenceNote).toBe('draft_only_ai_assisted');
   });
 
+  it('can force ai-priority parsing even when deterministic standalone parsing would succeed', async () => {
+    let llmCalls = 0;
+    const llmAdapter = {
+      getCapabilities() {
+        return {
+          enabled: true,
+          mode: 'force',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          reason: null,
+          supportsJsonSchema: true,
+          supportsReasoning: true,
+        };
+      },
+      parseUnknownSkill: async ({ fallbackReason }: { fallbackReason: string }) => {
+        llmCalls += 1;
+        expect(fallbackReason).toContain('AI-priority');
+        return {
+          parserResult: {
+            $schema: './standalone/skill-decomposition.schema.json',
+            analysis_findings: [],
+            command_references: [],
+            decomposition: {
+              actions: [{
+                action_type: 'transform',
+                description: 'Recover the skill through the forced AI path.',
+                deterministic: false,
+                id: 'a_001',
+                name: 'Recover with AI priority',
+                side_effects: [],
+              }],
+              directives: [],
+              rules: [],
+            },
+            execution_paths: [],
+            manifest: {
+              analysis_level: 'single_file',
+              command_references_count: 0,
+              supporting_files_count: 0,
+              unresolved_references_count: 0,
+            },
+            meta: {
+              description: 'Recovered through force mode.',
+              name: 'demo-skill',
+              parsed_by: 'llm-assisted/openai',
+              parse_timestamp: new Date().toISOString(),
+              parser_version: 'skill-0-review-studio llm-assisted openai/gpt-4o-mini',
+              schema_version: '2.4.0',
+              skill_id: 'claude__demo-skill',
+              skill_layer: 'claude_skill',
+              title: 'Demo Skill',
+            },
+            original_definition: {
+              fallback_reason: fallbackReason,
+              skill_description: 'Recovered through force mode.',
+              skill_name: 'demo-skill',
+              source: 'llm-assisted/openai',
+            },
+            supporting_files: [],
+          },
+          schemaValidation: 'passed',
+        };
+      },
+    };
+
+    const bridge = createSkill0Bridge({
+      llmAdapter,
+      mode: 'standalone',
+      projectRoot,
+    });
+
+    const parsed = await bridge.parseSkill('# Demo Skill\n\n## Rules\n- Always validate input.\n', 'demo-skill');
+
+    expect(llmCalls).toBe(1);
+    expect(parsed.bridge.mode).toBe('llm-assisted');
+    expect(parsed.bridge.draft_only).toBe(true);
+    expect(parsed.bridge.fallback_reason).toContain('AI-priority');
+    expect(parsed.reviewerSummary.mode).toBe('llm-assisted');
+  });
+
   it('fails clearly when llm fallback is required but unavailable', async () => {
     const llmAdapter = {
       getCapabilities() {

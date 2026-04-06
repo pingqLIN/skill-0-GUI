@@ -19,7 +19,7 @@ type FormState = {
   apiKey: string;
   clearApiKey: boolean;
   maxInputChars: number;
-  mode: 'disabled' | 'fallback';
+  mode: 'disabled' | 'fallback' | 'force';
   model: string;
   provider: 'openai' | 'gemini' | 'anthropic';
   timeoutMs: number;
@@ -265,7 +265,11 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
               >
                 {responseState.options.modeValues.map((value) => (
                   <option key={value} value={value}>
-                    {value === 'fallback' ? t('app.llmAdminModeFallback') : t('app.llmAdminModeDisabled')}
+                    {value === 'fallback'
+                      ? t('app.llmAdminModeFallback')
+                      : value === 'force'
+                        ? t('app.llmAdminModeForce')
+                        : t('app.llmAdminModeDisabled')}
                   </option>
                 ))}
               </select>
