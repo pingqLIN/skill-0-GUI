@@ -34,6 +34,24 @@
   --font-display: 'Newsreader', ui-serif, Georgia, serif;
   --font-serif: 'Newsreader', ui-serif, Georgia, serif;
   --font-mono: 'SF Mono', ui-monospace, monospace;
+
+  --animate-border-breathe: border-breathe 2s ease-in-out infinite;
+  @keyframes border-breathe {
+    0%, 100% {
+      border-color: rgba(173, 255, 47, 0.25);
+      box-shadow: 0 0 0 rgba(173, 255, 47, 0);
+    }
+    50% {
+      border-color: rgba(173, 255, 47, 1);
+      box-shadow: 0 0 10px rgba(173, 255, 47, 0.65);
+    }
+  }
+
+  --animate-led-flash-yellow: led-flash-yellow 1s ease-in-out infinite;
+  @keyframes led-flash-yellow {
+    0%, 100% { opacity: 0.4; box-shadow: inset 0 -1px 2px rgba(0,0,0,0.4), 0 0 2px rgba(234, 179, 8, 0.2); filter: brightness(0.8); }
+    50% { opacity: 1; box-shadow: inset 0 -1px 2px rgba(0,0,0,0.1), 0 0 8px rgba(234, 179, 8, 0.8); filter: brightness(1.2); }
+  }
 }
 
 @layer base {
@@ -146,6 +164,21 @@
 }
 
 @layer components {
+  .led-3d-red {
+    background: radial-gradient(circle at 35% 35%, #fca5a5, #ef4444 40%, #b91c1c);
+    box-shadow: inset 0 -1px 2px rgba(0,0,0,0.4), 0 0 6px rgba(239, 68, 68, 0.6);
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .led-3d-emerald {
+    background: radial-gradient(circle at 35% 35%, #f7fee7, #a3e635 40%, #15803d);
+    box-shadow: inset 0 -1px 2px rgba(0,0,0,0.4), 0 0 6px rgba(163, 230, 53, 0.8);
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .led-3d-yellow {
+    background: radial-gradient(circle at 35% 35%, #fef08a, #eab308 40%, #a16207);
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+
   .app-shell {
     position: relative;
     isolation: isolate;
@@ -205,6 +238,164 @@
     border: 1px solid hsl(var(--foreground) / 0.07);
     background: hsl(var(--muted));
     box-shadow: none;
+  }
+
+  /* ── 3-level surface hierarchy ── */
+  .surface-ground {
+    position: relative;
+    overflow: hidden;
+    border-radius: calc(var(--radius) * 1.05);
+    border: 1px solid hsl(var(--foreground) / 0.05);
+    background: hsl(var(--muted));
+  }
+
+  .surface-raised {
+    position: relative;
+    overflow: hidden;
+    border-radius: calc(var(--radius) * 1.05);
+    border: 1px solid hsl(var(--foreground) / 0.08);
+    background: hsl(var(--card));
+    box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04);
+  }
+
+  .surface-elevated {
+    position: relative;
+    overflow: hidden;
+    border-radius: calc(var(--radius) * 1.05);
+    border: 1px solid hsl(var(--foreground) / 0.10);
+    background: hsl(var(--background));
+    box-shadow: 0 2px 8px hsl(var(--foreground) / 0.06);
+  }
+
+  /* ── Parser Pipeline Stepper ── */
+  .parser-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .parser-stepper__step {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: calc(var(--radius) * 1.02);
+    background: hsl(var(--muted));
+    border: 1px solid transparent;
+    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+    white-space: nowrap;
+  }
+
+  .parser-stepper__step--active {
+    background: hsl(var(--background));
+    border-color: hsl(var(--foreground) / 0.12);
+    color: hsl(var(--foreground));
+    box-shadow: 0 1px 4px hsl(var(--foreground) / 0.06);
+  }
+
+  .parser-stepper__step--done {
+    color: hsl(var(--foreground) / 0.55);
+  }
+
+  .parser-stepper__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: hsl(var(--foreground) / 0.08);
+    color: hsl(var(--foreground) / 0.6);
+    flex-shrink: 0;
+  }
+
+  .parser-stepper__step--active .parser-stepper__num {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .parser-stepper__step--done .parser-stepper__num {
+    background: hsl(var(--foreground) / 0.12);
+    color: hsl(var(--foreground) / 0.5);
+  }
+
+  .parser-stepper__connector {
+    flex: 0 0 auto;
+    width: 1.8rem;
+    height: 2px;
+    background: linear-gradient(90deg, hsl(var(--foreground) / 0.12), hsl(var(--foreground) / 0.06));
+    position: relative;
+  }
+
+  .parser-stepper__connector--done {
+    background: hsl(var(--foreground) / 0.15);
+  }
+
+  /* ── Truth Strip (compact merged banner) ── */
+  .truth-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: calc(var(--radius) * 1.02);
+    border: 1px solid hsl(var(--foreground) / 0.08);
+    font-size: 0.72rem;
+    font-weight: 600;
+    transition: background-color 160ms ease;
+  }
+
+  .truth-strip__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: calc(var(--radius) * 0.9);
+    background: hsl(var(--background) / 0.7);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .truth-strip__divider {
+    width: 1px;
+    height: 1rem;
+    background: currentColor;
+    opacity: 0.18;
+    flex-shrink: 0;
+  }
+
+  .truth-strip__tag--wrap {
+    white-space: normal;
+    max-width: 100%;
+  }
+
+  @media (max-width: 640px) {
+    .parser-stepper {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .parser-stepper__step {
+      flex: 1 1 calc(50% - 0.25rem);
+      min-width: 0;
+      align-items: flex-start;
+      white-space: normal;
+    }
+
+    .parser-stepper__connector {
+      display: none;
+    }
+
+    .truth-strip__tag--wrap {
+      flex-basis: 100%;
+    }
   }
 
   .editorial-kicker {
@@ -408,6 +599,14 @@
     border: 1px solid transparent;
     background: hsl(var(--card));
     color: hsl(var(--foreground) / 0.84);
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .editorial-chip--truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .editorial-tab-button {
@@ -517,6 +716,12 @@
 @layer utilities {
   .tool-density {
     letter-spacing: -0.01em;
+  }
+
+  .section-divider {
+    border-top: 1px solid hsl(var(--foreground) / 0.07);
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
   }
 
   .measure-wide {

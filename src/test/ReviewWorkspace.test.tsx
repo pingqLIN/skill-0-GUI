@@ -149,7 +149,7 @@ describe('ReviewWorkspace', () => {
     render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
     await openInsightTab('checks');
-    expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
+    expect((await screen.findAllByText('app.schemaValidation')).length).toBeGreaterThan(0);
     expect(screen.getByText('app.validationValid')).toBeInTheDocument();
     expect(screen.getByText('SCHEMA_ORIGINAL_DEFINITION_RECOMMENDED')).toBeInTheDocument();
   });
@@ -172,7 +172,7 @@ describe('ReviewWorkspace', () => {
     render(<ReviewWorkspace data={inconsistentData} {...createProps()} />);
 
     await openInsightTab('checks');
-    expect(await screen.findByText('app.consistencyChecks')).toBeInTheDocument();
+    expect((await screen.findAllByText('app.consistencyChecks')).length).toBeGreaterThan(0);
     expect(screen.getByText('app.consistencyInvalid')).toBeInTheDocument();
     expect(screen.getByText('missing_reference')).toBeInTheDocument();
   });
@@ -190,7 +190,7 @@ describe('ReviewWorkspace', () => {
     render(<ReviewWorkspace data={malformedData} {...createProps()} />);
 
     await openInsightTab('checks');
-    expect(await screen.findByText('app.schemaValidation')).toBeInTheDocument();
+    expect((await screen.findAllByText('app.schemaValidation')).length).toBeGreaterThan(0);
     expect(screen.getByText('app.validationInvalid')).toBeInTheDocument();
     expect(screen.getByText('SCHEMA_PATH_ID')).toBeInTheDocument();
   });
@@ -498,9 +498,10 @@ describe('ReviewWorkspace', () => {
     expect(readinessBanner).toHaveTextContent('app.reviewEvidenceStatus');
     expect(readinessBanner).toHaveTextContent('app.reviewEvidenceStandalone');
     expect(readinessBanner).toHaveTextContent('app.bridgeHelpStandalone');
-    expect(truthBanner).toHaveTextContent('app.reviewTruthPanel');
-    expect(truthBanner).toHaveTextContent('app.equivalenceStatus: app.equivalenceUnverified');
-    expect(screen.getAllByText('app.bridgeModeBundled')).not.toHaveLength(0);
+    expect(truthBanner).toHaveTextContent('app.bridgeModeStandaloneShort');
+    expect(truthBanner).toHaveTextContent('app.reviewEvidenceStandalone');
+    expect(truthBanner).toHaveTextContent('app.equivalenceUnverified');
+    expect(truthBanner).toHaveTextContent('app.handoffStateNeedsEvidence');
   });
 
   it('shows reviewer-facing validation evidence for incomplete parser metadata', async () => {

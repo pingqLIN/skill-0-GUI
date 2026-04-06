@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, KeyRound, RefreshCw, Save, SlidersHorizontal, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useHighlightEffect } from '../hooks/useHighlightEffect';
 import type { BridgeStatus } from '../services/bridgeStatusService';
 import {
   fetchLlmSettings,
@@ -45,6 +46,7 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [highlightRecentSave, triggerHighlightRecentSave] = useHighlightEffect(6000);
 
   useEffect(() => {
     if (!open) {
@@ -141,6 +143,7 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
       setFormState(buildFormState(payload));
       setSuccess(t('app.llmAdminSaved'));
       onBridgeStatusChange(payload.bridgeStatus);
+      triggerHighlightRecentSave();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : t('app.llmAdminSaveError'));
     } finally {
@@ -180,12 +183,21 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
                 </div>
               </div>
               <span className={`editorial-chip px-3 py-1 text-[11px] font-medium ${isMutable ? '' : 'opacity-80'}`}>
+                <span 
+                  className={`h-2 w-2 rounded-full ${
+                    responseState?.settings.mode === 'force' 
+                      ? 'animate-led-flash-yellow led-3d-yellow' 
+                      : responseState?.settings.mode === 'fallback' 
+                        ? 'led-3d-emerald' 
+                        : 'led-3d-red'
+                  }`} 
+                />
                 {isMutable ? t('app.llmAdminMutable') : t('app.llmAdminReadOnly')}
               </span>
             </div>
             <p className="mt-3 text-sm leading-6 text-foreground/72">{capabilitySummary}</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[calc(var(--radius)*1.02)] bg-background/70 px-3 py-3">
+              <div className={`rounded-[calc(var(--radius)*1.02)] border px-3 py-3 transition-colors ${highlightRecentSave ? 'animate-border-breathe bg-background/50' : 'border-transparent bg-background/70'}`}>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.llmAdminApiKey')}</div>
                 <div className="mt-2 text-sm font-medium text-foreground">
                   {responseState?.settings.apiKeyConfigured ? t('app.llmAdminApiKeyConfigured') : t('app.llmAdminApiKeyMissing')}
@@ -198,7 +210,7 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
                       : t('app.llmAdminApiKeyNone')}
                 </div>
               </div>
-              <div className="rounded-[calc(var(--radius)*1.02)] bg-background/70 px-3 py-3">
+              <div className="rounded-[calc(var(--radius)*1.02)] border border-transparent bg-background/70 px-3 py-3">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.llmAdminCapability')}</div>
                 <div className="mt-2 text-sm font-medium text-foreground">{responseState?.bridgeStatus.llmProvider || t('app.bridgeModeUnavailable')}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
@@ -254,7 +266,7 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
             {t('app.llmAdminLoading')}
           </div>
         ) : (
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <div className={`mt-5 grid gap-4 rounded-[calc(var(--radius)*1.02)] border px-4 py-4 transition-colors md:grid-cols-2 ${highlightRecentSave ? 'animate-border-breathe bg-background/50' : 'border-transparent'}`}>
             <label className="space-y-2">
               <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.llmAdminMode')}</span>
               <select
@@ -300,12 +312,41 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
               <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.llmAdminModel')}</span>
               <input
                 type="text"
+                list="llm-admin-model-options"
                 value={formState.model}
                 onChange={(event) => setFormState((current) => current ? { ...current, model: event.target.value } : current)}
                 disabled={!isMutable}
                 placeholder="gpt-4o-mini"
                 className="editorial-input-surface w-full px-4 py-3 text-sm leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-60"
               />
+              <datalist id="llm-admin-model-options">
+                {formState.provider === 'openai' && (
+                  <>
+                    <option value="gpt-5.4" />
+                    <option value="gpt-5" />
+                    <option value="gpt-4o" />
+                    <option value="gpt-4o-mini" />
+                    <option value="o3-mini" />
+                    <option value="o1" />
+                    <option value="o1-mini" />
+                  </>
+                )}
+                {formState.provider === 'gemini' && (
+                  <>
+                    <option value="gemini-2.5-pro" />
+                    <option value="gemini-2.0-flash" />
+                    <option value="gemini-1.5-pro" />
+                    <option value="gemini-1.5-flash" />
+                  </>
+                )}
+                {formState.provider === 'anthropic' && (
+                  <>
+                    <option value="claude-3-7-sonnet-20250219" />
+                    <option value="claude-3-5-sonnet-20241022" />
+                    <option value="claude-3-5-haiku-20241022" />
+                  </>
+                )}
+              </datalist>
             </label>
 
             <label className="space-y-2">

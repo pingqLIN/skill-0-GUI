@@ -78,7 +78,7 @@ export type DemoReviewPreset = {
   title: string;
 };
 
-type LandingPaneTabId = 'overview' | 'outputs' | 'docs' | DemoScenarioDefinition['id'];
+type LandingPaneTabId = 'overview' | 'outputs' | 'docs' | 'scenarios';
 
 function readWorkspaceDraft(): WorkspaceDraftSnapshot | null {
   if (typeof window === 'undefined') {
@@ -1066,17 +1066,11 @@ npm run release:preview
     },
   ];
   const [landingPaneTab, setLandingPaneTab] = useState<LandingPaneTabId>('overview');
-  const activeLandingScenario = landingPaneTab === 'overview' || landingPaneTab === 'outputs' || landingPaneTab === 'docs'
-    ? null
-    : curatedScenarios.find((scenario) => scenario.id === landingPaneTab) ?? null;
   const landingPaneTabs: Array<{ id: LandingPaneTabId; label: string }> = [
     { id: 'overview', label: t('app.landingOverviewTab') },
     { id: 'outputs', label: t('app.landingOutputsTab') },
     { id: 'docs', label: t('app.landingDocsTab') },
-    ...curatedScenarios.map((scenario) => ({
-      id: scenario.id as LandingPaneTabId,
-      label: scenario.title,
-    })),
+    { id: 'scenarios', label: t('app.landingScenariosTab') },
   ];
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
@@ -1252,45 +1246,43 @@ npm run release:preview
                         ))}
                       </div>
                     </div>
-                  ) : activeLandingScenario ? (
+                  ) : landingPaneTab === 'scenarios' ? (
                     <div className="max-w-4xl space-y-4">
                       <p className="editorial-kicker">{t('app.sampleScenariosKicker')}</p>
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
-                        {activeLandingScenario.title}
+                        {t('app.sampleScenariosTitle')}
                       </h2>
                       <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
-                        {activeLandingScenario.body}
+                        {t('app.sampleScenariosLead')}
                       </p>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <div className="surface-panel-muted px-4 py-4">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.sampleScenarioFocusLabel')}</div>
-                          <p className="mt-2 text-sm leading-6 text-foreground">{activeLandingScenario.focus}</p>
-                        </div>
-                        <div className="surface-panel-muted px-4 py-4">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.sampleScenarioArtifactsLabel')}</div>
-                          <p className="mt-2 text-sm leading-6 text-foreground">{activeLandingScenario.artifacts}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={() => loadCuratedScenario(activeLandingScenario)}
-                          className="editorial-button-primary px-5 py-3 text-sm font-medium"
-                        >
-                          <PlayCircle size={16} />
-                          {activeLandingScenario.cta}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setLandingPaneTab('overview')}
-                          className="editorial-button-secondary px-5 py-3 text-sm font-medium"
-                        >
-                          {t('app.title')}
-                        </button>
+                      <div className="custom-scrollbar flex gap-3 overflow-x-auto pb-2">
+                        {curatedScenarios.map((scenario) => (
+                          <div
+                            key={scenario.id}
+                            className="surface-raised flex min-w-[280px] max-w-[340px] shrink-0 flex-col p-4"
+                          >
+                            <div className="text-sm font-semibold text-foreground">{scenario.title}</div>
+                            <p className="mt-2 flex-1 text-sm leading-6 text-foreground/72">{scenario.body}</p>
+                            <div className="mt-3 space-y-2">
+                              <div className="surface-ground px-3 py-2">
+                                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.sampleScenarioFocusLabel')}</div>
+                                <p className="mt-1 text-xs leading-5 text-foreground">{scenario.focus}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => loadCuratedScenario(scenario)}
+                                className="editorial-button-primary w-full px-4 py-2.5 text-sm font-medium"
+                              >
+                                <PlayCircle size={14} />
+                                {scenario.cta}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ) : (
-                    <div className="max-w-4xl space-y-4">
+                    <div className="max-w-4xl space-y-5">
                       <p className="editorial-kicker">{t('app.landingEyebrow')}</p>
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.4rem]">
                         {t('app.title')}
@@ -1298,12 +1290,47 @@ npm run release:preview
                       <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {t('app.landingTagline')}
                       </p>
+
+                      {/* Pipeline stepper — directional cue */}
+                      <div className="parser-stepper mt-2">
+                        <div className="parser-stepper__step parser-stepper__step--done">
+                          <span className="parser-stepper__num">1</span>
+                          <div>
+                            <div>{t('app.stepIntake')}</div>
+                            <div className="mt-0.5 text-[0.65rem] font-normal opacity-75">{t('app.stepIntakeDesc')}</div>
+                          </div>
+                        </div>
+                        <div className="parser-stepper__connector parser-stepper__connector--done" />
+                        <div className="parser-stepper__step parser-stepper__step--done">
+                          <span className="parser-stepper__num">2</span>
+                          <div>
+                            <div>{t('app.stepParse')}</div>
+                            <div className="mt-0.5 text-[0.65rem] font-normal opacity-75">{t('app.stepParseDesc')}</div>
+                          </div>
+                        </div>
+                        <div className="parser-stepper__connector" />
+                        <div className="parser-stepper__step parser-stepper__step--active">
+                          <span className="parser-stepper__num">3</span>
+                          <div>
+                            <div>{t('app.stepReview')}</div>
+                            <div className="mt-0.5 text-[0.65rem] font-normal opacity-75">{t('app.stepReviewDesc')}</div>
+                          </div>
+                        </div>
+                        <div className="parser-stepper__connector" />
+                        <div className="parser-stepper__step">
+                          <span className="parser-stepper__num">4</span>
+                          <div>
+                            <div>{t('app.stepExport')}</div>
+                            <div className="mt-0.5 text-[0.65rem] font-normal opacity-75">{t('app.stepExportDesc')}</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="glass-panel-strong px-5 py-5 sm:px-6 sm:py-6 2xl:sticky 2xl:top-28 2xl:self-start">
+              <div className="surface-elevated px-5 py-5 sm:px-6 sm:py-6 2xl:sticky 2xl:top-28 2xl:self-start">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="editorial-kicker">{t('app.inputStudio')}</p>

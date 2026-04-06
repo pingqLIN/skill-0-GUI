@@ -125,14 +125,18 @@ describe('App smoke test', () => {
     expect(await screen.findByText('app.landingOverviewTab')).toBeInTheDocument();
     expect(await screen.findByText('app.landingOutputsTab')).toBeInTheDocument();
     expect(await screen.findByText('app.landingDocsTab')).toBeInTheDocument();
+    expect(await screen.findByText('app.landingScenariosTab')).toBeInTheDocument();
     expect(await screen.findByText('app.skillUrlLabel')).toBeInTheDocument();
-    expect(await screen.findByText('Mode overview')).toBeInTheDocument();
-    expect(await screen.findByText('Bundle intake review')).toBeInTheDocument();
-    expect(await screen.findByText('Publish approval gate')).toBeInTheDocument();
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect((await screen.findAllByText('app.bridgeModeCanonical')).length).toBeGreaterThan(0);
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
     expect(await screen.findByText('/home/miles/dev2/skill-0')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('app.landingScenariosTab'));
+
+    expect(await screen.findByText('Mode overview')).toBeInTheDocument();
+    expect(await screen.findByText('Bundle intake review')).toBeInTheDocument();
+    expect(await screen.findByText('Publish approval gate')).toBeInTheDocument();
   });
 
   it('surfaces standalone parser review guidance before analysis starts', async () => {
@@ -314,6 +318,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
+    fireEvent.click(screen.getByText('app.landingScenariosTab'));
     fireEvent.click(screen.getByText('Bundle intake review'));
     fireEvent.click(await screen.findByRole('button', { name: 'Open bundle sample' }));
 

@@ -71,7 +71,7 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
                 <MetricCard icon={<Target size={14} className="text-muted-foreground/70" />} label={t('dashboard.goalAchievement')} value={`${globalMetrics.goalAchievementRate}%`} />
               </div>
 
-              <div className="rounded-[1.35rem] border border-border/50 bg-white/42 p-4 shadow-[0_18px_38px_-32px_hsl(var(--foreground)/0.35)] backdrop-blur-2xl min-h-[220px]">
+              <div className="surface-ground p-4 min-h-[220px]">
                 <ResponsiveContainer width="100%" height={220}>
                   <RadarChart cx="50%" cy="50%" outerRadius="66%" data={radarData}>
                     <PolarGrid stroke="var(--color-border)" strokeOpacity={0.6} />
@@ -83,7 +83,7 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
               </div>
 
               <div className="flex flex-col gap-3">
-                <div className="rounded-[1.35rem] border border-border/50 bg-white/42 p-4 shadow-[0_18px_38px_-32px_hsl(var(--foreground)/0.35)] backdrop-blur-2xl group">
+                <div className="surface-raised p-4 group">
                   <h4 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground/70">{t('dashboard.riskAssessment')}</h4>
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -102,7 +102,7 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
                   </button>
                 </div>
 
-                <div className="rounded-[1.35rem] border border-border/50 bg-white/42 p-4 shadow-[0_18px_38px_-32px_hsl(var(--foreground)/0.35)] backdrop-blur-2xl group">
+                <div className="surface-raised p-4 group">
                   <h4 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground/70">{t('dashboard.threeClassification')}</h4>
                   <div className="mt-3 space-y-2 text-xs">
                     <div className="flex items-center justify-between gap-3">
@@ -141,7 +141,7 @@ export function Dashboard({ data, onNavigatePhase, modifiedPaths = new Set() }: 
 
 function MetricCard({ icon, label, value, isModified }: { icon: React.ReactNode; label: string; value: string; isModified?: boolean }) {
   return (
-    <div className={`rounded-[1.2rem] border p-3 shadow-[0_16px_34px_-30px_hsl(var(--foreground)/0.3)] backdrop-blur-2xl transition-colors ${isModified ? 'border-amber-500/35 bg-amber-500/10' : 'border-border/50 bg-white/42'}`}>
+    <div className={`surface-raised p-3 transition-colors ${isModified ? 'border-amber-500/35 bg-amber-500/10' : ''}`}>
       <div className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
         <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>

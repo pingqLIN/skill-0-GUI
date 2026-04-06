@@ -1377,15 +1377,18 @@ export function ReviewWorkspace({
             </div>
 
             <div className="space-y-2">
-              {workspaceTabs.map((view) => (
+              {workspaceTabs.map((view, index) => (
                 <div key={view.id} className="space-y-2">
                   <button
                     onClick={() => setActiveTab(view.id)}
                     className={`workspace-nav-button ${activeTab === view.id ? 'workspace-nav-button--active' : ''}`}
                   >
                     <div>
-                      <div className="text-pretty-wrap text-sm font-medium text-foreground">{view.label}</div>
-                      <div className="text-pretty-wrap mt-1 text-[11px] text-muted-foreground">{view.meta}</div>
+                      <div className="flex items-center gap-2 text-pretty-wrap text-sm font-medium text-foreground">
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-foreground/8 text-[10px] font-bold text-foreground/60">{index + 1}</span>
+                        {view.label}
+                      </div>
+                      <div className="text-pretty-wrap mt-1 pl-7 text-[11px] text-muted-foreground">{view.meta}</div>
                     </div>
                     <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-muted-foreground/70">{view.id}</span>
                   </button>
@@ -1521,23 +1524,6 @@ export function ReviewWorkspace({
               <p className="text-pretty-wrap mt-2 text-xs leading-5 text-foreground/68">{t('app.parserBoardHint')}</p>
             </div>
 
-            <div className="surface-panel-muted p-4 sm:hidden">
-              <div className="flex items-center justify-between gap-3">
-                <p className="editorial-kicker">{t('app.bridgeMode')}</p>
-                <span className={`editorial-chip px-2.5 py-1 text-[11px] font-medium ${
-                  activeBridgeMode === 'skill-0'
-                    ? 'bg-emerald-500/12 text-emerald-800'
-                    : activeBridgeMode === 'standalone'
-                      ? 'bg-amber-500/12 text-amber-800'
-                      : activeBridgeMode === 'llm-assisted'
-                        ? 'bg-sky-500/12 text-sky-800'
-                      : 'bg-muted/92 text-muted-foreground'
-                }`}>
-                  {bridgeModeLabel}
-                </span>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-foreground/68">{bridgeModeDetail}</p>
-            </div>
 
             <div
               data-testid="review-readiness-banner"
@@ -1565,20 +1551,43 @@ export function ReviewWorkspace({
           )}
 
           <div className="glass-panel-strong relative overflow-hidden px-5 py-5 sm:px-6">
+            {/* Progress breadcrumb — directional cue */}
+            <div className="parser-stepper mb-4">
+              <div className="parser-stepper__step parser-stepper__step--done">
+                <span className="parser-stepper__num">1</span>
+                <span>{t('app.stepIntake')}</span>
+              </div>
+              <div className="parser-stepper__connector parser-stepper__connector--done" />
+              <div className="parser-stepper__step parser-stepper__step--done">
+                <span className="parser-stepper__num">2</span>
+                <span>{t('app.stepParse')}</span>
+              </div>
+              <div className="parser-stepper__connector parser-stepper__connector--done" />
+              <div className="parser-stepper__step parser-stepper__step--active">
+                <span className="parser-stepper__num">3</span>
+                <span>{t('app.stepReview')}</span>
+              </div>
+              <div className="parser-stepper__connector" />
+              <div className="parser-stepper__step">
+                <span className="parser-stepper__num">4</span>
+                <span>{t('app.stepExport')}</span>
+              </div>
+            </div>
+
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
               <div>
                 {!isWorkspaceFocusMode && (
                   <>
                     <p className="editorial-kicker">{t('app.analysisResult')}</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                      <span className="editorial-chip px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-muted-foreground">
+                      <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-muted-foreground">
                         {t('app.project')}: {data.projectId}
                       </span>
-                      <span className="editorial-chip px-3 py-1 text-[11px] text-muted-foreground">
+                      <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] text-muted-foreground">
                         {t('app.parserVersion')}: {data?.parserResult?.meta?.parser_version || '--'}
                       </span>
                       {parserManifest && (
-                        <span className="editorial-chip px-3 py-1 text-[11px] text-muted-foreground">
+                        <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] text-muted-foreground">
                           {t('app.analysisLevel')}: {parserManifest.analysis_level}
                         </span>
                       )}
@@ -1624,32 +1633,25 @@ export function ReviewWorkspace({
               </div>
             </div>
 
-            <div data-testid="review-truth-banner" className={`surface-panel-muted mt-4 px-4 py-4 ${bridgeToneClass}`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={15} className="shrink-0" />
-                  <p className="editorial-kicker text-current/80">{t('app.reviewTruthPanel')}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                  <span className="editorial-chip px-3 py-1 font-medium">{bridgeModeSummary}</span>
-                  <span className="editorial-chip px-3 py-1 font-medium">
-                    {t('app.reviewEvidenceStatus')}: {reviewReadinessLabel}
-                  </span>
-                  <span className="editorial-chip px-3 py-1 font-medium">
-                    {t('app.equivalenceStatus')}: {reviewEquivalenceLabel}
-                  </span>
-                  <span className="editorial-chip px-3 py-1 font-medium">
-                    {t('app.handoffState')}: {handoffSummary}
-                  </span>
-                </div>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-current/75">{t('app.bridgeSource')}: {bridgeModeDetail}</p>
+            {/* Compact truth strip — merged from separate banners */}
+            <div data-testid="review-truth-banner" className={`truth-strip mt-4 ${bridgeToneClass}`}>
+              <AlertTriangle size={14} className="shrink-0" />
+              <span className="truth-strip__tag">{bridgeModeSummary}</span>
+              <span className="truth-strip__divider" />
+              <span className="truth-strip__tag">{reviewReadinessLabel}</span>
+              <span className="truth-strip__divider" />
+              <span className="truth-strip__tag">{reviewEquivalenceLabel}</span>
+              <span className="truth-strip__divider" />
+              <span className="truth-strip__tag">{handoffSummary}</span>
               {activeBridgeDraftOnly && (
-                <p className="mt-2 text-xs leading-5 text-current/75">{t('app.bridgeDraftOnlyWarning')}</p>
+                <>
+                  <span className="truth-strip__divider" />
+                  <span className="truth-strip__tag truth-strip__tag--wrap text-amber-800">{t('app.bridgeDraftOnlyWarning')}</span>
+                </>
               )}
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+            <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
               <StatPill label={t('app.totalActions')} value={String(parserActions.length)} />
               <StatPill label={t('app.totalRules')} value={String(parserRules.length)} />
               <StatPill label={t('app.totalDirectives')} value={String(parserDirectives.length)} accent={parserDirectives.length > 8 ? 'warn' : 'default'} />
@@ -1819,7 +1821,7 @@ export function ReviewWorkspace({
             {activeInsightTab === 'review' && (
               <>
                 <InsightBlock
-                  kicker={t('app.detailsPanel')}
+                  kicker={t('app.reviewDecision')}
                   title={t('app.workflowCheckpoint')}
                   summary={handoffSummary}
                   accent={effectiveHandoffState === 'approved_for_export' ? 'emerald' : effectiveHandoffState === 'needs_changes' ? 'rose' : 'default'}
@@ -2028,7 +2030,7 @@ export function ReviewWorkspace({
                 </InsightBlock>
 
                 <InsightBlock
-                  kicker={t('app.detailsPanel')}
+                  kicker={t('app.reviewNotes')}
                   title={t('app.reviewerNotes')}
                   summary={globalNotes.length + elementNotes.length > 0 ? `${globalNotes.length + elementNotes.length} ${t('app.notesCount')}` : t('app.reviewerNotesIdleShort')}
                   defaultOpen
@@ -2090,7 +2092,7 @@ export function ReviewWorkspace({
                 </InsightBlock>
 
                 <InsightBlock
-                  kicker={t('app.detailsPanel')}
+                  kicker={t('app.analysisResult')}
                   title={t('app.diffSummary')}
                   summary={diffSummary ? summarizeDiffSummary(t, diffSummary) : t('app.diffSummaryUnavailable')}
                   defaultOpen
@@ -2119,7 +2121,7 @@ export function ReviewWorkspace({
             {activeInsightTab === 'checks' && (
               <>
                 <InsightBlock
-                  kicker={t('app.detailsPanel')}
+                  kicker={t('app.checksPosture')}
                   title={t('app.checksPosture')}
                   summary={hasBlockingChecks ? t('app.checksBlocked') : hasAttentionChecks ? t('app.checksAttention') : t('app.checksClean')}
                   accent={hasBlockingChecks ? 'rose' : hasAttentionChecks ? 'default' : 'emerald'}
@@ -2134,7 +2136,7 @@ export function ReviewWorkspace({
                 </InsightBlock>
 
                 <InsightBlock
-                  kicker={t('app.detailsPanel')}
+                  kicker={t('app.schemaValidation')}
                   title={t('app.schemaValidation')}
                   summary={validationResult
                     ? validationErrors.length > 0
@@ -2199,7 +2201,7 @@ export function ReviewWorkspace({
                 </InsightBlock>
 
                 <InsightBlock
-                  kicker={t('app.detailsPanel')}
+                  kicker={t('app.consistencyChecks')}
                   title={t('app.consistencyChecks')}
                   summary={consistencyResult
                     ? consistencyErrors.length > 0
@@ -2265,7 +2267,7 @@ export function ReviewWorkspace({
                 </InsightBlock>
 
                 <InsightBlock
-                  kicker={t('app.detailsPanel')}
+                  kicker={t('app.reviewerTests')}
                   title={t('app.reviewerTests')}
                   summary={summarizeTestPanel(t, latestValidationRun, latestConsistencyRun, latestPathTestRun)}
                   accent={
