@@ -165,6 +165,32 @@ describe('Vite dev middleware API parity', () => {
     expect(examplePayload.text).toContain('Standalone Skill Demo');
   });
 
+  it('serves llm runtime settings through the dev middleware', async () => {
+    runtime = await startDevRuntime({
+      SKILL0_MODE: 'standalone',
+      SKILL0_LLM_MODE: 'fallback',
+      SKILL0_LLM_PROVIDER: 'openai',
+      SKILL0_LLM_MODEL: 'gpt-4o-mini',
+      SKILL0_RUNTIME_CONFIG_MUTABLE: 'true',
+      SKILL0_PARSER_ROOT: undefined,
+      SKILL0_ROOT: undefined,
+    });
+
+    const response = await fetch(`${runtime.baseUrl}/api/llm-settings`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.settings).toMatchObject({
+      mode: 'fallback',
+      model: 'gpt-4o-mini',
+      mutable: true,
+      provider: 'openai',
+    });
+    expect(payload.bridgeStatus).toMatchObject({
+      mode: 'standalone',
+    });
+  });
+
   it('parses uploaded skills through the dev middleware in standalone mode', async () => {
     runtime = await startDevRuntime({
       SKILL0_MODE: 'standalone',

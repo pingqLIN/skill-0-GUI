@@ -8,8 +8,12 @@ import { createServerApp } from '../../server.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-async function startTestServer(mode = 'standalone', bridge?: Parameters<typeof createServerApp>[0]['bridge']) {
-  const { app } = createServerApp({ bridge, mode, projectRoot });
+async function startTestServer(
+  mode = 'standalone',
+  bridge?: Parameters<typeof createServerApp>[0]['bridge'],
+  llmAdmin?: Parameters<typeof createServerApp>[0]['llmAdmin'],
+) {
+  const { app } = createServerApp({ bridge, llmAdmin, mode, projectRoot });
 
   return await new Promise<{ server: Server; url: string }>((resolve, reject) => {
     const server = app.listen(0, '127.0.0.1', () => {
@@ -205,6 +209,129 @@ describe('server runtime routes', () => {
     expect(parsePayload).toEqual({
       detail: 'Provider returned 503.',
       error: 'llm_provider_request_failed',
+    });
+  });
+
+  it('serves and updates llm runtime settings through the admin route', async () => {
+    let currentBridgeStatus = {
+      llmFallbackAvailable: false,
+      llmModel: null,
+      llmProvider: null,
+      llmReason: 'LLM fallback mode is disabled.',
+      llmSupportsJsonSchema: false,
+      llmSupportsReasoning: false,
+      mode: 'standalone',
+      skill0Root: null,
+    };
+    const llmAdmin = {
+      getPublicSettings: () => ({
+        options: {
+          modeValues: ['disabled', 'fallback'],
+          providerValues: ['openai', 'gemini', 'anthropic'],
+        },
+        settings: {
+          apiKeyConfigured: false,
+          apiKeySource: 'none',
+          maxInputChars: 12000,
+          mode: 'disabled',
+          model: 'gpt-4o-mini',
+          mutable: true,
+          provider: 'openai',
+          timeoutMs: 15000,
+          updatedAt: null,
+        },
+      }),
+      getRuntimeConfig: () => ({
+        apiKey: '',
+        maxInputChars: 12000,
+        mode: 'disabled',
+        model: 'gpt-4o-mini',
+        provider: 'openai',
+        timeoutMs: 15000,
+      }),
+      updateRuntimeConfig: (input: Record<string, unknown> = {}) => {
+        currentBridgeStatus = {
+          ...currentBridgeStatus,
+          llmFallbackAvailable: input.mode === 'fallback',
+          llmModel: typeof input.model === 'string' ? input.model : 'gpt-4o-mini',
+          llmProvider: typeof input.provider === 'string' ? input.provider : 'openai',
+          llmReason: input.mode === 'fallback' ? null : 'LLM fallback mode is disabled.',
+          llmSupportsJsonSchema: input.provider === 'openai',
+          llmSupportsReasoning: input.provider === 'openai',
+        };
+        return {
+          options: {
+            modeValues: ['disabled', 'fallback'],
+            providerValues: ['openai', 'gemini', 'anthropic'],
+          },
+          settings: {
+            apiKeyConfigured: Boolean(input.apiKey),
+            apiKeySource: input.apiKey ? 'runtime' : 'none',
+            maxInputChars: Number(input.maxInputChars || 12000),
+            mode: input.mode === 'fallback' ? 'fallback' : 'disabled',
+            model: typeof input.model === 'string' ? input.model : 'gpt-4o-mini',
+            mutable: true,
+            provider: typeof input.provider === 'string' ? input.provider : 'openai',
+            timeoutMs: Number(input.timeoutMs || 15000),
+            updatedAt: '2026-04-06T07:12:00.000Z',
+          },
+        };
+      },
+    };
+    const runtime = await startTestServer('standalone', {
+      getBridgeStatus: async () => currentBridgeStatus,
+      getExampleSkill: async () => ({
+        mode: 'standalone',
+        name: 'standalone-sample',
+        skill0Root: null,
+        source: 'standalone/example-skill.md',
+        text: '# Example',
+      }),
+      parseSkill: async () => ({ bridge: currentBridgeStatus }),
+    } as never, llmAdmin as never);
+    activeServer = runtime.server;
+
+    const settingsResponse = await fetch(`${runtime.url}/api/llm-settings`);
+    const settingsPayload = await settingsResponse.json();
+
+    expect(settingsResponse.status).toBe(200);
+    expect(settingsPayload.settings).toMatchObject({
+      mode: 'disabled',
+      mutable: true,
+      provider: 'openai',
+    });
+    expect(settingsPayload.bridgeStatus).toMatchObject({
+      llmFallbackAvailable: false,
+      mode: 'standalone',
+    });
+
+    const updateResponse = await fetch(`${runtime.url}/api/llm-settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: 'sk-runtime-test',
+        maxInputChars: 16000,
+        mode: 'fallback',
+        model: 'gpt-4.1-mini',
+        provider: 'openai',
+        timeoutMs: 18000,
+      }),
+    });
+    const updatePayload = await updateResponse.json();
+
+    expect(updateResponse.status).toBe(200);
+    expect(updatePayload.settings).toMatchObject({
+      apiKeyConfigured: true,
+      apiKeySource: 'runtime',
+      mode: 'fallback',
+      model: 'gpt-4.1-mini',
+      provider: 'openai',
+      timeoutMs: 18000,
+    });
+    expect(updatePayload.bridgeStatus).toMatchObject({
+      llmFallbackAvailable: true,
+      llmModel: 'gpt-4.1-mini',
+      llmProvider: 'openai',
     });
   });
 });

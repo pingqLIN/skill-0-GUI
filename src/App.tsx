@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity,
   AlertCircle,
@@ -10,9 +10,11 @@ import {
   PlayCircle,
   RefreshCw,
   ShieldCheck,
+  SlidersHorizontal,
   UploadCloud,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { LlmSettingsDialog } from './components/LlmSettingsDialog';
 import { analyzeSkillText, resolveSkillUrl } from './services/parserBridgeService';
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
@@ -177,6 +179,7 @@ export default function App() {
   const [workspaceDraftSavedAt, setWorkspaceDraftSavedAt] = useState<string | null>(null);
   const [workspaceDraftRestored, setWorkspaceDraftRestored] = useState(false);
   const [activeDemoPreset, setActiveDemoPreset] = useState<DemoReviewPreset | null>(null);
+  const [isLlmSettingsOpen, setIsLlmSettingsOpen] = useState(false);
   const hasHydratedWorkspaceDraftRef = useRef(false);
   const skipNextWorkspaceDraftPersistRef = useRef(false);
 
@@ -853,6 +856,10 @@ export default function App() {
     ? [bridgeStatus?.llmProvider, bridgeStatus?.llmModel].filter(Boolean).join('/') || t('app.llmFallbackReady')
     : bridgeStatus?.llmReason || t('app.llmFallbackDisabledHint');
   const sampleScenarioContent = getSampleScenarioContent(i18n.language);
+  const handleBridgeStatusChange = useCallback((status: BridgeStatus) => {
+    setBridgeStatus(status);
+    setBridgeStatusError(null);
+  }, []);
   const landingDocs = [
     {
       title: t('app.resourceDocsIndexTitle'),
@@ -1129,6 +1136,15 @@ npm run release:preview
               <Github size={16} />
               <span className="hidden sm:inline">GitHub</span>
             </a>
+            <button
+              type="button"
+              onClick={() => setIsLlmSettingsOpen(true)}
+              className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+              title={t('app.llmAdminTitle')}
+            >
+              <SlidersHorizontal size={16} />
+              <span className="hidden sm:inline">{t('app.aiSettings')}</span>
+            </button>
             <button
               onClick={toggleLanguage}
               className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
@@ -1557,6 +1573,11 @@ npm run release:preview
           </Suspense>
         )}
       </main>
+      <LlmSettingsDialog
+        open={isLlmSettingsOpen}
+        onClose={() => setIsLlmSettingsOpen(false)}
+        onBridgeStatusChange={handleBridgeStatusChange}
+      />
     </div>
   );
 }

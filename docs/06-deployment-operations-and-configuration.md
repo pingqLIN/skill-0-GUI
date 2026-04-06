@@ -82,6 +82,9 @@ Defined or documented in [../.env.example](../.env.example):
 - `SKILL0_LLM_MAX_INPUT_CHARS`
   Prompt-budget guardrail for recovery requests.
 
+- `SKILL0_RUNTIME_CONFIG_MUTABLE`
+  Allows the in-app LLM admin console to change provider, model, timeouts, input guardrails, and an in-memory API key at runtime. Defaults to read-only in production unless explicitly enabled.
+
 ## 6.3 Recommended Deployment Modes
 
 ### Internal integration deployment
@@ -155,8 +158,10 @@ Runtime endpoints:
 
 - `GET /healthz`
 - `GET /api/bridge-status`
+- `GET /api/llm-settings`
 - `GET /api/example-skill`
 - `POST /api/parse-skill`
+- `POST /api/llm-settings`
 - `POST /api/resolve-skill-url`
 
 These endpoints behave consistently in:
@@ -194,6 +199,7 @@ Before calling the deployment acceptable, verify all of the following on Render 
 - `GET /healthz` returns `ok: true`
 - `GET /api/bridge-status` reports standalone mode
 - `GET /api/bridge-status` also shows whether `llm-assisted` fallback is available
+- `GET /api/llm-settings` returns sanitized runtime settings without exposing the API key
 - `GET /api/example-skill` returns the bundled sample
 - paste intake parses successfully through `POST /api/parse-skill`
 - skill URL import succeeds for a supported remote source or fails with a clear user-facing explanation

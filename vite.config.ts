@@ -2,6 +2,8 @@ import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
+import { createLLMParserAdapter } from './bridge/llmParserAdapter.mjs';
+import { createLLMRuntimeConfigStore } from './bridge/llmRuntimeConfigStore.mjs';
 import { createSkill0Bridge, readJsonBody } from './bridge/skill0Bridge.mjs';
 import { resolveSkillUrlImport, serializeSkillUrlError } from './bridge/skillUrlResolver.mjs';
 
@@ -65,8 +67,14 @@ function isNodeModulePackage(id: string, packageName: string) {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const enable3D = env.VITE_ENABLE_3D !== 'false';
+  const llmAdmin = createLLMRuntimeConfigStore({
+    mutable: env.SKILL0_RUNTIME_CONFIG_MUTABLE,
+  });
   const bridge = createSkill0Bridge({
     explicitRoot: env.SKILL0_PARSER_ROOT || env.SKILL0_ROOT,
+    llmAdapter: createLLMParserAdapter({
+      getConfig: llmAdmin.getRuntimeConfig,
+    }),
     mode: env.SKILL0_MODE || 'auto',
     projectRoot: __dirname,
   });
@@ -97,6 +105,42 @@ export default defineConfig(({ mode }) => {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(await bridge.getBridgeStatus()));
+          });
+
+          server.middlewares.use('/api/llm-settings', async (req, res, next) => {
+            if (req.method === 'GET') {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                ...llmAdmin.getPublicSettings(),
+                bridgeStatus: await bridge.getBridgeStatus(),
+              }));
+              return;
+            }
+
+            if (req.method === 'POST') {
+              try {
+                const body = await readJsonBody(req);
+                const payload = llmAdmin.updateRuntimeConfig(body || {});
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({
+                  ...payload,
+                  bridgeStatus: await bridge.getBridgeStatus(),
+                }));
+              } catch (error) {
+                const payload = serializeBridgeError(error);
+                res.statusCode = payload.statusCode;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({
+                  error: payload.error,
+                  detail: payload.detail,
+                }));
+              }
+              return;
+            }
+
+            next();
           });
 
           server.middlewares.use('/api/example-skill', async (req, res, next) => {

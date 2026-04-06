@@ -111,6 +111,7 @@ Important:
 - this path is `draft-only`
 - it is useful for unknown or future formats
 - it must not be presented as final equivalence evidence
+- the in-app `AI settings` console can inspect or adjust the server-side runtime when `SKILL0_RUNTIME_CONFIG_MUTABLE=true`
 
 Advanced contract:
 
@@ -187,6 +188,7 @@ Most users can start with defaults. These are the main variables when you need m
 - `SKILL0_LLM_API_KEY`
 - `SKILL0_LLM_TIMEOUT_MS`
 - `SKILL0_LLM_MAX_INPUT_CHARS`
+- `SKILL0_RUNTIME_CONFIG_MUTABLE`
 - `PORT`
 - `VITE_ENABLE_3D`
 

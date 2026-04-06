@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import { createLLMParserAdapter } from './bridge/llmParserAdapter.mjs';
+import { createLLMRuntimeConfigStore } from './bridge/llmRuntimeConfigStore.mjs';
 import { createSkill0Bridge } from './bridge/skill0Bridge.mjs';
 import { resolveSkillUrlImport, serializeSkillUrlError } from './bridge/skillUrlResolver.mjs';
 
@@ -47,6 +49,11 @@ function serializeBridgeError(error) {
  *     parseSkill: (text: string, skillName: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>;
  *   };
  *   explicitRoot?: string;
+ *   llmAdmin?: {
+ *     getPublicSettings: () => Record<string, unknown>;
+ *     getRuntimeConfig: () => Record<string, unknown>;
+ *     updateRuntimeConfig: (input?: Record<string, unknown>) => Record<string, unknown>;
+ *   };
  *   mode?: string;
  *   projectRoot?: string;
  * }} ServerAppOptions
@@ -56,13 +63,18 @@ function serializeBridgeError(error) {
 export function createServerApp({
   bridge: providedBridge,
   explicitRoot = process.env.SKILL0_PARSER_ROOT || process.env.SKILL0_ROOT,
+  llmAdmin: providedLlmAdmin,
   mode = process.env.SKILL0_MODE || 'auto',
   projectRoot = __dirname,
 } = {}) {
   const app = express();
   const distDir = path.resolve(projectRoot, 'dist');
+  const llmAdmin = providedLlmAdmin || createLLMRuntimeConfigStore();
   const bridge = providedBridge || createSkill0Bridge({
     explicitRoot,
+    llmAdapter: createLLMParserAdapter({
+      getConfig: llmAdmin.getRuntimeConfig,
+    }),
     mode,
     projectRoot,
   });
@@ -79,6 +91,29 @@ export function createServerApp({
 
   app.get('/api/bridge-status', async (_req, res) => {
     res.json(await bridge.getBridgeStatus());
+  });
+
+  app.get('/api/llm-settings', async (_req, res) => {
+    res.json({
+      ...llmAdmin.getPublicSettings(),
+      bridgeStatus: await bridge.getBridgeStatus(),
+    });
+  });
+
+  app.post('/api/llm-settings', async (req, res) => {
+    try {
+      const payload = llmAdmin.updateRuntimeConfig(req.body || {});
+      res.json({
+        ...payload,
+        bridgeStatus: await bridge.getBridgeStatus(),
+      });
+    } catch (error) {
+      const payload = serializeBridgeError(error);
+      res.status(payload.statusCode).json({
+        error: payload.error,
+        detail: payload.detail,
+      });
+    }
   });
 
   app.get('/api/example-skill', async (_req, res) => {

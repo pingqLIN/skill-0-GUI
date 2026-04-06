@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import App from '../App';
 import { analyzeSkillText, resolveSkillUrl } from '../services/parserBridgeService';
 import { fetchBridgeStatus } from '../services/bridgeStatusService';
+import { fetchLlmSettings, updateLlmSettings } from '../services/llmSettingsService';
 import JSZip from 'jszip';
 
 const WORKSPACE_DRAFT_STORAGE_KEY = 'skill-0-review-studio.workspace-draft.v1';
@@ -43,12 +44,70 @@ vi.mock('../services/bridgeStatusService', () => ({
     skill0Root: '/home/miles/dev2/skill-0',
   }),
 }));
+vi.mock('../services/llmSettingsService', () => ({
+  fetchLlmSettings: vi.fn().mockResolvedValue({
+    bridgeStatus: {
+      mode: 'skill-0',
+      skill0Root: '/home/miles/dev2/skill-0',
+      llmFallbackAvailable: false,
+      llmProvider: null,
+      llmModel: null,
+      llmReason: 'app.llmFallbackDisabledHint',
+      llmSupportsJsonSchema: false,
+      llmSupportsReasoning: false,
+    },
+    options: {
+      modeValues: ['disabled', 'fallback'],
+      providerValues: ['openai', 'gemini', 'anthropic'],
+    },
+    settings: {
+      apiKeyConfigured: false,
+      apiKeySource: 'none',
+      maxInputChars: 12000,
+      mode: 'disabled',
+      model: 'gpt-4o-mini',
+      mutable: true,
+      provider: 'openai',
+      timeoutMs: 15000,
+      updatedAt: null,
+    },
+  }),
+  updateLlmSettings: vi.fn().mockResolvedValue({
+    bridgeStatus: {
+      mode: 'skill-0',
+      skill0Root: '/home/miles/dev2/skill-0',
+      llmFallbackAvailable: true,
+      llmProvider: 'openai',
+      llmModel: 'gpt-4o-mini',
+      llmReason: null,
+      llmSupportsJsonSchema: true,
+      llmSupportsReasoning: true,
+    },
+    options: {
+      modeValues: ['disabled', 'fallback'],
+      providerValues: ['openai', 'gemini', 'anthropic'],
+    },
+    settings: {
+      apiKeyConfigured: true,
+      apiKeySource: 'runtime',
+      maxInputChars: 12000,
+      mode: 'fallback',
+      model: 'gpt-4o-mini',
+      mutable: true,
+      provider: 'openai',
+      timeoutMs: 15000,
+      updatedAt: '2026-04-06T07:10:00.000Z',
+    },
+  }),
+}));
 
 describe('App smoke test', () => {
   beforeEach(() => {
     vi.mocked(analyzeSkillText).mockReset();
     vi.mocked(resolveSkillUrl).mockReset();
     vi.mocked(JSZip.loadAsync).mockReset();
+    vi.mocked(fetchLlmSettings).mockClear();
+    vi.mocked(updateLlmSettings).mockClear();
     window.localStorage.clear();
     vi.mocked(fetchBridgeStatus).mockResolvedValue({
       mode: 'skill-0',
@@ -118,6 +177,39 @@ describe('App smoke test', () => {
 
     expect(await screen.findByText('app.llmFallbackAvailable')).toBeInTheDocument();
     expect(await screen.findByText('openai/gpt-4o-mini')).toBeInTheDocument();
+  });
+
+  it('opens the llm admin dialog and saves runtime settings', async () => {
+    await act(async () => {
+      render(<App />);
+    });
+
+    fireEvent.click(screen.getByText('app.aiSettings'));
+
+    expect(await screen.findByTestId('llm-settings-dialog')).toBeInTheDocument();
+    expect(fetchLlmSettings).toHaveBeenCalled();
+    expect(screen.getByDisplayValue('gpt-4o-mini')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByDisplayValue('gpt-4o-mini'), {
+      target: { value: 'gpt-4.1-mini' },
+    });
+    fireEvent.change(await screen.findByPlaceholderText('app.llmAdminApiKeyPlaceholder'), {
+      target: { value: 'sk-test-1234' },
+    });
+    fireEvent.click(screen.getByText('app.save'));
+
+    await waitFor(() => {
+      expect(updateLlmSettings).toHaveBeenCalledWith({
+        apiKey: 'sk-test-1234',
+        clearApiKey: false,
+        maxInputChars: 12000,
+        mode: 'disabled',
+        model: 'gpt-4.1-mini',
+        provider: 'openai',
+        timeoutMs: 15000,
+      });
+    });
+    expect(await screen.findByText('app.llmAdminSaved')).toBeInTheDocument();
   });
 
   it('loads the review workspace after analysis completes', async () => {

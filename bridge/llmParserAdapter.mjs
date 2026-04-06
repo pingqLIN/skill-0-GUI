@@ -693,67 +693,118 @@ async function parseUnknownSkillWithOpenAI({
   }
 }
 
+/**
+ * @typedef {{
+ *   apiKey?: string;
+ *   fetchImpl?: typeof fetch;
+ *   getConfig?: () => {
+ *     apiKey?: string;
+ *     maxInputChars?: number;
+ *     mode?: string;
+ *     model?: string;
+ *     provider?: string | null;
+ *     timeoutMs?: number;
+ *   };
+ *   maxInputChars?: number;
+ *   mode?: string;
+ *   model?: string;
+ *   provider?: string;
+ *   timeoutMs?: number;
+ * }} LLMParserAdapterOptions
+ */
+
+/** @param {LLMParserAdapterOptions} options */
 export function createLLMParserAdapter({
   apiKey = process.env.SKILL0_LLM_API_KEY || process.env.OPENAI_API_KEY || '',
   fetchImpl = globalThis.fetch,
+  getConfig,
   maxInputChars = normalizePositiveInteger(process.env.SKILL0_LLM_MAX_INPUT_CHARS, DEFAULT_MAX_INPUT_CHARS, 48000),
   mode = process.env.SKILL0_LLM_MODE || 'disabled',
   model,
   provider = process.env.SKILL0_LLM_PROVIDER || '',
   timeoutMs = normalizePositiveInteger(process.env.SKILL0_LLM_TIMEOUT_MS, DEFAULT_TIMEOUT_MS, 120000),
 } = {}) {
-  const normalizedMode = normalizeMode(mode);
-  const normalizedProvider = normalizeProvider(provider);
-  const resolvedModel = trimString(model) || (normalizedProvider === 'openai' ? DEFAULT_OPENAI_MODEL : '');
+  function resolveRuntimeConfig() {
+    const config = typeof getConfig === 'function'
+      ? getConfig()
+      : {
+          apiKey,
+          maxInputChars,
+          mode,
+          model,
+          provider,
+          timeoutMs,
+        };
+    const normalizedProvider = normalizeProvider(config?.provider);
 
-  let capabilities;
+    return {
+      apiKey: trimString(config?.apiKey),
+      maxInputChars: normalizePositiveInteger(config?.maxInputChars, DEFAULT_MAX_INPUT_CHARS, 48000),
+      mode: normalizeMode(config?.mode),
+      model: trimString(config?.model) || (normalizedProvider === 'openai' ? DEFAULT_OPENAI_MODEL : ''),
+      provider: normalizedProvider,
+      timeoutMs: normalizePositiveInteger(config?.timeoutMs, DEFAULT_TIMEOUT_MS, 120000),
+    };
+  }
 
-  if (normalizedMode !== 'fallback') {
-    capabilities = buildCapabilities({
-      enabled: false,
-      mode: normalizedMode,
-      model: resolvedModel || null,
-      provider: normalizedProvider,
-      reason: 'LLM fallback mode is disabled.',
-    });
-  } else if (!normalizedProvider) {
-    capabilities = buildCapabilities({
-      enabled: false,
-      mode: normalizedMode,
-      model: null,
-      provider: null,
-      reason: 'LLM fallback provider is not configured.',
-    });
-  } else if (!apiKey) {
-    capabilities = buildCapabilities({
-      enabled: false,
-      mode: normalizedMode,
-      model: resolvedModel || null,
-      provider: normalizedProvider,
-      reason: 'LLM fallback API key is not configured.',
-    });
-  } else if (normalizedProvider !== 'openai') {
-    capabilities = buildCapabilities({
-      enabled: false,
-      mode: normalizedMode,
-      model: resolvedModel || null,
-      provider: normalizedProvider,
-      reason: `${normalizedProvider} fallback is not implemented in this build.`,
-    });
-  } else if (typeof fetchImpl !== 'function') {
-    capabilities = buildCapabilities({
-      enabled: false,
-      mode: normalizedMode,
-      model: resolvedModel || null,
-      provider: normalizedProvider,
-      reason: 'No fetch implementation is available for the LLM fallback adapter.',
-    });
-  } else {
-    capabilities = buildCapabilities({
+  function getCapabilities() {
+    const config = resolveRuntimeConfig();
+
+    if (config.mode !== 'fallback') {
+      return buildCapabilities({
+        enabled: false,
+        mode: config.mode,
+        model: config.model || null,
+        provider: config.provider,
+        reason: 'LLM fallback mode is disabled.',
+      });
+    }
+
+    if (!config.provider) {
+      return buildCapabilities({
+        enabled: false,
+        mode: config.mode,
+        model: null,
+        provider: null,
+        reason: 'LLM fallback provider is not configured.',
+      });
+    }
+
+    if (!config.apiKey) {
+      return buildCapabilities({
+        enabled: false,
+        mode: config.mode,
+        model: config.model || null,
+        provider: config.provider,
+        reason: 'LLM fallback API key is not configured.',
+      });
+    }
+
+    if (config.provider !== 'openai') {
+      return buildCapabilities({
+        enabled: false,
+        mode: config.mode,
+        model: config.model || null,
+        provider: config.provider,
+        reason: `${config.provider} fallback is not implemented in this build.`,
+      });
+    }
+
+    if (typeof fetchImpl !== 'function') {
+      return buildCapabilities({
+        enabled: false,
+        mode: config.mode,
+        model: config.model || null,
+        provider: config.provider,
+        reason: 'No fetch implementation is available for the LLM fallback adapter.',
+      });
+    }
+
+    return buildCapabilities({
       enabled: true,
-      mode: normalizedMode,
-      model: resolvedModel,
-      provider: normalizedProvider,
+      mode: config.mode,
+      model: config.model,
+      provider: config.provider,
     });
   }
 
@@ -765,6 +816,9 @@ export function createLLMParserAdapter({
     skillName,
     text,
   }) {
+    const config = resolveRuntimeConfig();
+    const capabilities = getCapabilities();
+
     if (!capabilities.enabled || !capabilities.provider || !capabilities.model) {
       throw createLLMParserError(
         capabilities.reason || 'LLM fallback is unavailable.',
@@ -779,18 +833,18 @@ export function createLLMParserAdapter({
 
     if (capabilities.provider === 'openai') {
       return await parseUnknownSkillWithOpenAI({
-        apiKey,
+        apiKey: config.apiKey,
         contextFiles,
         fallbackReason,
         fetchImpl,
-        maxInputChars,
+        maxInputChars: config.maxInputChars,
         model: capabilities.model,
         primaryPath,
         provider: capabilities.provider,
         schemaPath,
         skillName,
         text,
-        timeoutMs,
+        timeoutMs: config.timeoutMs,
       });
     }
 
@@ -805,9 +859,7 @@ export function createLLMParserAdapter({
   }
 
   return {
-    getCapabilities() {
-      return { ...capabilities };
-    },
+    getCapabilities,
     async parseUnknownSkill(input, options = {}) {
       return await parseUnknownSkill({
         ...input,
