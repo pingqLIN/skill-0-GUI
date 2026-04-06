@@ -1071,14 +1071,14 @@ npm run release:preview
       <header className="frost-banner">
         <div className="mx-auto flex max-w-[1980px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-[0_18px_40px_-24px_hsl(var(--foreground)/0.55)]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[calc(var(--radius)*1.05)] bg-primary text-sm font-bold text-primary-foreground">
               S0
             </div>
             <div className="min-w-0">
               <p className="editorial-kicker">{t('app.workspace')}</p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
-                <span className="hidden text-xs text-muted-foreground/80 sm:inline">{t('app.subtitle')}</span>
+                <span className="hidden text-xs text-foreground/60 sm:inline">{t('app.subtitle')}</span>
               </div>
             </div>
           </div>
@@ -1088,19 +1088,19 @@ npm run release:preview
               <button
                 type="button"
                 onClick={handleResetWorkspace}
-                className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-2 text-sm font-medium text-muted-foreground backdrop-blur-xl transition-colors hover:border-primary/28 hover:text-foreground"
+                className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
                 title={t('app.resetWorkspace')}
               >
                 <RefreshCw size={16} />
                 <span className="hidden lg:inline">{t('app.resetWorkspace')}</span>
               </button>
             )}
-            <div className={`hidden rounded-[1rem] border px-3 py-2 text-left backdrop-blur-xl sm:block ${
+            <div className={`hidden rounded-[calc(var(--radius)*1.05)] px-3 py-2 text-left sm:block ${
               bridgeStatus?.mode === 'skill-0'
-                ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+                ? 'bg-emerald-500/14 text-emerald-950'
                 : bridgeStatus?.mode === 'standalone'
-                  ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
-                  : 'border-border/50 bg-card/60 text-muted-foreground'
+                  ? 'bg-amber-500/14 text-amber-950'
+                  : 'bg-muted text-muted-foreground'
             }`}>
               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.bridgeMode')}</div>
               <div className="mt-1 text-xs font-medium">{bridgeModeLabel}</div>
@@ -1170,14 +1170,14 @@ npm run release:preview
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
                         {t('app.reviewOutputsTitle')}
                       </h2>
-                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
+                      <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {t('app.reviewOutputsLead')}
                       </p>
                       <div className="grid gap-3 md:grid-cols-3">
                         {landingArtifacts.map((item) => (
                           <div key={item.title} className="surface-panel-muted px-4 py-4">
                             <div className="text-sm font-semibold text-foreground">{item.title}</div>
-                            <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                            <p className="mt-2 text-sm leading-6 text-foreground/72">{item.body}</p>
                           </div>
                         ))}
                       </div>
@@ -1208,7 +1208,7 @@ npm run release:preview
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
                         {t('app.resourcesTitle')}
                       </h2>
-                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
+                      <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {t('app.resourcesLead')}
                       </p>
                       <div className="grid gap-3 md:grid-cols-3">
@@ -1218,10 +1218,10 @@ npm run release:preview
                             href={item.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="surface-panel-muted px-4 py-4 text-left transition hover:border-foreground/14 hover:bg-background/96"
+                            className="surface-panel-muted px-4 py-4 text-left transition hover:bg-card"
                           >
                             <div className="text-sm font-semibold text-foreground">{item.title}</div>
-                            <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                            <p className="mt-2 text-sm leading-6 text-foreground/72">{item.body}</p>
                           </a>
                         ))}
                       </div>
@@ -1232,7 +1232,7 @@ npm run release:preview
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
                         {activeLandingScenario.title}
                       </h2>
-                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
+                      <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {activeLandingScenario.body}
                       </p>
                       <div className="grid gap-3 md:grid-cols-2">
@@ -1269,7 +1269,7 @@ npm run release:preview
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.4rem]">
                         {t('app.title')}
                       </h2>
-                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-[1.02rem]">
+                      <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {t('app.landingTagline')}
                       </p>
                     </div>
@@ -1299,8 +1299,8 @@ npm run release:preview
                   onDrop={handleDrop}
                   className={`editorial-dropzone p-5 transition-colors ${
                     isDragActive
-                      ? 'border-foreground/24 bg-accent/70 shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.06)]'
-                      : 'hover:border-foreground/18 hover:bg-card/92'
+                      ? 'border-foreground/18 bg-card'
+                      : 'hover:bg-card'
                   }`}
                 >
                   <input
@@ -1323,7 +1323,7 @@ npm run release:preview
                       <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
                       <div className="space-y-1">
                         <p className="text-lg font-medium text-foreground">{t('app.analyzing')}</p>
-                        <p className="text-sm text-muted-foreground">{t('app.applying')}</p>
+                        <p className="text-sm text-foreground/70">{t('app.applying')}</p>
                       </div>
                     </div>
                   ) : (
@@ -1391,7 +1391,7 @@ npm run release:preview
                       />
 
                       {error && (
-                        <div className="flex items-start gap-2 rounded-xl border border-destructive/15 bg-destructive/10 px-3 py-2 text-sm text-destructive backdrop-blur-lg">
+                        <div className="flex items-start gap-2 rounded-[calc(var(--radius)*1.05)] bg-destructive/10 px-3 py-2 text-sm text-destructive">
                           <AlertCircle size={16} className="mt-0.5 shrink-0" />
                           <span>{error}</span>
                         </div>
@@ -1439,7 +1439,7 @@ npm run release:preview
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.intakePreview')}</div>
-                              <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('app.intakePreviewHint')}</p>
+                              <p className="mt-2 text-sm leading-6 text-foreground/70">{t('app.intakePreviewHint')}</p>
                             </div>
                             <div className="editorial-chip px-3 py-1.5 text-[11px] font-medium text-foreground">
                               {pendingUploadFiles.length} {t('app.intakeFiles')}
@@ -1453,11 +1453,11 @@ npm run release:preview
                                   key={`${file.path}-${file.size}`}
                                   type="button"
                                   onClick={() => file.isPrimaryCandidate && setPendingPrimaryPath(file.path)}
-                                  className={`rounded-[calc(var(--radius)*1.05)] border border-border/12 px-3 py-3 text-left transition ${
+                                  className={`rounded-[calc(var(--radius)*1.02)] px-3 py-3 text-left transition ${
                                     isSelectedPrimary
-                                      ? 'bg-accent/90 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.03)]'
-                                      : 'bg-background/84'
-                                  } ${file.isPrimaryCandidate ? 'hover:border-foreground/16 hover:bg-background' : ''}`}
+                                      ? 'bg-background'
+                                      : 'bg-muted'
+                                  } ${file.isPrimaryCandidate ? 'hover:bg-card' : ''}`}
                                 >
                                   <div className="flex items-center justify-between gap-3">
                                     <div className="text-sm font-medium text-foreground">{file.name}</div>
@@ -1465,10 +1465,10 @@ npm run release:preview
                                       <span className="text-[11px] text-muted-foreground">{formatBytes(file.size)}</span>
                                       <span className={`editorial-chip px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                                         isSelectedPrimary
-                                          ? 'bg-accent/90 text-foreground'
+                                          ? 'bg-background text-foreground'
                                           : file.isPrimaryCandidate
-                                            ? 'bg-[#fbf2eb] text-[#7c5b2a]'
-                                            : 'bg-background/90 text-muted-foreground'
+                                            ? 'bg-[#efe2d4] text-[#6f4f25]'
+                                            : 'bg-card text-muted-foreground'
                                       }`}>
                                         {isSelectedPrimary ? t('app.primarySkill') : file.isPrimaryCandidate ? t('app.primaryCandidate') : t('app.contextOnly')}
                                       </span>
@@ -1492,8 +1492,8 @@ npm run release:preview
                                 key={`${file.path}-${file.size}`}
                                 type="button"
                                 onClick={() => setSelectedContextPath(file.path)}
-                                className={`rounded-[calc(var(--radius)*1.05)] border border-border/12 px-3 py-3 text-left transition ${
-                                  selectedContextPath === file.path ? 'bg-accent/88 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.03)]' : 'bg-background/84'
+                                className={`rounded-[calc(var(--radius)*1.02)] px-3 py-3 text-left transition ${
+                                  selectedContextPath === file.path ? 'bg-background' : 'bg-muted'
                                 }`}
                               >
                                 <div className="flex items-center justify-between gap-3">

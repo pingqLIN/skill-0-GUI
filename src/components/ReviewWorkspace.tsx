@@ -261,10 +261,10 @@ export function ReviewWorkspace({
       ? t('app.reviewEvidenceStandalone')
       : t('app.reviewEvidenceUnavailable');
   const reviewReadinessStyles = bridgeStatus?.mode === 'skill-0'
-    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+    ? 'bg-emerald-500/12 text-emerald-950'
     : bridgeStatus?.mode === 'standalone'
-      ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
-      : 'border-border/55 bg-background/70 text-muted-foreground';
+      ? 'bg-amber-500/12 text-amber-950'
+      : 'bg-muted text-muted-foreground';
   const skillDocument = extractSkillDocumentFromReviewData(data);
   const originalSkillDocument = originalData ? extractSkillDocumentFromReviewData(originalData) : null;
   const reviewDraftStorageKey = data?.projectId ? `${REVIEW_DRAFT_STORAGE_PREFIX}:${data.projectId}` : null;
@@ -743,10 +743,10 @@ export function ReviewWorkspace({
       ? 'standalone'
       : 'unknown';
   const bridgeToneClass = bridgeStatus?.mode === 'skill-0'
-    ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-900'
+    ? 'bg-emerald-500/12 text-emerald-950'
     : bridgeStatus?.mode === 'standalone'
-      ? 'border-amber-500/20 bg-amber-500/10 text-amber-900'
-      : 'border-border/50 bg-background/70 text-foreground';
+      ? 'bg-amber-500/12 text-amber-950'
+      : 'bg-muted text-foreground';
   const reviewStatusLabel = reviewStatus === 'approved'
     ? t('app.reviewStatusApproved')
     : reviewStatus === 'changes_requested'
@@ -1245,7 +1245,7 @@ export function ReviewWorkspace({
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-5 rounded-[1.4rem] border border-primary/20 bg-primary/8 px-4 py-4 text-foreground backdrop-blur-xl"
+          className="mb-5 rounded-[calc(var(--radius)*1.02)] bg-card px-4 py-4 text-foreground"
           data-testid="demo-review-preset"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1254,20 +1254,20 @@ export function ReviewWorkspace({
               <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">{demoPreset.title}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{demoPreset.focus}</p>
             </div>
-            <div className="rounded-full border border-primary/20 bg-background/72 px-3 py-1.5 text-[11px] font-medium text-foreground">
+            <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5 text-[11px] font-medium text-foreground">
               {t(reviewStatusLabelKey(reviewStatus))}
             </div>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
+            <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-3">
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.sampleNextStep')}</div>
               <div className="mt-2 text-sm leading-6 text-foreground">{demoPreset.nextStep}</div>
             </div>
-            <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
+            <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-3">
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.samplePrefilled')}</div>
               <div className="mt-2 text-sm leading-6 text-foreground">{reviewerSignoff || t('app.reviewerSignoffPending')}</div>
             </div>
-            <div className="rounded-[1rem] border border-border/55 bg-background/72 px-3 py-3">
+            <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-3">
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.sampleChecklist')}</div>
               <div className="mt-2 text-sm leading-6 text-foreground">{checklistCompletedCount}/4</div>
             </div>
@@ -1403,7 +1403,7 @@ export function ReviewWorkspace({
                       {modifiedPaths.size > 0 && (
                         <button
                           onClick={onUndo}
-                          className="inline-flex items-center justify-between rounded-xl border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-amber-700 transition hover:bg-amber-500/12"
+                          className="inline-flex items-center justify-between rounded-[calc(var(--radius)*1.02)] bg-amber-500/12 px-3 py-2 text-sm text-amber-900 transition hover:bg-amber-500/18"
                         >
                           <span>{t('app.undo')}</span>
                           <Undo2 size={14} />
@@ -1425,7 +1425,7 @@ export function ReviewWorkspace({
               <div className="text-pretty-wrap mt-3 text-sm font-medium text-foreground">
                 {data?.parserResult?.meta?.title || data?.parserResult?.meta?.name || '--'}
               </div>
-              <p className="text-pretty-wrap mt-2 text-xs leading-5 text-muted-foreground">{t('app.parserBoardHint')}</p>
+              <p className="text-pretty-wrap mt-2 text-xs leading-5 text-foreground/68">{t('app.parserBoardHint')}</p>
             </div>
 
             <div className="surface-panel-muted p-4 sm:hidden">
@@ -1433,15 +1433,15 @@ export function ReviewWorkspace({
                 <p className="editorial-kicker">{t('app.bridgeMode')}</p>
                 <span className={`editorial-chip px-2.5 py-1 text-[11px] font-medium ${
                   bridgeStatus?.mode === 'skill-0'
-                    ? 'bg-emerald-500/10 text-emerald-700'
+                    ? 'bg-emerald-500/12 text-emerald-800'
                     : bridgeStatus?.mode === 'standalone'
-                      ? 'bg-amber-500/10 text-amber-700'
-                      : 'bg-background/70 text-muted-foreground'
+                      ? 'bg-amber-500/12 text-amber-800'
+                      : 'bg-muted/92 text-muted-foreground'
                 }`}>
                   {bridgeModeLabel}
                 </span>
               </div>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">{bridgeModeDetail}</p>
+              <p className="mt-2 text-xs leading-5 text-foreground/68">{bridgeModeDetail}</p>
             </div>
 
             <div
@@ -1470,7 +1470,6 @@ export function ReviewWorkspace({
           )}
 
           <div className="glass-panel-strong relative overflow-hidden px-5 py-5 sm:px-6">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
               <div>
                 {!isWorkspaceFocusMode && (
@@ -1501,14 +1500,14 @@ export function ReviewWorkspace({
                   </h2>
                   <Edit2 size={16} className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{bridgeReviewGuidance}</p>
+                <p className="mt-3 max-w-3xl text-[0.95rem] leading-7 text-foreground/74">{bridgeReviewGuidance}</p>
               </div>
 
               <div data-testid="review-decision-panel" className="surface-panel-muted px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="editorial-kicker">{t('app.reviewDecisionPanel')}</p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('app.reviewPacketHint')}</p>
+                    <p className="mt-2 text-sm leading-6 text-foreground/72">{t('app.reviewPacketHint')}</p>
                   </div>
                   <span className="editorial-chip px-3 py-1 text-[11px] font-medium text-foreground">
                     {reviewStatusLabel}
@@ -1525,7 +1524,7 @@ export function ReviewWorkspace({
                   <MiniMetric label={t('app.reviewProfile')} value={reviewProfileSummary} highlight />
                 </div>
                 {reviewerNotes.trim() && (
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{reviewerNotes.trim()}</p>
+                  <p className="mt-3 text-sm leading-6 text-foreground/72">{reviewerNotes.trim()}</p>
                 )}
               </div>
             </div>
@@ -1566,7 +1565,7 @@ export function ReviewWorkspace({
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <p className="editorial-kicker">{t('app.workspaceViews')}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{t('app.phaseFlowHint')}</p>
+                <p className="mt-2 text-sm text-foreground/68">{t('app.phaseFlowHint')}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {isWorkspaceFocusMode && (
@@ -1663,7 +1662,7 @@ export function ReviewWorkspace({
 	                            <div className="max-w-sm space-y-3">
 	                              <p className="editorial-kicker">{t('app.detailsPanel')}</p>
 	                              <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('app.noActivePhase')}</h3>
-                              <p className="text-sm leading-6 text-muted-foreground">{t('app.selectPhaseHint')}</p>
+                              <p className="text-sm leading-6 text-foreground/70">{t('app.selectPhaseHint')}</p>
                             </div>
                           </div>
                         )}
@@ -1745,15 +1744,15 @@ export function ReviewWorkspace({
                         highlight={Boolean(reviewerSignoff)}
                       />
                     </div>
-                    <div className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-muted-foreground">
+                    <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-3 text-sm leading-6 text-muted-foreground">
                       <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.nextAction')}</div>
                       <p className="mt-2 font-medium text-foreground">{nextActionLabel}</p>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{handoffGuidance}</p>
+                      <p className="mt-1 text-sm leading-6 text-foreground/72">{handoffGuidance}</p>
                     </div>
                     {reviewDraftSavedAt && (
                       <div
                         data-testid="review-draft-status"
-                        className="rounded-[1.05rem] border border-border/55 bg-background/68 px-3 py-3 text-sm text-foreground backdrop-blur-xl"
+                        className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-3 text-sm text-foreground"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
@@ -1776,7 +1775,7 @@ export function ReviewWorkspace({
                             id="review-profile-input"
                             value={reviewProfile}
                             onChange={(event) => updateReviewProfile(event.target.value as ReviewProfile)}
-                            className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                            className="editorial-field w-full px-3 py-3 text-sm text-foreground outline-none"
                           >
                             <option value="mode_verification">{t('app.reviewProfileModeVerification')}</option>
                             <option value="bundle_evidence_review">{t('app.reviewProfileBundleEvidenceReview')}</option>
@@ -1791,7 +1790,7 @@ export function ReviewWorkspace({
                             id="handoff-state-input"
                             value={effectiveHandoffState}
                             onChange={(event) => updateHandoffState(event.target.value as HandoffState)}
-                            className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                            className="editorial-field w-full px-3 py-3 text-sm text-foreground outline-none"
                           >
                             {allowedHandoffStates.map((state) => (
                               <option key={state} value={state}>
@@ -1811,7 +1810,7 @@ export function ReviewWorkspace({
                           value={reviewerName}
                           onChange={(event) => setReviewerName(event.target.value)}
                           placeholder={t('app.reviewerNamePlaceholder')}
-                          className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                          className="editorial-field w-full px-3 py-3 text-sm text-foreground outline-none"
                         />
                       </div>
                       <div className="space-y-1">
@@ -1822,7 +1821,7 @@ export function ReviewWorkspace({
                           id="reviewer-notes-input"
                           value={reviewerNotes}
                           onChange={(event) => setReviewerNotes(event.target.value)}
-                          className="min-h-20 w-full resize-none rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
+                          className="editorial-field min-h-20 w-full resize-none px-3 py-3 text-sm leading-6 text-foreground outline-none"
                         />
                       </div>
                     </div>
@@ -1831,14 +1830,14 @@ export function ReviewWorkspace({
                         value={reviewSummaryDraft}
                         onChange={(event) => setReviewSummaryDraft(event.target.value)}
                         placeholder={t('app.reviewSummaryPlaceholder')}
-                        className="min-h-24 w-full resize-none rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
+                        className="editorial-field min-h-24 w-full resize-none px-3 py-3 text-sm leading-6 text-foreground outline-none"
                       />
                       <input
                         type="text"
                         value={reviewerSignoff}
                         onChange={(event) => setReviewerSignoff(event.target.value)}
                         placeholder={t('app.reviewerSignoffPlaceholder')}
-                        className="w-full rounded-[1.05rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                        className="editorial-field w-full px-3 py-3 text-sm text-foreground outline-none"
                       />
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -1867,36 +1866,36 @@ export function ReviewWorkspace({
                       <button
                         type="button"
                         onClick={() => updateReviewStatus('draft')}
-                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        className="editorial-choice-button px-3 py-3 text-left text-sm"
                       >
                         {t('app.returnToDraft')}
                       </button>
                       <button
                         type="button"
                         onClick={() => updateReviewStatus('in_review')}
-                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        className="editorial-choice-button px-3 py-3 text-left text-sm"
                       >
                         {t('app.markInReview')}
                       </button>
                       <button
                         type="button"
                         onClick={() => updateReviewStatus('approved')}
-                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        className="editorial-choice-button px-3 py-3 text-left text-sm"
                       >
                         {t('app.markApproved')}
                       </button>
                       <button
                         type="button"
                         onClick={() => updateReviewStatus('changes_requested')}
-                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35"
+                        className="editorial-choice-button px-3 py-3 text-left text-sm"
                       >
                         {t('app.requestChanges')}
                       </button>
                     </div>
-                    <div className={`rounded-[1.15rem] border px-3 py-3 text-sm leading-6 ${
+                    <div className={`rounded-[calc(var(--radius)*1.02)] px-3 py-3 text-sm leading-6 ${
                       canExportArtifacts
-                        ? 'border-emerald-500/25 bg-emerald-500/8 text-emerald-900'
-                        : 'border-amber-500/25 bg-amber-500/8 text-amber-900'
+                        ? 'bg-emerald-500/12 text-emerald-950'
+                        : 'bg-amber-500/12 text-amber-950'
                     }`}>
                       <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t('app.exportReadiness')}</div>
                       <p className="mt-2 font-medium">
@@ -1923,7 +1922,7 @@ export function ReviewWorkspace({
                         ))}
                       </div>
                     ) : (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                         {t('app.reviewDecisionLogEmpty')}
                       </div>
                     )}
@@ -1940,7 +1939,7 @@ export function ReviewWorkspace({
                     <select
                       value={noteTarget}
                       onChange={(event) => setNoteTarget(event.target.value)}
-                      className="w-full rounded-[1.1rem] border border-border/60 bg-background/76 px-3 py-3 text-sm text-foreground outline-none transition focus:border-primary/40"
+                      className="editorial-field w-full px-3 py-3 text-sm text-foreground outline-none"
                     >
                       {noteTargets.map((target) => (
                         <option key={target.value} value={target.value}>
@@ -1952,13 +1951,13 @@ export function ReviewWorkspace({
                       value={noteDraft}
                       onChange={(event) => setNoteDraft(event.target.value)}
                       placeholder={t('app.reviewerNotesPlaceholder')}
-                      className="min-h-28 w-full resize-none rounded-[1.2rem] border border-border/60 bg-background/76 px-3 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary/40"
+                      className="editorial-field min-h-28 w-full resize-none px-3 py-3 text-sm leading-6 text-foreground outline-none"
                     />
                     <button
                       type="button"
                       onClick={addReviewNote}
                       disabled={!noteDraft.trim()}
-                      className="w-full rounded-[1.1rem] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/92 disabled:cursor-not-allowed disabled:opacity-55"
+                      className="editorial-button-primary w-full px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-55"
                     >
                       {t('app.addReviewerNote')}
                     </button>
@@ -1985,7 +1984,7 @@ export function ReviewWorkspace({
                         ))}
                       </div>
                     ) : (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                         {t('app.reviewerNotesIdle')}
                       </div>
                     )}
@@ -2011,7 +2010,7 @@ export function ReviewWorkspace({
                       <DiffList title={t('app.diffChanged')} items={diffSummary.changed} emptyLabel={t('app.diffNone')} />
                     </div>
                   ) : (
-                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                       {t('app.diffSummaryUnavailable')}
                     </div>
                   )}
@@ -2062,13 +2061,13 @@ export function ReviewWorkspace({
                           {validationIssues.slice(0, 5).map((issue) => {
                             const focusPath = resolveValidationIssueFieldPath(issue);
                             return (
-                              <div key={`${issue.code}-${issue.path}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                              <div key={`${issue.code}-${issue.path}`} className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                                 <div className="flex items-center justify-between gap-3">
                                   <span className="font-medium text-foreground">{issue.code}</span>
                                   <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                                     issue.severity === 'error'
                                       ? 'bg-destructive/12 text-destructive'
-                                      : 'bg-amber-500/12 text-amber-700'
+                                      : 'bg-amber-500/12 text-amber-800'
                                   }`}>
                                     {issue.severity}
                                   </span>
@@ -2079,7 +2078,7 @@ export function ReviewWorkspace({
                                   <button
                                     type="button"
                                     onClick={() => openSkillDocumentEditor(focusPath)}
-                                    className="mt-3 inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
+                                    className="mt-3 inline-flex items-center rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:text-foreground"
                                   >
                                     {t('app.openIssueInEditor')}
                                   </button>
@@ -2089,13 +2088,13 @@ export function ReviewWorkspace({
                           })}
                         </div>
                       ) : (
-                        <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
+                        <div className="rounded-[calc(var(--radius)*1.02)] bg-emerald-500/12 px-4 py-3 text-sm leading-6 text-emerald-950">
                           {t('app.validationNoIssues')}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                       {t('app.validationUnavailable')}
                     </div>
                   )}
@@ -2126,13 +2125,13 @@ export function ReviewWorkspace({
                           {consistencyIssues.slice(0, 5).map((issue, index) => {
                             const focusPath = skillDocument ? resolveConsistencyIssueFieldPath(skillDocument, issue) : null;
                             return (
-                              <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                              <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                                 <div className="flex items-center justify-between gap-3">
                                   <span className="font-medium text-foreground">{issue.type}</span>
                                   <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                                     issue.severity === 'error'
                                       ? 'bg-destructive/12 text-destructive'
-                                      : 'bg-amber-500/12 text-amber-700'
+                                      : 'bg-amber-500/12 text-amber-800'
                                   }`}>
                                     {issue.severity}
                                   </span>
@@ -2145,7 +2144,7 @@ export function ReviewWorkspace({
                                   <button
                                     type="button"
                                     onClick={() => openSkillDocumentEditor(focusPath)}
-                                    className="mt-3 inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/35 hover:text-foreground"
+                                    className="mt-3 inline-flex items-center rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:text-foreground"
                                   >
                                     {t('app.openIssueInEditor')}
                                   </button>
@@ -2155,13 +2154,13 @@ export function ReviewWorkspace({
                           })}
                         </div>
                       ) : (
-                        <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-800">
+                        <div className="rounded-[calc(var(--radius)*1.02)] bg-emerald-500/12 px-4 py-3 text-sm leading-6 text-emerald-950">
                           {t('app.consistencyNoIssues')}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                       {t('app.consistencyUnavailable')}
                     </div>
                   )}
@@ -2186,7 +2185,7 @@ export function ReviewWorkspace({
                         type="button"
                         onClick={addValidationRun}
                         disabled={!skillDocument}
-                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                        className="editorial-choice-button px-3 py-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-55"
                       >
                         <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                           {t('app.reviewerTests')}
@@ -2197,7 +2196,7 @@ export function ReviewWorkspace({
                         type="button"
                         onClick={addConsistencyRun}
                         disabled={!skillDocument}
-                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                        className="editorial-choice-button px-3 py-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-55"
                       >
                         <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                           {t('app.reviewerTests')}
@@ -2208,7 +2207,7 @@ export function ReviewWorkspace({
                         type="button"
                         onClick={addPathTestRun}
                         disabled={!skillDocument}
-                        className="rounded-[1.15rem] border border-border/60 bg-background/76 px-3 py-3 text-left text-sm text-foreground backdrop-blur-xl transition hover:border-primary/35 disabled:cursor-not-allowed disabled:opacity-55"
+                        className="editorial-choice-button px-3 py-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-55"
                       >
                         <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                           {t('app.reviewerTests')}
@@ -2245,7 +2244,7 @@ export function ReviewWorkspace({
                         )}
                       </div>
                     ) : (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                         {t('app.reviewerTestsIdle')}
                       </div>
                     )}
@@ -2270,7 +2269,7 @@ export function ReviewWorkspace({
                         </div>
 
                         {validationEvidence.evidenceWarnings.length > 0 && (
-                          <div className="rounded-[1.25rem] border border-amber-500/25 bg-amber-500/8 p-3 text-sm leading-6 text-amber-900">
+                          <div className="rounded-[calc(var(--radius)*1.02)] bg-amber-500/12 p-3 text-sm leading-6 text-amber-950">
                             {validationEvidence.evidenceWarnings.map((warning) => (
                               <p key={warning}>{t(warning)}</p>
                             ))}
@@ -2278,13 +2277,13 @@ export function ReviewWorkspace({
                         )}
 
                         {validationEvidence.validationRun.errors.length > 0 && (
-                          <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                          <div className="rounded-[calc(var(--radius)*1.02)] bg-muted p-3">
                             <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                               {t('app.validationIssues')}
                             </div>
                             <div className="mt-3 space-y-2">
                               {validationEvidence.validationRun.errors.map((issue) => (
-                                <div key={`${issue.code}-${issue.path}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                                <div key={`${issue.code}-${issue.path}`} className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-2 text-xs leading-6 text-muted-foreground">
                                   <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
                                   <div>{issue.path}</div>
                                 </div>
@@ -2294,13 +2293,13 @@ export function ReviewWorkspace({
                         )}
 
                         {validationEvidence.consistencyRun.issues.length > 0 && (
-                          <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                          <div className="rounded-[calc(var(--radius)*1.02)] bg-muted p-3">
                             <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                               {t('app.consistencyIssues')}
                             </div>
                             <div className="mt-3 space-y-2">
                               {validationEvidence.consistencyRun.issues.map((issue, index) => (
-                                <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                                <div key={`${issue.type}-${issue.targetId || index}`} className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-2 text-xs leading-6 text-muted-foreground">
                                   <div className="font-medium text-foreground">{translateEvidenceMessage(issue.message)}</div>
                                   {issue.targetId && <div>{issue.targetId}</div>}
                                 </div>
@@ -2312,13 +2311,13 @@ export function ReviewWorkspace({
                         {validationEvidence.validationRun.errors.length === 0
                           && validationEvidence.consistencyRun.issues.length === 0
                           && validationEvidence.evidenceWarnings.length === 0 && (
-                            <div className="rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm leading-6 text-emerald-900">
+                            <div className="rounded-[calc(var(--radius)*1.02)] bg-emerald-500/12 px-4 py-3 text-sm leading-6 text-emerald-950">
                               {t('app.validationNoIssues')}
                             </div>
                         )}
                       </>
                     ) : (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                         {t('app.validationUnavailable')}
                       </div>
                     )}
@@ -2337,15 +2336,15 @@ export function ReviewWorkspace({
                 >
                   <div className="grid gap-2 sm:grid-cols-2">
                     {contextSummary.map((item) => (
-                      <div key={item.id} className="rounded-[1.15rem] border border-border/55 bg-background/72 px-3 py-3">
+                      <div key={item.id} className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="text-sm font-medium text-foreground">{item.label}</div>
                           <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                             item.status === 'blocked'
                               ? 'bg-destructive/12 text-destructive'
                               : item.status === 'attention'
-                                ? 'bg-amber-500/12 text-amber-700'
-                                : 'bg-emerald-500/12 text-emerald-700'
+                                ? 'bg-amber-500/12 text-amber-800'
+                                : 'bg-emerald-500/12 text-emerald-800'
                           }`}>
                             {item.status}
                           </span>
@@ -2373,7 +2372,7 @@ export function ReviewWorkspace({
                     {parserCommandReferences.length > 0 ? (
                       <div className="space-y-2">
                         {parserCommandReferences.slice(0, 5).map((reference: any, index: number) => (
-                          <div key={`${reference.command || reference.id || index}`} className="rounded-[1.15rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground">
+                          <div key={`${reference.command || reference.id || index}`} className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                             <div className="font-medium text-foreground">{reference.command || reference.label || reference.id || `reference-${index + 1}`}</div>
                             {(reference.detail || reference.path) && (
                               <p className="mt-1">{reference.detail || reference.path}</p>
@@ -2382,7 +2381,7 @@ export function ReviewWorkspace({
                         ))}
                       </div>
                     ) : (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                         {t('app.contextPolicyReferenceEmpty')}
                       </div>
                     )}
@@ -2400,8 +2399,8 @@ export function ReviewWorkspace({
                         key={`${file.path}-${file.size}`}
                         type="button"
                         onClick={() => onSelectContextPath(file.path)}
-                        className={`w-full rounded-[1.25rem] border px-4 py-3 text-left backdrop-blur-xl transition ${
-                          selectedContextPath === file.path ? 'border-primary/35 bg-primary/8' : 'border-border/55 bg-background/72'
+                        className={`w-full rounded-[calc(var(--radius)*1.02)] px-4 py-3 text-left transition ${
+                          selectedContextPath === file.path ? 'bg-background' : 'bg-muted'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-3">
@@ -2412,7 +2411,7 @@ export function ReviewWorkspace({
                         <p className="mt-1 text-[11px] text-muted-foreground">{file.path}</p>
                       </button>
                     )) : (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                         {t('app.noContextFiles')}
                       </div>
                     )}
@@ -2428,10 +2427,10 @@ export function ReviewWorkspace({
                   {firstFinding || operatorReminders.length > 0 || parserAnalysisFindings.length > 0 ? (
                     <div className="space-y-3">
                       {firstFinding && (
-                        <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                        <div className="rounded-[calc(var(--radius)*1.02)] bg-muted p-3">
                           <div className="flex items-center justify-between gap-3">
                             <p className="text-sm font-medium text-foreground">{firstFinding.ruleName}</p>
-                            <span className="rounded-full bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive">
+                            <span className="rounded-[calc(var(--radius)*1.05)] bg-destructive/12 px-2 py-1 text-[11px] font-medium text-destructive">
                               {firstFinding.adjustedSeverity}
                             </span>
                           </div>
@@ -2448,7 +2447,7 @@ export function ReviewWorkspace({
                       {parserAnalysisFindings.length > 0 && (
                         <div className="space-y-2">
                           {parserAnalysisFindings.slice(0, 4).map((finding: any, index: number) => (
-                            <div key={`${finding.id || finding.code || index}`} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-3">
+                            <div key={`${finding.id || finding.code || index}`} className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-3">
                               <div className="text-sm font-medium text-foreground">{finding.label || finding.title || finding.code || `finding-${index + 1}`}</div>
                               {(finding.detail || finding.message) && (
                                 <p className="mt-2 text-xs leading-6 text-muted-foreground">{finding.detail || finding.message}</p>
@@ -2458,21 +2457,21 @@ export function ReviewWorkspace({
                         </div>
                       )}
                       {operatorReminders.length > 0 && (
-                        <div className="rounded-[1.25rem] border border-border/55 bg-background/72 p-3 backdrop-blur-xl">
+                        <div className="rounded-[calc(var(--radius)*1.02)] bg-muted p-3">
                           <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                             {t('app.operatorReminders')}
                           </div>
                           <div className="mt-3 space-y-3">
                             {operatorReminders.map((reminder: any) => (
-                              <div key={reminder.id} className="rounded-[1rem] border border-border/45 bg-white/65 px-3 py-3">
+                              <div key={reminder.id} className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-3">
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="text-sm font-medium text-foreground">{reminder.label}</div>
                                   <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                                     reminder.level === 'high'
                                       ? 'bg-destructive/12 text-destructive'
                                       : reminder.level === 'medium'
-                                        ? 'bg-amber-500/12 text-amber-700'
-                                        : 'bg-background/70 text-muted-foreground'
+                                        ? 'bg-amber-500/12 text-amber-800'
+                                        : 'bg-card/98 text-muted-foreground'
                                   }`}>
                                     {reminder.level}
                                   </span>
@@ -2486,7 +2485,7 @@ export function ReviewWorkspace({
                       )}
                     </div>
                   ) : (
-                    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                    <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                       {t('securityMatrix.auditLogSummaryText')}
                     </div>
                   )}
@@ -2499,7 +2498,7 @@ export function ReviewWorkspace({
                 >
                   <div className="space-y-3">
                     {parserManifest && (
-                      <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm leading-6 text-muted-foreground backdrop-blur-xl">
+                      <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
                         {t('app.analysisLevel')}: <span className="font-medium text-foreground">{parserManifest.analysis_level}</span>
                         {' · '}
                         {t('app.resolved')}: <span className="font-medium text-foreground">{parserSupportingFiles.filter((file: any) => file.resolved).length}</span>
@@ -2522,7 +2521,7 @@ export function ReviewWorkspace({
                       href={guiRepoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/30"
+                      className="flex items-center justify-between rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm text-foreground transition hover:bg-card"
                     >
                       <span>{t('app.guiRepo')}</span>
                       <Github size={15} className="text-muted-foreground" />
@@ -2531,7 +2530,7 @@ export function ReviewWorkspace({
                       href={engineRepoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 text-sm text-foreground backdrop-blur-xl transition hover:border-primary/30"
+                      className="flex items-center justify-between rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3 text-sm text-foreground transition hover:bg-card"
                     >
                       <span>{t('app.engineRepo')}</span>
                       <FileCode2 size={15} className="text-muted-foreground" />
@@ -2565,7 +2564,7 @@ function PanelFallback({ heightClassName = 'min-h-[200px]' }: { heightClassName?
   const { t } = useTranslation();
 
   return (
-    <div className={`flex items-center justify-center rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-6 text-sm text-muted-foreground backdrop-blur-xl ${heightClassName}`}>
+    <div className={`flex items-center justify-center rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-6 text-sm text-muted-foreground ${heightClassName}`}>
       {t('app.loadingWorkspaceModule')}
     </div>
   );
@@ -2573,13 +2572,13 @@ function PanelFallback({ heightClassName = 'min-h-[200px]' }: { heightClassName?
 
 function StatPill({ label, value, accent = 'default' }: { label: string; value: string; accent?: 'default' | 'warn' | 'danger' }) {
   const accentClass = accent === 'warn'
-    ? 'border-amber-500/25 bg-amber-500/10 text-amber-700'
+    ? 'bg-amber-500/12 text-amber-900'
     : accent === 'danger'
-      ? 'border-destructive/20 bg-destructive/8 text-destructive'
-      : 'border-border/55 bg-background/72 text-foreground';
+      ? 'bg-destructive/10 text-destructive'
+      : 'bg-muted text-foreground';
 
   return (
-    <div className={`rounded-[1.2rem] border px-4 py-3 shadow-[0_14px_30px_-28px_hsl(var(--foreground)/0.4)] backdrop-blur-xl ${accentClass}`}>
+    <div className={`rounded-[calc(var(--radius)*1.02)] px-4 py-3 ${accentClass}`}>
       <div className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">{label}</div>
       <div className="mt-2 text-xl font-semibold tracking-tight">{value}</div>
     </div>
@@ -2588,9 +2587,9 @@ function StatPill({ label, value, accent = 'default' }: { label: string; value: 
 
 function MiniMetric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-[1.2rem] border px-3 py-3 backdrop-blur-xl ${highlight ? 'border-amber-500/25 bg-amber-500/10' : 'border-border/55 bg-background/72'}`}>
+    <div className={`rounded-[calc(var(--radius)*1.02)] px-3 py-3 ${highlight ? 'bg-amber-500/12' : 'bg-muted'}`}>
       <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
-      <div className={`mt-2 text-sm font-medium leading-6 ${highlight ? 'text-amber-700' : 'text-foreground'}`}>{value}</div>
+      <div className={`mt-2 text-sm font-medium leading-6 ${highlight ? 'text-amber-900' : 'text-foreground'}`}>{value}</div>
     </div>
   );
 }
@@ -2607,7 +2606,7 @@ function RunCard({
   summary: string;
 }) {
   return (
-    <div className={`rounded-[1.25rem] border px-4 py-3 backdrop-blur-xl ${runStatusClassName(status)}`}>
+    <div className={`rounded-[calc(var(--radius)*1.02)] px-4 py-3 ${runStatusClassName(status)}`}>
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-foreground">{label}</span>
         <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${runStatusBadgeClassName(status)}`}>
@@ -2630,7 +2629,7 @@ function NoteCard({
   content: string;
 }) {
   return (
-    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 backdrop-blur-xl">
+    <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-foreground">{label}</span>
         <span className="text-[11px] font-mono text-muted-foreground">{formatRunTimestamp(timestamp)}</span>
@@ -2650,7 +2649,7 @@ function DecisionCard({
   timestamp: string;
 }) {
   return (
-    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 backdrop-blur-xl">
+    <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-foreground">{action}</span>
         <span className="text-[11px] font-mono text-muted-foreground">{formatRunTimestamp(timestamp)}</span>
@@ -2662,12 +2661,12 @@ function DecisionCard({
 
 function DiffList({ title, items, emptyLabel }: { title: string; items: string[]; emptyLabel: string }) {
   return (
-    <div className="rounded-[1.25rem] border border-border/55 bg-background/72 px-4 py-3 backdrop-blur-xl">
+    <div className="rounded-[calc(var(--radius)*1.02)] bg-muted px-4 py-3">
       <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{title}</div>
       {items.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {items.map((item) => (
-            <span key={`${title}-${item}`} className="rounded-full border border-border/50 bg-white/70 px-3 py-1 text-[11px] text-foreground">
+            <span key={`${title}-${item}`} className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1 text-[11px] text-foreground">
               {item}
             </span>
           ))}
@@ -2707,12 +2706,12 @@ function formatRunTimestamp(value: string) {
 
 function runStatusClassName(status: 'running' | 'passed' | 'failed') {
   if (status === 'failed') {
-    return 'border-destructive/20 bg-destructive/8';
+    return 'bg-destructive/10';
   }
   if (status === 'passed') {
-    return 'border-emerald-500/20 bg-emerald-500/8';
+    return 'bg-emerald-500/12';
   }
-  return 'border-border/55 bg-background/72';
+  return 'bg-muted';
 }
 
 function runStatusBadgeClassName(status: 'running' | 'passed' | 'failed') {
@@ -2720,9 +2719,9 @@ function runStatusBadgeClassName(status: 'running' | 'passed' | 'failed') {
     return 'bg-destructive/12 text-destructive';
   }
   if (status === 'passed') {
-    return 'bg-emerald-500/12 text-emerald-700';
+    return 'bg-emerald-500/12 text-emerald-800';
   }
-  return 'bg-background/70 text-muted-foreground';
+  return 'bg-card/98 text-muted-foreground';
 }
 
 function summarizeTestPanel(
@@ -3048,10 +3047,10 @@ function ChecklistToggle({ label, checked, onToggle }: { label: string; checked:
     <button
       type="button"
       onClick={onToggle}
-      className={`rounded-[1.05rem] border px-3 py-3 text-left text-sm transition ${
+      className={`rounded-[calc(var(--radius)*1.02)] px-3 py-3 text-left text-sm transition ${
         checked
-          ? 'border-emerald-500/30 bg-emerald-500/10 text-foreground'
-          : 'border-border/60 bg-background/76 text-foreground'
+          ? 'bg-emerald-500/12 text-foreground'
+          : 'bg-muted text-foreground'
       }`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -3082,7 +3081,7 @@ function FlowStepper({ phases, activePhase, onSelectPhase }: { phases: any[]; ac
                 <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                   {t('app.phaseStep')} {index + 1}
                 </span>
-                <span className="rounded-full border border-border/50 bg-background/70 px-2 py-1 text-[10px] font-mono text-muted-foreground backdrop-blur-lg">
+                <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-2 py-1 text-[10px] font-mono text-muted-foreground">
                   {phase.id}
                 </span>
               </div>
@@ -3120,7 +3119,7 @@ function InsightBlock({
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isControlled = typeof controlledOpen === 'boolean';
   const isOpen = isControlled ? controlledOpen : internalOpen;
-  const accentGlow = accent === 'emerald' ? 'before:bg-emerald-500/14' : accent === 'rose' ? 'before:bg-rose-500/14' : 'before:bg-primary/12';
+  const accentTone = accent === 'emerald' ? 'bg-emerald-500/10' : accent === 'rose' ? 'bg-rose-500/10' : 'bg-card';
 
   const handleToggle = () => {
     if (isControlled) {
@@ -3131,7 +3130,7 @@ function InsightBlock({
   };
 
   return (
-    <section id={id} className={`glass-panel relative overflow-hidden before:absolute before:right-0 before:top-0 before:h-24 before:w-24 before:rounded-bl-[2rem] before:blur-2xl ${accentGlow}`}>
+    <section id={id} className={`glass-panel relative overflow-hidden ${accentTone}`}>
       <div className="relative p-5">
         <button onClick={handleToggle} className="w-full text-left">
           <p className="editorial-kicker">{kicker}</p>
