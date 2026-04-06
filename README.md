@@ -6,6 +6,7 @@ Review-first tooling for inspecting, validating, annotating, and signing off on 
 
 - load a `SKILL.md`, SkillDocument JSON, or bundled review context
 - switch between canonical bridge mode and standalone fallback mode
+- optionally use an LLM-assisted recovery fallback when deterministic parsing is insufficient
 - inspect validation, consistency, and path-walk results
 - capture reviewer notes, review status, decision log, summary, and sign-off
 - complete explicit sign-off gates before external review
@@ -62,6 +63,7 @@ What that means in practice:
 
 - run with the canonical local `skill-0` parser when available
 - run in standalone mode for self-contained demos or public deployment
+- enable server-side `llm-assisted` recovery for unknown or future formats on hosted builds
 - disable the optional 3D surface for lighter public builds
 
 ## Quick Start
@@ -99,6 +101,16 @@ The app calls the real `skill-0` parser through the local bridge. Use this when 
 The app uses the bundled fallback parser. Use this for demos, lightweight review, or external hosting where the local `skill-0` repository is not available.
 
 Important: standalone mode is compatibility-oriented. It should not be presented as strict canonical equivalence unless separate evidence exists.
+
+### LLM-assisted fallback
+
+When `SKILL0_LLM_MODE=fallback` is configured with a supported server-side provider, the app can promote failed or too-sparse deterministic parses into an `llm-assisted` recovery path.
+
+Important:
+
+- this path is `draft-only`
+- it is useful for unknown or future formats
+- it must not be presented as final equivalence evidence
 
 Advanced contract:
 
@@ -168,6 +180,13 @@ Most users can start with defaults. These are the main variables when you need m
 - `SKILL0_PARSER_ROOT`
 - `SKILL0_ROOT`
 - `SKILL0_API_BODY_LIMIT`
+- `SKILL0_REQUEST_TIMEOUT_MS`
+- `SKILL0_LLM_MODE`
+- `SKILL0_LLM_PROVIDER`
+- `SKILL0_LLM_MODEL`
+- `SKILL0_LLM_API_KEY`
+- `SKILL0_LLM_TIMEOUT_MS`
+- `SKILL0_LLM_MAX_INPUT_CHARS`
 - `PORT`
 - `VITE_ENABLE_3D`
 
@@ -183,6 +202,7 @@ The first hosted profile is intentionally conservative:
 - use a Node-capable host
 - deploy `server.mjs`, not a static-only export
 - run in `SKILL0_MODE=standalone`
+- set `SKILL0_LLM_MODE=fallback` if you want server-side recovery for unknown formats
 - build with `VITE_ENABLE_3D=false`
 - do not set `SKILL0_PARSER_ROOT` or `SKILL0_ROOT`
 

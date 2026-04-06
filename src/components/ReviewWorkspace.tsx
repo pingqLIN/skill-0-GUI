@@ -168,6 +168,11 @@ export function ReviewWorkspace({
   onResetWorkspace,
 }: ReviewWorkspaceProps) {
   const { t } = useTranslation();
+  const initialBridgeMode = data?.bridge?.mode === 'skill-0' || data?.bridge?.mode === 'standalone' || data?.bridge?.mode === 'llm-assisted'
+    ? data.bridge.mode
+    : bridgeStatus?.mode ?? 'unknown';
+  const initialReviewStatus = data?.reviewerSummary?.reviewStatus
+    || (initialBridgeMode === 'skill-0' ? 'in_review' : 'draft');
   const [activeTab, setActiveTab] = useState<WorkspaceTabId>('pipeline');
   const [activePhase, setActivePhase] = useState<string | null>(null);
   const [activeInsightTab, setActiveInsightTab] = useState<'review' | 'checks' | 'context'>('review');
@@ -180,10 +185,7 @@ export function ReviewWorkspace({
   const [pathTestRuns, setPathTestRuns] = useState<PathTestRun[]>([]);
   const [globalNotes, setGlobalNotes] = useState<ReviewNote[]>([]);
   const [elementNotes, setElementNotes] = useState<ElementReviewNote[]>([]);
-  const [reviewStatus, setReviewStatus] = useState<ReviewState['reviewStatus']>(
-    data?.reviewerSummary?.reviewStatus
-      || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
-  );
+  const [reviewStatus, setReviewStatus] = useState<ReviewState['reviewStatus']>(initialReviewStatus);
   const [decisionLog, setDecisionLog] = useState<ReviewDecision[]>([]);
   const [noteDraft, setNoteDraft] = useState('');
   const [noteTarget, setNoteTarget] = useState('global');
@@ -193,7 +195,7 @@ export function ReviewWorkspace({
   const [reviewerSignoff, setReviewerSignoff] = useState('');
   const [reviewChecklist, setReviewChecklist] = useState<ReviewChecklist>(DEFAULT_REVIEW_CHECKLIST);
   const [reviewProfile, setReviewProfile] = useState<ReviewProfile>(() => deriveReviewProfile({
-    bridgeMode: bridgeStatus?.mode ?? 'unknown',
+    bridgeMode: initialBridgeMode,
     demoPresetId: demoPreset?.id ?? null,
     reviewStatus: data?.reviewerSummary?.reviewStatus,
     supportFileCount: supportFiles.length,
@@ -219,6 +221,27 @@ export function ReviewWorkspace({
   const scanScore = data?.securityScan?.riskScore ?? data?.riskAssessment?.negativeIntent ?? 0;
   const firstFinding = data?.securityScan?.findings?.[0] ?? null;
   const operatorReminders = data?.reviewerSummary?.operatorReminders ?? [];
+  const activeBridgeMode = initialBridgeMode;
+  const activeBridgeSkill0Root = typeof data?.bridge?.skill0Root === 'string'
+    ? data.bridge.skill0Root
+    : bridgeStatus?.skill0Root ?? null;
+  const activeBridgeProvider = typeof data?.bridge?.provider === 'string'
+    ? data.bridge.provider
+    : null;
+  const activeBridgeModel = typeof data?.bridge?.model === 'string'
+    ? data.bridge.model
+    : null;
+  const activeBridgeFallbackReason = typeof data?.bridge?.fallback_reason === 'string'
+    ? data.bridge.fallback_reason
+    : typeof data?.reviewerSummary?.fallback_reason === 'string'
+      ? data.reviewerSummary.fallback_reason
+      : null;
+  const activeBridgeDraftOnly = data?.bridge?.draft_only === true || data?.reviewerSummary?.draft_only === true;
+  const activeBridgeSchemaValidation = typeof data?.bridge?.schema_validation === 'string'
+    ? data.bridge.schema_validation
+    : typeof data?.reviewerSummary?.schema_validation === 'string'
+      ? data.reviewerSummary.schema_validation
+      : null;
   const workspaceTabs = [
     {
       id: 'pipeline' as WorkspaceTabId,
@@ -236,34 +259,52 @@ export function ReviewWorkspace({
       meta: `${decisionCount} ${t('app.totalDecisions')}`,
     },
   ];
-  const bridgeModeLabel = bridgeStatus?.mode === 'skill-0'
+  const bridgeModeLabel = activeBridgeMode === 'skill-0'
     ? t('app.bridgeModeCanonical')
-    : bridgeStatus?.mode === 'standalone'
+    : activeBridgeMode === 'standalone'
       ? t('app.bridgeModeStandalone')
+      : activeBridgeMode === 'llm-assisted'
+        ? t('app.bridgeModeLlmAssisted')
       : t('app.bridgeModeUnavailable');
-  const bridgeModeDetail = bridgeStatus?.skill0Root
-    || (bridgeStatus?.mode === 'standalone'
-      ? t('app.bridgeModeBundled')
-      : bridgeStatusError || t('app.bridgeModeChecking'));
-  const bridgeModeSummary = bridgeStatus?.mode === 'skill-0'
+  const bridgeModeDetail = activeBridgeMode === 'llm-assisted'
+    ? [
+        activeBridgeProvider && activeBridgeModel
+          ? `${activeBridgeProvider}/${activeBridgeModel}`
+          : activeBridgeProvider || activeBridgeModel,
+        activeBridgeSchemaValidation ? `schema ${activeBridgeSchemaValidation}` : null,
+        activeBridgeFallbackReason,
+      ].filter(Boolean).join(' · ') || t('app.bridgeModeLlmAssistedDetail')
+    : activeBridgeSkill0Root
+      || (activeBridgeMode === 'standalone'
+        ? t('app.bridgeModeBundled')
+        : bridgeStatusError || t('app.bridgeModeChecking'));
+  const bridgeModeSummary = activeBridgeMode === 'skill-0'
     ? t('app.bridgeModeCanonicalShort')
-    : bridgeStatus?.mode === 'standalone'
+    : activeBridgeMode === 'standalone'
       ? t('app.bridgeModeStandaloneShort')
+      : activeBridgeMode === 'llm-assisted'
+        ? t('app.bridgeModeLlmAssistedShort')
       : t('app.bridgeModeUnavailableShort');
-  const bridgeReviewGuidance = bridgeStatus?.mode === 'skill-0'
+  const bridgeReviewGuidance = activeBridgeMode === 'skill-0'
     ? t('app.bridgeHelpCanonical')
-    : bridgeStatus?.mode === 'standalone'
+    : activeBridgeMode === 'standalone'
       ? t('app.bridgeHelpStandalone')
+      : activeBridgeMode === 'llm-assisted'
+        ? t('app.bridgeHelpLlmAssisted')
       : t('app.bridgeHelpUnavailable');
-  const reviewReadinessLabel = bridgeStatus?.mode === 'skill-0'
+  const reviewReadinessLabel = activeBridgeMode === 'skill-0'
     ? t('app.reviewEvidenceCanonical')
-    : bridgeStatus?.mode === 'standalone'
+    : activeBridgeMode === 'standalone'
       ? t('app.reviewEvidenceStandalone')
+      : activeBridgeMode === 'llm-assisted'
+        ? t('app.reviewEvidenceLlmAssisted')
       : t('app.reviewEvidenceUnavailable');
-  const reviewReadinessStyles = bridgeStatus?.mode === 'skill-0'
+  const reviewReadinessStyles = activeBridgeMode === 'skill-0'
     ? 'bg-emerald-500/12 text-emerald-950'
-    : bridgeStatus?.mode === 'standalone'
+    : activeBridgeMode === 'standalone'
       ? 'bg-amber-500/12 text-amber-950'
+      : activeBridgeMode === 'llm-assisted'
+        ? 'bg-sky-500/12 text-sky-950'
       : 'bg-muted text-muted-foreground';
   const skillDocument = extractSkillDocumentFromReviewData(data);
   const originalSkillDocument = originalData ? extractSkillDocumentFromReviewData(originalData) : null;
@@ -333,29 +374,29 @@ export function ReviewWorkspace({
         setPathTestRuns([]);
         setGlobalNotes([]);
         setElementNotes([]);
-        setReviewStatus(data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'));
+        setReviewStatus(initialReviewStatus);
         setReviewerName(data?.reviewerSummary?.reviewerName || '');
         setReviewerNotes(data?.reviewerSummary?.reviewerNotes || '');
-      setDecisionLog([]);
-      setNoteTarget('global');
-      setReviewSummaryDraft('');
-      setReviewerSignoff('');
-      setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
-      setReviewProfile(deriveReviewProfile({
-        bridgeMode: bridgeStatus?.mode ?? 'unknown',
-        demoPresetId: demoPreset?.id ?? null,
-        reviewStatus: data?.reviewerSummary?.reviewStatus,
-        supportFileCount: supportFiles.length,
-      }));
-      setHandoffState(deriveDefaultHandoffState({
-        hasBlockingChecks,
-        reviewChecklist: DEFAULT_REVIEW_CHECKLIST,
-        reviewStatus: data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
-      }));
-      setReviewDraftSavedAt(null);
-      setReviewDraftRestored(false);
-      hasHydratedReviewDraftRef.current = true;
-      return;
+        setDecisionLog([]);
+        setNoteTarget('global');
+        setReviewSummaryDraft('');
+        setReviewerSignoff('');
+        setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
+        setReviewProfile(deriveReviewProfile({
+          bridgeMode: activeBridgeMode,
+          demoPresetId: demoPreset?.id ?? null,
+          reviewStatus: data?.reviewerSummary?.reviewStatus,
+          supportFileCount: supportFiles.length,
+        }));
+        setHandoffState(deriveDefaultHandoffState({
+          hasBlockingChecks,
+          reviewChecklist: DEFAULT_REVIEW_CHECKLIST,
+          reviewStatus: initialReviewStatus,
+        }));
+        setReviewDraftSavedAt(null);
+        setReviewDraftRestored(false);
+        hasHydratedReviewDraftRef.current = true;
+        return;
       }
 
       hadStoredReviewDraftRef.current = true;
@@ -376,7 +417,7 @@ export function ReviewWorkspace({
       setReviewProfile(
         normalizeReviewProfile(parsed.reviewProfile)
         || deriveReviewProfile({
-          bridgeMode: bridgeStatus?.mode ?? 'unknown',
+          bridgeMode: activeBridgeMode,
           demoPresetId: demoPreset?.id ?? null,
           reviewStatus: parsed.reviewStatus,
           supportFileCount: supportFiles.length,
@@ -400,7 +441,7 @@ export function ReviewWorkspace({
       setPathTestRuns([]);
       setGlobalNotes([]);
       setElementNotes([]);
-      setReviewStatus(data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'));
+      setReviewStatus(initialReviewStatus);
       setReviewerName(data?.reviewerSummary?.reviewerName || '');
       setReviewerNotes(data?.reviewerSummary?.reviewerNotes || '');
       setDecisionLog([]);
@@ -409,7 +450,7 @@ export function ReviewWorkspace({
       setReviewerSignoff('');
       setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
       setReviewProfile(deriveReviewProfile({
-        bridgeMode: bridgeStatus?.mode ?? 'unknown',
+        bridgeMode: activeBridgeMode,
         demoPresetId: demoPreset?.id ?? null,
         reviewStatus: data?.reviewerSummary?.reviewStatus,
         supportFileCount: supportFiles.length,
@@ -417,14 +458,21 @@ export function ReviewWorkspace({
       setHandoffState(deriveDefaultHandoffState({
         hasBlockingChecks,
         reviewChecklist: DEFAULT_REVIEW_CHECKLIST,
-        reviewStatus: data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
+        reviewStatus: initialReviewStatus,
       }));
       setReviewDraftSavedAt(null);
       setReviewDraftRestored(false);
     }
 
     hasHydratedReviewDraftRef.current = true;
-  }, [bridgeStatus?.mode, data?.reviewerSummary?.reviewStatus, data?.reviewerSummary?.reviewerName, data?.reviewerSummary?.reviewerNotes, reviewDraftStorageKey]);
+  }, [
+    activeBridgeMode,
+    data?.reviewerSummary?.reviewStatus,
+    data?.reviewerSummary?.reviewerName,
+    data?.reviewerSummary?.reviewerNotes,
+    initialReviewStatus,
+    reviewDraftStorageKey,
+  ]);
 
   useEffect(() => {
     if (!reviewDraftStorageKey || typeof window === 'undefined') {
@@ -533,7 +581,7 @@ export function ReviewWorkspace({
     setReviewerSignoff(demoPreset.reviewerSignoff);
     setReviewChecklist(demoPreset.reviewChecklist);
     setReviewProfile(deriveReviewProfile({
-      bridgeMode: bridgeStatus?.mode ?? 'unknown',
+      bridgeMode: activeBridgeMode,
       demoPresetId: demoPreset.id,
       reviewStatus: demoPreset.reviewStatus,
       supportFileCount: supportFiles.length,
@@ -549,7 +597,7 @@ export function ReviewWorkspace({
     setDecisionLog(buildDemoPresetDecisionLog(demoPreset, timestamp, seededValidationRuns, seededConsistencyRuns, seededPathRuns));
     setReviewDraftRestored(false);
     appliedDemoPresetIdRef.current = demoPreset.id;
-  }, [bridgeStatus?.mode, demoPreset, hasBlockingChecks, skillDocument, supportFiles.length]);
+  }, [activeBridgeMode, demoPreset, hasBlockingChecks, skillDocument, supportFiles.length]);
 
   useEffect(() => {
     setHandoffState(derivedHandoffState);
@@ -693,7 +741,7 @@ export function ReviewWorkspace({
     setReviewerSignoff('');
     setReviewChecklist(DEFAULT_REVIEW_CHECKLIST);
     setReviewProfile(deriveReviewProfile({
-      bridgeMode: bridgeStatus?.mode ?? 'unknown',
+      bridgeMode: activeBridgeMode,
       demoPresetId: demoPreset?.id ?? null,
       reviewStatus: data?.reviewerSummary?.reviewStatus,
       supportFileCount: supportFiles.length,
@@ -701,7 +749,7 @@ export function ReviewWorkspace({
     setHandoffState(deriveDefaultHandoffState({
       hasBlockingChecks,
       reviewChecklist: DEFAULT_REVIEW_CHECKLIST,
-      reviewStatus: data?.reviewerSummary?.reviewStatus || (bridgeStatus?.mode === 'skill-0' ? 'in_review' : 'draft'),
+      reviewStatus: initialReviewStatus,
     }));
     setReviewDraftSavedAt(null);
     setReviewDraftRestored(false);
@@ -719,33 +767,47 @@ export function ReviewWorkspace({
     });
   };
   const reviewMode = data?.reviewerSummary?.mode
-    || (bridgeStatus?.mode === 'skill-0'
+    || (activeBridgeMode === 'skill-0'
       ? 'canonical'
-      : bridgeStatus?.mode === 'standalone'
+      : activeBridgeMode === 'standalone'
         ? 'standalone'
+        : activeBridgeMode === 'llm-assisted'
+          ? 'llm-assisted'
         : 'unknown');
   const reviewEquivalenceStatus = data?.reviewerSummary?.equivalenceNote
-    || (reviewMode === 'canonical' ? 'implementation_identity' : 'equivalence_unverified');
+    || (reviewMode === 'canonical'
+      ? 'implementation_identity'
+      : reviewMode === 'llm-assisted'
+        ? 'draft_only_ai_assisted'
+        : 'equivalence_unverified');
   const reviewEquivalenceLabel = reviewEquivalenceStatus === 'implementation_identity'
     ? t('app.equivalenceImplementationIdentity')
     : reviewEquivalenceStatus === 'equivalence_unverified'
       ? t('app.equivalenceUnverified')
+      : reviewEquivalenceStatus === 'draft_only_ai_assisted'
+        ? t('app.equivalenceAiAssistedDraft')
       : t('app.equivalencePending');
   const reviewDecisionGuidance = data?.reviewerSummary?.finalDecisionGuidance
-    || (bridgeStatus?.mode === 'skill-0'
+    || (activeBridgeMode === 'skill-0'
       ? 'Result was produced by the canonical skill-0 bridge. Final equivalence review is acceptable if supporting files and findings are inspected.'
-      : bridgeStatus?.mode === 'standalone'
+      : activeBridgeMode === 'standalone'
         ? 'Result was produced by the standalone compatibility path. Re-run with the canonical skill-0 bridge before parity-sensitive or final equivalence decisions.'
+        : activeBridgeMode === 'llm-assisted'
+          ? 'Result was recovered through the LLM-assisted fallback path. Use it for draft review and format recovery only. Do not treat it as final equivalence evidence.'
         : 'Parser mode could not be verified. Do not treat this result as final equivalence evidence until bridge status is confirmed.');
   const exportModeSuffix = reviewMode === 'canonical'
     ? 'canonical'
     : reviewMode === 'standalone'
       ? 'standalone'
+      : reviewMode === 'llm-assisted'
+        ? 'llm-assisted'
       : 'unknown';
-  const bridgeToneClass = bridgeStatus?.mode === 'skill-0'
+  const bridgeToneClass = activeBridgeMode === 'skill-0'
     ? 'bg-emerald-500/12 text-emerald-950'
-    : bridgeStatus?.mode === 'standalone'
+    : activeBridgeMode === 'standalone'
       ? 'bg-amber-500/12 text-amber-950'
+      : activeBridgeMode === 'llm-assisted'
+        ? 'bg-sky-500/12 text-sky-950'
       : 'bg-muted text-foreground';
   const reviewStatusLabel = reviewStatus === 'approved'
     ? t('app.reviewStatusApproved')
@@ -874,11 +936,16 @@ export function ReviewWorkspace({
         `- skill_id: ${meta.skill_id || skillData.projectId}`,
         `- schema_version: ${meta.schema_version || 'unknown'}`,
         `- parser_version: ${meta.parser_version || 'unknown'}`,
-        `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
+        `- parser_mode: ${activeBridgeMode}`,
         `- parser_mode_source: ${bridgeModeDetail}`,
         `- review_mode: ${reviewMode}`,
         `- review_profile: ${reviewProfile}`,
         `- equivalence_status: ${reviewEquivalenceStatus}`,
+        `- draft_only: ${activeBridgeDraftOnly ? 'true' : 'false'}`,
+        `- llm_provider: ${activeBridgeProvider || 'n/a'}`,
+        `- llm_model: ${activeBridgeModel || 'n/a'}`,
+        `- llm_schema_validation: ${activeBridgeSchemaValidation || 'n/a'}`,
+        `- fallback_reason: ${activeBridgeFallbackReason || 'n/a'}`,
         `- handoff_state: ${effectiveHandoffState}`,
         `- review_decision_guidance: ${reviewDecisionGuidance}`,
         `- review_status: ${reviewStatus}`,
@@ -901,6 +968,11 @@ export function ReviewWorkspace({
 
       if (reviewEquivalenceStatus !== 'implementation_identity') {
         lines.push(`> Review note: ${reviewDecisionGuidance}`);
+        lines.push('');
+      }
+
+      if (activeBridgeDraftOnly) {
+        lines.push(`> AI-assisted recovery: ${t('app.bridgeDraftOnlyWarning')}`);
         lines.push('');
       }
 
@@ -966,13 +1038,18 @@ export function ReviewWorkspace({
       `- granularity: ${skillData.threeClassification.granularity}`,
       `- operability: ${skillData.threeClassification.operability}`,
       `- risk_level: ${skillData.riskAssessment.level}`,
-      `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
+      `- parser_mode: ${activeBridgeMode}`,
       `- parser_mode_source: ${bridgeModeDetail}`,
       `- review_mode: ${reviewMode}`,
       `- review_profile: ${reviewProfile}`,
       `- review_status: ${reviewStatus}`,
       `- handoff_state: ${effectiveHandoffState}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
+      `- draft_only: ${activeBridgeDraftOnly ? 'true' : 'false'}`,
+      `- llm_provider: ${activeBridgeProvider || 'n/a'}`,
+      `- llm_model: ${activeBridgeModel || 'n/a'}`,
+      `- llm_schema_validation: ${activeBridgeSchemaValidation || 'n/a'}`,
+      `- fallback_reason: ${activeBridgeFallbackReason || 'n/a'}`,
       `- review_decision_guidance: ${reviewDecisionGuidance}`,
       `- reviewer: ${reviewerName.trim() || 'unassigned'}`,
       `- reviewer_signoff: ${reviewerSignoff.trim() || 'unassigned'}`,
@@ -992,6 +1069,11 @@ export function ReviewWorkspace({
 
     if (reviewEquivalenceStatus !== 'implementation_identity') {
       lines.push(`> Review note: ${reviewDecisionGuidance}`);
+      lines.push('');
+    }
+
+    if (activeBridgeDraftOnly) {
+      lines.push(`> AI-assisted recovery: ${t('app.bridgeDraftOnlyWarning')}`);
       lines.push('');
     }
 
@@ -1072,13 +1154,18 @@ export function ReviewWorkspace({
       '',
       `- generated_at: ${new Date().toISOString()}`,
       `- skill_id: ${data.projectId}`,
-      `- parser_mode: ${bridgeStatus?.mode || 'unknown'}`,
+      `- parser_mode: ${activeBridgeMode}`,
       `- parser_mode_source: ${bridgeModeDetail}`,
       `- review_mode: ${reviewMode}`,
       `- review_profile: ${reviewProfile}`,
       `- review_status: ${reviewStatus}`,
       `- handoff_state: ${effectiveHandoffState}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
+      `- draft_only: ${activeBridgeDraftOnly ? 'true' : 'false'}`,
+      `- llm_provider: ${activeBridgeProvider || 'n/a'}`,
+      `- llm_model: ${activeBridgeModel || 'n/a'}`,
+      `- llm_schema_validation: ${activeBridgeSchemaValidation || 'n/a'}`,
+      `- fallback_reason: ${activeBridgeFallbackReason || 'n/a'}`,
       `- schema_validation_status: ${validationResult?.valid ? 'valid' : 'invalid'}`,
       `- consistency_status: ${consistencyResult?.valid ? 'consistent' : 'inconsistent'}`,
       `- reviewer_signoff: ${reviewerSignoff || 'unassigned'}`,
@@ -1091,6 +1178,12 @@ export function ReviewWorkspace({
       '',
       reviewDecisionGuidance,
       '',
+      ...(activeBridgeDraftOnly ? [
+        '## Draft-only Warning',
+        '',
+        t('app.bridgeDraftOnlyWarning'),
+        '',
+      ] : []),
       '## Reviewer Summary',
       '',
       reviewSummaryDraft.trim() || 'No reviewer summary captured.',
@@ -1213,7 +1306,7 @@ export function ReviewWorkspace({
     }
 
     const reviewPacket = buildReviewPacketFromReviewData(data, {
-      bridgeMode: (bridgeStatus?.mode ?? 'unknown') as ReviewPacket['parserMode'],
+      bridgeMode: activeBridgeMode as ReviewPacket['parserMode'],
       bridgeModeSource: bridgeModeDetail,
       contextSummary,
       equivalenceStatus: reviewEquivalenceStatus,
@@ -1432,10 +1525,12 @@ export function ReviewWorkspace({
               <div className="flex items-center justify-between gap-3">
                 <p className="editorial-kicker">{t('app.bridgeMode')}</p>
                 <span className={`editorial-chip px-2.5 py-1 text-[11px] font-medium ${
-                  bridgeStatus?.mode === 'skill-0'
+                  activeBridgeMode === 'skill-0'
                     ? 'bg-emerald-500/12 text-emerald-800'
-                    : bridgeStatus?.mode === 'standalone'
+                    : activeBridgeMode === 'standalone'
                       ? 'bg-amber-500/12 text-amber-800'
+                      : activeBridgeMode === 'llm-assisted'
+                        ? 'bg-sky-500/12 text-sky-800'
                       : 'bg-muted/92 text-muted-foreground'
                 }`}>
                   {bridgeModeLabel}
@@ -1516,7 +1611,7 @@ export function ReviewWorkspace({
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <MiniMetric label={t('app.reviewerName')} value={reviewerName.trim() || t('app.reviewerUnassigned')} highlight={Boolean(reviewerName.trim())} />
                   <MiniMetric label={t('app.validationEvidence')} value={validationStatusLabel} highlight={!validationHasErrors} />
-                  <MiniMetric label={t('app.bridgeMode')} value={bridgeModeSummary} highlight={bridgeStatus?.mode === 'skill-0'} />
+                  <MiniMetric label={t('app.bridgeMode')} value={bridgeModeSummary} highlight={activeBridgeMode === 'skill-0'} />
                   <MiniMetric label={t('app.equivalenceStatus')} value={reviewEquivalenceLabel} highlight={reviewEquivalenceLabel === t('app.equivalenceImplementationIdentity')} />
                 </div>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -1549,6 +1644,9 @@ export function ReviewWorkspace({
                 </div>
               </div>
               <p className="mt-2 text-xs leading-5 text-current/75">{t('app.bridgeSource')}: {bridgeModeDetail}</p>
+              {activeBridgeDraftOnly && (
+                <p className="mt-2 text-xs leading-5 text-current/75">{t('app.bridgeDraftOnlyWarning')}</p>
+              )}
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
@@ -2806,7 +2904,7 @@ function deriveReviewProfile({
   reviewStatus,
   supportFileCount,
 }: {
-  bridgeMode: BridgeStatus['mode'] | 'unknown';
+  bridgeMode: BridgeStatus['mode'] | 'llm-assisted' | 'unknown';
   demoPresetId: string | null;
   reviewStatus?: ReviewState['reviewStatus'];
   supportFileCount: number;

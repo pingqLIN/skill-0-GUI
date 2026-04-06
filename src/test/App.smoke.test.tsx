@@ -61,18 +61,19 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
-    expect(await screen.findByText('app.title')).toBeInTheDocument();
+    expect((await screen.findAllByText('app.title')).length).toBeGreaterThan(0);
     expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
-    expect(await screen.findByText('app.landingTitle')).toBeInTheDocument();
+    expect(await screen.findByText('app.landingOverviewTab')).toBeInTheDocument();
+    expect(await screen.findByText('app.landingOutputsTab')).toBeInTheDocument();
+    expect(await screen.findByText('app.landingDocsTab')).toBeInTheDocument();
     expect(await screen.findByText('app.skillUrlLabel')).toBeInTheDocument();
-    expect(await screen.findAllByText('app.sampleScenariosTitle')).not.toHaveLength(0);
-    expect(await screen.findByText('app.resourcesTitle')).toBeInTheDocument();
-    expect(await screen.findAllByText('app.reviewOutputsTitle')).not.toHaveLength(0);
+    expect(await screen.findByText('Mode overview')).toBeInTheDocument();
+    expect(await screen.findByText('Bundle intake review')).toBeInTheDocument();
+    expect(await screen.findByText('Publish approval gate')).toBeInTheDocument();
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
-    expect(await screen.findAllByText('app.bridgeModeCanonical')).not.toHaveLength(0);
-    const banner = await screen.findByTestId('intake-review-readiness');
-    expect(banner).toHaveTextContent('app.reviewEvidenceStatus');
-    expect(banner).toHaveTextContent('app.reviewEvidenceCanonical');
+    expect((await screen.findAllByText('app.bridgeModeCanonical')).length).toBeGreaterThan(0);
+    expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
+    expect(await screen.findByText('/home/miles/dev2/skill-0')).toBeInTheDocument();
   });
 
   it('surfaces standalone parser review guidance before analysis starts', async () => {
@@ -85,9 +86,9 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
-    const banner = await screen.findByTestId('intake-review-readiness');
-    expect(banner).toHaveTextContent('app.reviewEvidenceStandalone');
-    expect(banner).toHaveTextContent('app.bridgeHelpStandalone');
+    expect(await screen.findByText('app.bridgeModeStandalone')).toBeInTheDocument();
+    expect(await screen.findByText('app.bridgeModeBundled')).toBeInTheDocument();
+    expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
   });
 
   it('surfaces bridge verification guidance when the bridge status request fails', async () => {
@@ -97,10 +98,26 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
-    const banner = await screen.findByTestId('intake-review-readiness');
-    expect(banner).toHaveTextContent('app.reviewEvidenceUnavailable');
-    expect(banner).toHaveTextContent('Bridge down');
-    expect(banner).toHaveTextContent('app.bridgeHelpUnavailable');
+    expect(await screen.findByText('app.bridgeModeUnavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Bridge down')).toBeInTheDocument();
+    expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
+  });
+
+  it('shows the hosted llm fallback capability when the bridge reports it', async () => {
+    vi.mocked(fetchBridgeStatus).mockResolvedValue({
+      mode: 'standalone',
+      skill0Root: null,
+      llmFallbackAvailable: true,
+      llmProvider: 'openai',
+      llmModel: 'gpt-4o-mini',
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(await screen.findByText('app.llmFallbackAvailable')).toBeInTheDocument();
+    expect(await screen.findByText('openai/gpt-4o-mini')).toBeInTheDocument();
   });
 
   it('loads the review workspace after analysis completes', async () => {
@@ -202,7 +219,8 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
-    fireEvent.click(screen.getByTestId('sample-scenario-bundle-review'));
+    fireEvent.click(screen.getByText('Bundle intake review'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open bundle sample' }));
 
     await waitFor(() => {
       expect(analyzeSkillText).toHaveBeenCalledWith(

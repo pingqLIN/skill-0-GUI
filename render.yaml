@@ -12,5 +12,7 @@ services:
         value: production
       - key: SKILL0_MODE
         value: standalone
+      - key: SKILL0_LLM_MODE
+        value: fallback
       - key: VITE_ENABLE_3D
         value: "false"

@@ -61,6 +61,27 @@ Defined or documented in [../.env.example](../.env.example):
 - `SKILL0_API_BODY_LIMIT`
   Optional JSON payload limit for uploaded review bundles.
 
+- `SKILL0_REQUEST_TIMEOUT_MS`
+  End-to-end timeout for a single parse request.
+
+- `SKILL0_LLM_MODE`
+  `disabled` or `fallback` for the server-side recovery adapter.
+
+- `SKILL0_LLM_PROVIDER`
+  Provider-neutral selector for the LLM recovery adapter.
+
+- `SKILL0_LLM_MODEL`
+  Optional model override for the LLM recovery adapter.
+
+- `SKILL0_LLM_API_KEY`
+  Server-side secret for the recovery adapter.
+
+- `SKILL0_LLM_TIMEOUT_MS`
+  Provider timeout for the recovery adapter.
+
+- `SKILL0_LLM_MAX_INPUT_CHARS`
+  Prompt-budget guardrail for recovery requests.
+
 ## 6.3 Recommended Deployment Modes
 
 ### Internal integration deployment
@@ -80,6 +101,7 @@ Use when the website must be self-contained.
 Recommended:
 
 - `SKILL0_MODE=standalone`
+- `SKILL0_LLM_MODE=fallback`
 - omit `SKILL0_PARSER_ROOT`
 - `VITE_ENABLE_3D=false`
 
@@ -92,6 +114,7 @@ This repository now includes a Render Blueprint in [../render.yaml](../render.ya
 Recommended first hosted profile:
 
 - `SKILL0_MODE=standalone`
+- `SKILL0_LLM_MODE=fallback`
 - omit `SKILL0_PARSER_ROOT`
 - omit `SKILL0_ROOT`
 - `VITE_ENABLE_3D=false`
@@ -103,6 +126,8 @@ Operational intent:
 - keep the first public deployment self-contained
 - do not vendor canonical parser source into this repository in this phase
 - reserve canonical parser bridging for controlled internal environments
+- allow a server-side `llm-assisted` recovery path for unknown or future formats when a provider is configured
+- keep `llm-assisted` output draft-only and never present it as final equivalence evidence
 
 ## 6.4 GitHub Platform Strategy
 
@@ -168,6 +193,7 @@ Before calling the deployment acceptable, verify all of the following on Render 
 - the site loads without boot errors
 - `GET /healthz` returns `ok: true`
 - `GET /api/bridge-status` reports standalone mode
+- `GET /api/bridge-status` also shows whether `llm-assisted` fallback is available
 - `GET /api/example-skill` returns the bundled sample
 - paste intake parses successfully through `POST /api/parse-skill`
 - skill URL import succeeds for a supported remote source or fails with a clear user-facing explanation
@@ -209,6 +235,7 @@ Validated outcomes:
 - example skill loads from canonical repo when available
 - parser requests succeed through canonical `auto_parse.py`
 - standalone mode returns bundled sample and fallback parser output
+- public standalone deployments can expose a server-side `llm-assisted` recovery capability without exposing canonical parser roots
 
 ## 6.11 CI Workflow
 

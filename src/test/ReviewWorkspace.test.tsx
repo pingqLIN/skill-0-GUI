@@ -76,6 +76,28 @@ const exportReadyData = {
   },
 };
 
+const llmAssistedExportData = {
+  ...exportReadyData,
+  bridge: {
+    draft_only: true,
+    fallback_reason: 'Unknown document structure required AI-assisted recovery.',
+    mode: 'llm-assisted',
+    model: 'gpt-4o-mini',
+    provider: 'openai',
+    schema_validation: 'passed',
+    skill0Root: null,
+  },
+  reviewerSummary: {
+    ...sampleData.reviewerSummary,
+    draft_only: true,
+    equivalenceNote: 'draft_only_ai_assisted',
+    fallback_reason: 'Unknown document structure required AI-assisted recovery.',
+    mode: 'llm-assisted',
+    operatorReminders: ['Treat the result as a draft until canonical parity is confirmed.'],
+    schema_validation: 'passed',
+  },
+};
+
 const baseProps = {
   darkMode: false,
   demoPreset: null,
@@ -555,6 +577,50 @@ describe('ReviewWorkspace', () => {
     URL.createObjectURL = originalCreateObjectUrl;
     URL.revokeObjectURL = originalRevokeObjectUrl;
     window.scrollTo = originalScrollTo;
+    clickSpy.mockRestore();
+    stringifySpy.mockRestore();
+  });
+
+  it('keeps llm-assisted draft metadata in the truth banner and exported review packet', async () => {
+    const originalCreateObjectUrl = URL.createObjectURL;
+    const originalRevokeObjectUrl = URL.revokeObjectURL;
+    URL.createObjectURL = vi.fn(() => 'blob:llm-review-packet') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const stringifySpy = vi.spyOn(JSON, 'stringify');
+
+    render(<ReviewWorkspace data={llmAssistedExportData} {...createProps()} />);
+
+    const truthBanner = await screen.findByTestId('review-truth-banner');
+    expect(truthBanner).toHaveTextContent('app.bridgeModeLlmAssistedShort');
+    expect(truthBanner).toHaveTextContent('app.equivalenceAiAssistedDraft');
+    expect(truthBanner).toHaveTextContent('app.bridgeDraftOnlyWarning');
+
+    await openInsightTab('checks');
+    expect(await screen.findByTestId('validation-evidence-panel')).toHaveTextContent('app.validationLlmAssistedWarning');
+
+    await openInsightTab('review');
+    fireEvent.change(screen.getByLabelText('app.reviewerName'), { target: { value: 'Miles' } });
+    fireEvent.click(screen.getByText('app.reviewChecklistModeConfirmed'));
+    fireEvent.click(screen.getByText('app.reviewChecklistValidationReviewed'));
+    fireEvent.click(screen.getByText('app.reviewChecklistDiffReviewed'));
+    fireEvent.click(screen.getByText('app.reviewChecklistEvidenceReady'));
+    fireEvent.click(screen.getByText('app.markApproved'));
+    fireEvent.click(screen.getByText('app.actionsTray'));
+    fireEvent.click(await screen.findByText('app.exportReviewPacket'));
+
+    expect(clickSpy).toHaveBeenCalled();
+    const packet = stringifySpy.mock.calls.at(-1)?.[0] as any;
+    expect(packet.parserMode).toBe('llm-assisted');
+    expect(packet.draftOnly).toBe(true);
+    expect(packet.fallbackReason).toBe('Unknown document structure required AI-assisted recovery.');
+    expect(packet.llmProvider).toBe('openai');
+    expect(packet.llmModel).toBe('gpt-4o-mini');
+    expect(packet.schemaValidation).toBe('passed');
+    expect(packet.validationEvidence.evidenceWarnings).toContain('app.validationLlmAssistedWarning');
+
+    URL.createObjectURL = originalCreateObjectUrl;
+    URL.revokeObjectURL = originalRevokeObjectUrl;
     clickSpy.mockRestore();
     stringifySpy.mockRestore();
   });

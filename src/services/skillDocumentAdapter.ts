@@ -113,6 +113,7 @@ function buildRuleDecisionNodes(rules: RuleNode[]) {
 function mapBridgeModeToReviewMode(mode: unknown) {
   if (mode === 'skill-0') return 'canonical';
   if (mode === 'standalone') return 'standalone';
+  if (mode === 'llm-assisted') return 'llm-assisted';
   return 'unknown';
 }
 
@@ -130,7 +131,7 @@ function dedupeOperatorReminders(reminders: unknown[]) {
   });
 }
 
-function buildReviewGuidance(reviewMode: 'canonical' | 'standalone' | 'unknown', editSource: 'import' | 'json' | 'structured') {
+function buildReviewGuidance(reviewMode: 'canonical' | 'standalone' | 'llm-assisted' | 'unknown', editSource: 'import' | 'json' | 'structured') {
   if (editSource === 'import') {
     return 'Loaded from skill JSON import. Parser execution was not re-run. Validate structure and re-run through the canonical bridge before final equivalence decisions.';
   }
@@ -141,6 +142,9 @@ function buildReviewGuidance(reviewMode: 'canonical' | 'standalone' | 'unknown',
   }
   if (reviewMode === 'standalone') {
     return `This SkillDocument was updated in the ${editorLabel} after the last standalone parser run. Original parser provenance is preserved, but final equivalence still requires a fresh canonical re-run before approval.`;
+  }
+  if (reviewMode === 'llm-assisted') {
+    return `This SkillDocument was updated in the ${editorLabel} after an AI-assisted recovery run. Keep it draft-only and re-run through the canonical bridge before any final equivalence decision.`;
   }
   return `This SkillDocument was updated in the ${editorLabel} after an unverified or imported session. Confirm parser mode and re-run through the canonical bridge before final equivalence decisions.`;
 }
@@ -192,10 +196,12 @@ function buildReviewChecklist(
         ? `Canonical skill-0 bridge confirmed via ${bridgeModeSource}.`
         : bridgeMode === 'standalone'
           ? `Standalone bridge active via ${bridgeModeSource}. Canonical rerun still recommended before final parity claims.`
+          : bridgeMode === 'llm-assisted'
+            ? `LLM-assisted recovery path active via ${bridgeModeSource}. Keep this packet draft-only until a canonical rerun is completed.`
           : `Bridge mode is unverified. Source: ${bridgeModeSource}.`,
       id: 'bridge-mode',
       label: 'Bridge mode verified',
-      status: bridgeMode === 'skill-0' ? 'complete' : bridgeMode === 'standalone' ? 'attention' : 'blocked',
+      status: bridgeMode === 'skill-0' ? 'complete' : bridgeMode === 'unknown' ? 'blocked' : 'attention',
     },
     {
       detail: !validationEvidence
@@ -247,7 +253,7 @@ export function buildReviewDataFromSkillDocument(
     ? previousSession.reviewerSummary
     : null;
   const reviewMode = previousReviewerSummary && typeof previousReviewerSummary.mode === 'string'
-    ? previousReviewerSummary.mode as 'canonical' | 'standalone' | 'unknown'
+    ? previousReviewerSummary.mode as 'canonical' | 'standalone' | 'llm-assisted' | 'unknown'
     : mapBridgeModeToReviewMode(previousBridge?.mode);
   const editSource = options.editSource ?? 'import';
   const category = directives[0]?.directive_type || actions[0]?.action_type || 'skill_document';
@@ -304,7 +310,7 @@ export function buildReviewDataFromSkillDocument(
   return {
     bridge: {
       error: reviewGuidance,
-      mode: previousBridge?.mode === 'skill-0' || previousBridge?.mode === 'standalone'
+      mode: previousBridge?.mode === 'skill-0' || previousBridge?.mode === 'standalone' || previousBridge?.mode === 'llm-assisted'
         ? previousBridge.mode
         : 'unknown',
       skill0Root: typeof previousBridge?.skill0Root === 'string' ? previousBridge.skill0Root : null,
@@ -495,6 +501,7 @@ export function buildReviewPacketFromReviewData(
     ? data.projectName
     : skillDocument?.meta?.title || skillDocument?.meta?.name || 'Untitled Review';
   const reviewerSummary = isRecord(data.reviewerSummary) ? data.reviewerSummary : null;
+  const bridge = isRecord(data.bridge) ? data.bridge : null;
   const operatorReminders = Array.isArray(reviewerSummary?.operatorReminders)
     ? reviewerSummary.operatorReminders.filter((item): item is Record<string, unknown> => isRecord(item))
     : [];
@@ -508,9 +515,27 @@ export function buildReviewPacketFromReviewData(
 
   return {
     contextSummary: options.contextSummary ?? [],
+    draftOnly: options.bridgeMode === 'llm-assisted'
+      || (reviewerSummary?.draft_only === true)
+      || (bridge?.draft_only === true),
     equivalenceStatus: options.equivalenceStatus,
     exportedAt: new Date().toISOString(),
+    fallbackReason: typeof reviewerSummary?.fallback_reason === 'string'
+      ? reviewerSummary.fallback_reason
+      : typeof bridge?.fallback_reason === 'string'
+        ? bridge.fallback_reason
+        : null,
     handoffState: options.handoffState ?? reviewState.handoffState ?? 'ready_for_review',
+    llmModel: typeof reviewerSummary?.model === 'string'
+      ? reviewerSummary.model
+      : typeof bridge?.model === 'string'
+        ? bridge.model
+        : null,
+    llmProvider: typeof reviewerSummary?.provider === 'string'
+      ? reviewerSummary.provider
+      : typeof bridge?.provider === 'string'
+        ? bridge.provider
+        : null,
     operatorReminders,
     parserMode: options.bridgeMode,
     parserModeSource: options.bridgeModeSource,
@@ -521,6 +546,11 @@ export function buildReviewPacketFromReviewData(
     reviewProfile: options.reviewProfile ?? reviewState.reviewProfile ?? 'mode_verification',
     reviewMode: options.reviewMode,
     reviewState,
+    schemaValidation: typeof reviewerSummary?.schema_validation === 'string'
+      ? reviewerSummary.schema_validation
+      : typeof bridge?.schema_validation === 'string'
+        ? bridge.schema_validation
+        : null,
     validationEvidence,
     skillDocument,
   };
@@ -627,6 +657,8 @@ export function buildValidationEvidenceFromReviewData(
     evidenceWarnings.push('app.validationImportedJsonWarning');
   } else if (reviewMode === 'standalone') {
     evidenceWarnings.push('app.validationStandaloneWarning');
+  } else if (reviewMode === 'llm-assisted') {
+    evidenceWarnings.push('app.validationLlmAssistedWarning');
   }
 
   return {

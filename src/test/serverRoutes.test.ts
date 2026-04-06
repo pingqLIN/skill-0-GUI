@@ -8,8 +8,8 @@ import { createServerApp } from '../../server.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-async function startTestServer(mode = 'standalone') {
-  const { app } = createServerApp({ mode, projectRoot });
+async function startTestServer(mode = 'standalone', bridge?: Parameters<typeof createServerApp>[0]['bridge']) {
+  const { app } = createServerApp({ bridge, mode, projectRoot });
 
   return await new Promise<{ server: Server; url: string }>((resolve, reject) => {
     const server = app.listen(0, '127.0.0.1', () => {
@@ -60,7 +60,7 @@ describe('server runtime routes', () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(payload).toEqual({
+    expect(payload).toMatchObject({
       ok: true,
       mode: 'standalone',
       parserRootConfigured: false,
@@ -80,7 +80,8 @@ describe('server runtime routes', () => {
     const examplePayload = await exampleResponse.json();
 
     expect(statusResponse.status).toBe(200);
-    expect(statusPayload).toEqual({
+    expect(statusPayload).toMatchObject({
+      llmFallbackAvailable: false,
       mode: 'standalone',
       skill0Root: null,
     });
@@ -162,5 +163,48 @@ describe('server runtime routes', () => {
 
     expect(parseResponse.status).toBe(200);
     expect(parsePayload.parserResult.original_definition.skill_name).toBe('large-bundle-skill');
+  });
+
+  it('surfaces provider fallback failures as structured API errors', async () => {
+    const runtime = await startTestServer('standalone', {
+      getBridgeStatus: async () => ({
+        llmFallbackAvailable: true,
+        llmModel: 'gpt-4o-mini',
+        llmProvider: 'openai',
+        mode: 'standalone',
+        skill0Root: null,
+      }),
+      getExampleSkill: async () => ({
+        mode: 'standalone',
+        name: 'standalone-sample',
+        skill0Root: null,
+        source: 'standalone/example-skill.md',
+        text: '# Example',
+      }),
+      parseSkill: async () => {
+        const error = new Error('LLM fallback provider request failed.');
+        (error as Error & { code?: string; detail?: string; statusCode?: number }).code = 'llm_provider_request_failed';
+        (error as Error & { code?: string; detail?: string; statusCode?: number }).detail = 'Provider returned 503.';
+        (error as Error & { code?: string; detail?: string; statusCode?: number }).statusCode = 503;
+        throw error;
+      },
+    } as never);
+    activeServer = runtime.server;
+
+    const parseResponse = await fetch(`${runtime.url}/api/parse-skill`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: '{"workflow":["ingest","review","export"]}',
+        skillName: 'future-format',
+      }),
+    });
+
+    const parsePayload = await parseResponse.json();
+    expect(parseResponse.status).toBe(503);
+    expect(parsePayload).toEqual({
+      detail: 'Provider returned 503.',
+      error: 'llm_provider_request_failed',
+    });
   });
 });

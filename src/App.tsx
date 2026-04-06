@@ -846,6 +846,12 @@ export default function App() {
     || (bridgeStatus?.mode === 'standalone'
       ? t('app.bridgeModeBundled')
       : bridgeStatusError || t('app.bridgeModeChecking'));
+  const llmFallbackLabel = bridgeStatus?.llmFallbackAvailable
+    ? t('app.llmFallbackAvailable')
+    : t('app.llmFallbackUnavailable');
+  const llmFallbackDetail = bridgeStatus?.llmFallbackAvailable
+    ? [bridgeStatus?.llmProvider, bridgeStatus?.llmModel].filter(Boolean).join('/') || t('app.llmFallbackReady')
+    : bridgeStatus?.llmReason || t('app.llmFallbackDisabledHint');
   const sampleScenarioContent = getSampleScenarioContent(i18n.language);
   const landingDocs = [
     {
@@ -1106,6 +1112,11 @@ npm run release:preview
               <div className="mt-1 text-xs font-medium">{bridgeModeLabel}</div>
               <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={bridgeModeDetail}>
                 {bridgeModeDetail}
+              </div>
+              <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.llmFallbackStatus')}</div>
+              <div className="mt-1 text-xs font-medium">{llmFallbackLabel}</div>
+              <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={llmFallbackDetail}>
+                {llmFallbackDetail}
               </div>
             </div>
             <a

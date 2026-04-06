@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { createLLMParserAdapter } from './llmParserAdapter.mjs';
 
 const DEFAULT_SKILL0_ROOTS = ['/home/miles/dev2/skill-0', '/home/miles/dev/projects/skill-0'];
 const ACTION_VERBS = new Set([
@@ -177,6 +178,14 @@ function buildReviewDecisionSummary(bridge) {
     };
   }
 
+  if (bridge.mode === 'llm-assisted') {
+    return {
+      equivalenceNote: 'draft_only_ai_assisted',
+      finalDecisionGuidance: 'Result was recovered through the LLM-assisted fallback path. Use it for draft review and format recovery only. Do not treat it as final equivalence evidence.',
+      mode: 'llm-assisted',
+    };
+  }
+
   return {
     equivalenceNote: 'equivalence_unverified',
     finalDecisionGuidance: 'Parser mode could not be verified. Do not treat this result as final equivalence evidence until bridge status is confirmed.',
@@ -221,6 +230,16 @@ function buildOperatorReminders({ parserResult, securityFindings, bridge, riskLe
       label: `${manifest.command_references_count} authority-bearing commands`,
       detail: 'Command references can materially change what the skill is allowed to do.',
       action: 'Inspect command snippets and confirm the allowed execution scope.',
+    });
+  }
+
+  if (bridge.mode === 'llm-assisted' && reminders.length < 3) {
+    reminders.push({
+      id: `rem-${reminders.length + 1}`,
+      level: riskLevel === 'HIGH' ? 'high' : 'medium',
+      label: 'AI-assisted recovery path',
+      detail: 'This result was recovered through the LLM-assisted parser fallback and remains draft-only evidence.',
+      action: 'Review supporting evidence, then re-run through the canonical bridge before any final equivalence decision.',
     });
   }
 
@@ -910,6 +929,130 @@ function buildStandaloneParserResult({ schemaPath, skillName, source, text, reas
   };
 }
 
+function looksLikeStructuredFallbackInput({ primaryPath, text }) {
+  const pathLower = String(primaryPath || '').toLowerCase();
+  const trimmed = String(text || '').trim();
+
+  if (/\.(json|yaml|yml|toml|xml)$/i.test(pathLower)) {
+    return true;
+  }
+
+  if (/^[\[{]/.test(trimmed)) {
+    return true;
+  }
+
+  if (/^<[\w:-]+/.test(trimmed)) {
+    return true;
+  }
+
+  return /^[A-Za-z0-9_.-]+\s*=/m.test(trimmed) && !/^#/m.test(trimmed);
+}
+
+function assessParserResultForFallback(parserResult, { contextFiles, primaryPath, text }) {
+  const actions = Array.isArray(parserResult?.decomposition?.actions) ? parserResult.decomposition.actions : [];
+  const rules = Array.isArray(parserResult?.decomposition?.rules) ? parserResult.decomposition.rules : [];
+  const directives = Array.isArray(parserResult?.decomposition?.directives) ? parserResult.decomposition.directives : [];
+  const manifest = parserResult?.manifest ?? null;
+  const totalRecoveredItems = actions.length + rules.length + directives.length;
+  const looksStructured = looksLikeStructuredFallbackInput({ primaryPath, text });
+  const hasBundleContext = Array.isArray(contextFiles) && contextFiles.length > 0;
+  const hasManifestSignals = Boolean(
+    manifest
+    && (
+      (manifest.supporting_files_count ?? 0) > 0
+      || (manifest.command_references_count ?? 0) > 0
+      || (manifest.unresolved_references_count ?? 0) > 0
+    ),
+  );
+
+  if (!parserResult?.meta || typeof parserResult.meta !== 'object') {
+    return {
+      accepted: false,
+      reason: 'Deterministic parser result is missing parser metadata.',
+    };
+  }
+
+  if (!parserResult?.decomposition || typeof parserResult.decomposition !== 'object') {
+    return {
+      accepted: false,
+      reason: 'Deterministic parser result is missing decomposition data.',
+    };
+  }
+
+  if (totalRecoveredItems === 0 && !hasManifestSignals && (String(text || '').trim().length > 80 || hasBundleContext)) {
+    return {
+      accepted: false,
+      reason: 'Deterministic parser result did not extract any actionable decomposition.',
+    };
+  }
+
+  if (looksStructured && totalRecoveredItems < 2) {
+    return {
+      accepted: false,
+      reason: 'Input appears to use a non-standard or future format and the deterministic parser output is too sparse.',
+    };
+  }
+
+  return {
+    accepted: true,
+    reason: null,
+  };
+}
+
+async function maybePromoteToLLMFallback({
+  bridgeBase,
+  contextFiles,
+  llmAdapter,
+  parserResult,
+  primaryPath,
+  schemaPath,
+  skillName,
+  text,
+}) {
+  const assessment = assessParserResultForFallback(parserResult, {
+    contextFiles,
+    primaryPath,
+    text,
+  });
+
+  if (assessment.accepted) {
+    return transformParserResult(parserResult, bridgeBase);
+  }
+
+  const capabilities = llmAdapter.getCapabilities();
+
+  if (!capabilities.enabled || !capabilities.provider || !capabilities.model) {
+    const fallbackError = new Error(
+      `LLM fallback is required but unavailable. ${assessment.reason}${capabilities.reason ? ` ${capabilities.reason}` : ''}`,
+    );
+    fallbackError.code = 'llm_fallback_required_unavailable';
+    fallbackError.detail = assessment.reason;
+    fallbackError.statusCode = 503;
+    throw fallbackError;
+  }
+
+  const fallbackReason = assessment.reason;
+  const llmRecovered = await llmAdapter.parseUnknownSkill({
+    contextFiles,
+    fallbackReason,
+    primaryPath,
+    schemaPath,
+    skillName,
+    text,
+  });
+
+  return transformParserResult(llmRecovered.parserResult, {
+    draft_only: true,
+    error: fallbackReason,
+    fallback_reason: fallbackReason,
+    mode: 'llm-assisted',
+    model: capabilities.model,
+    provider: capabilities.provider,
+    schema_validation: llmRecovered.schemaValidation,
+    skill0Root: bridgeBase.skill0Root ?? null,
+  });
+}
+
 function transformParserResult(parserResult, bridge) {
   const actions = parserResult?.decomposition?.actions ?? [];
   const rules = parserResult?.decomposition?.rules ?? [];
@@ -975,14 +1118,14 @@ function transformParserResult(parserResult, bridge) {
   const securityFindings = [
     ...parserFindings,
     ...(bridge.error ? [{
-      adjustedSeverity: bridge.mode === 'standalone' ? 'MEDIUM' : 'LOW',
+      adjustedSeverity: bridge.mode === 'skill-0' ? 'LOW' : 'MEDIUM',
       adjustmentReason: 'Bridge fallback notice.',
       contextType: 'bridge',
       description: bridge.error,
       detectionStandard: 'Bridge runtime',
       lineContent: bridge.error,
       lineNumber: 0,
-      originalSeverity: bridge.mode === 'standalone' ? 'MEDIUM' : 'LOW',
+      originalSeverity: bridge.mode === 'skill-0' ? 'LOW' : 'MEDIUM',
       ruleId: 'BRIDGE-001',
       ruleName: 'Primary bridge unavailable',
       standardUrl: 'https://github.com/pingqLIN/skill-0-review-studio',
@@ -1080,6 +1223,13 @@ function transformParserResult(parserResult, bridge) {
       finalDecisionGuidance: reviewDecisionSummary.finalDecisionGuidance,
       mode: reviewDecisionSummary.mode,
       operatorReminders,
+      ...(bridge.mode === 'llm-assisted' ? {
+        draft_only: true,
+        fallback_reason: bridge.fallback_reason || bridge.error || null,
+        model: bridge.model || null,
+        provider: bridge.provider || null,
+        schema_validation: bridge.schema_validation || 'failed',
+      } : {}),
     },
     riskAssessment: {
       details: `Parser mode ${bridge.mode} extracted ${actions.length} actions, ${rules.length} rules, ${directives.length} directives from the submitted skill definition. Structural signals: ${structuralSignals}. Parser findings: ${parserFindings.length}.`,
@@ -1203,7 +1353,36 @@ function runSkill0ManifestParser({ entryPath, rootDir, skill0Root }) {
   });
 }
 
-export function createSkill0Bridge({ explicitRoot = '', mode = 'auto', projectRoot }) {
+/**
+ * @typedef {{
+ *   explicitRoot?: string;
+ *   llmAdapter?: {
+ *     getCapabilities: () => {
+ *       enabled: boolean;
+ *       mode: string;
+ *       model: string | null;
+ *       provider: string | null;
+ *       reason: string | null;
+ *       supportsJsonSchema: boolean;
+ *       supportsReasoning: boolean;
+ *     };
+ *     parseUnknownSkill: (input: Record<string, unknown>, options?: Record<string, unknown>) => Promise<{
+ *       parserResult: Record<string, unknown>;
+ *       schemaValidation: string;
+ *     }>;
+ *   };
+ *   mode?: string;
+ *   projectRoot?: string;
+ * }} Skill0BridgeOptions
+ */
+
+/** @param {Skill0BridgeOptions} options */
+export function createSkill0Bridge({
+  explicitRoot = '',
+  llmAdapter = createLLMParserAdapter(),
+  mode = 'auto',
+  projectRoot,
+} = {}) {
   const standaloneExampleSkillPath = path.resolve(projectRoot, 'standalone/example-skill.md');
   const standaloneSchemaPath = './standalone/skill-decomposition.schema.json';
 
@@ -1238,7 +1417,14 @@ export function createSkill0Bridge({ explicitRoot = '', mode = 'auto', projectRo
 
   async function getBridgeStatus() {
     const skill0Root = await resolveSkill0Root();
+    const llmCapabilities = llmAdapter.getCapabilities();
     return {
+      llmFallbackAvailable: llmCapabilities.enabled,
+      llmModel: llmCapabilities.model,
+      llmProvider: llmCapabilities.provider,
+      llmReason: llmCapabilities.reason,
+      llmSupportsJsonSchema: llmCapabilities.supportsJsonSchema,
+      llmSupportsReasoning: llmCapabilities.supportsReasoning,
       mode: skill0Root ? 'skill-0' : 'standalone',
       skill0Root,
     };
@@ -1295,9 +1481,18 @@ export function createSkill0Bridge({ explicitRoot = '', mode = 'auto', projectRo
               skill0Root,
             })
           : await runSkill0Parser(text, normalizedSkillName, skill0Root);
-        return transformParserResult(parserResult, {
-          mode: 'skill-0',
-          skill0Root,
+        return await maybePromoteToLLMFallback({
+          bridgeBase: {
+            mode: 'skill-0',
+            skill0Root,
+          },
+          contextFiles,
+          llmAdapter,
+          parserResult,
+          primaryPath,
+          schemaPath: standaloneSchemaPath,
+          skillName: normalizedSkillName,
+          text,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown skill-0 parser bridge error';
@@ -1318,11 +1513,19 @@ export function createSkill0Bridge({ explicitRoot = '', mode = 'auto', projectRo
               source: 'standalone/fallback',
               text,
             });
-
-        return transformParserResult(parserResult, {
-          error: message,
-          mode: 'standalone',
-          skill0Root,
+        return await maybePromoteToLLMFallback({
+          bridgeBase: {
+            error: message,
+            mode: 'standalone',
+            skill0Root,
+          },
+          contextFiles,
+          llmAdapter,
+          parserResult,
+          primaryPath,
+          schemaPath: standaloneSchemaPath,
+          skillName: normalizedSkillName,
+          text,
         });
       } finally {
         await virtualPackage?.cleanup?.();
@@ -1348,16 +1551,24 @@ export function createSkill0Bridge({ explicitRoot = '', mode = 'auto', projectRo
               : 'No compatible skill-0 repository was found.',
             schemaPath: standaloneSchemaPath,
             skillName: normalizedSkillName,
-            source: 'standalone/local',
-            text,
-          });
-
-      return transformParserResult(parserResult, {
-        error: mode === 'standalone'
-          ? 'Bridge mode was forced to standalone. Using the bundled standalone parser.'
-          : 'No compatible skill-0 repository was found. Using the bundled standalone parser.',
-        mode: 'standalone',
-        skill0Root: null,
+          source: 'standalone/local',
+          text,
+        });
+      return await maybePromoteToLLMFallback({
+        bridgeBase: {
+          error: mode === 'standalone'
+            ? 'Bridge mode was forced to standalone. Using the bundled standalone parser.'
+            : 'No compatible skill-0 repository was found. Using the bundled standalone parser.',
+          mode: 'standalone',
+          skill0Root: null,
+        },
+        contextFiles,
+        llmAdapter,
+        parserResult,
+        primaryPath,
+        schemaPath: standaloneSchemaPath,
+        skillName: normalizedSkillName,
+        text,
       });
     } finally {
       await virtualPackage?.cleanup?.();

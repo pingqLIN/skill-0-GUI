@@ -53,7 +53,7 @@ export async function analyzeSkillText(
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(payload?.error || 'Skill-0 parser bridge request failed');
+    throw new Error(payload?.detail || payload?.error || 'Skill-0 parser bridge request failed');
   }
 
   return payload;

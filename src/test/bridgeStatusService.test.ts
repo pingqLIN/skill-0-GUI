@@ -9,13 +9,28 @@ describe('bridgeStatusService', () => {
   it('returns the current parser mode and root', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => ({ mode: 'skill-0', skill0Root: '/tmp/skill-0' }),
+      json: async () => ({
+        llmFallbackAvailable: true,
+        llmModel: 'gpt-4o-mini',
+        llmProvider: 'openai',
+        mode: 'skill-0',
+        skill0Root: '/tmp/skill-0',
+      }),
     } as Response);
 
     const result = await fetchBridgeStatus();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/bridge-status');
-    expect(result).toEqual({ mode: 'skill-0', skill0Root: '/tmp/skill-0' });
+    expect(result).toEqual({
+      llmFallbackAvailable: true,
+      llmModel: 'gpt-4o-mini',
+      llmProvider: 'openai',
+      llmReason: null,
+      llmSupportsJsonSchema: false,
+      llmSupportsReasoning: false,
+      mode: 'skill-0',
+      skill0Root: '/tmp/skill-0',
+    });
   });
 
   it('throws when the bridge status endpoint fails', async () => {

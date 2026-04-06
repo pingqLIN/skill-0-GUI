@@ -7,15 +7,61 @@ import { resolveSkillUrlImport, serializeSkillUrlError } from './bridge/skillUrl
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const JSON_BODY_LIMIT = process.env.SKILL0_API_BODY_LIMIT || '10mb';
+const REQUEST_TIMEOUT_MS = Number.parseInt(process.env.SKILL0_REQUEST_TIMEOUT_MS || '20000', 10);
 
+function createTimeoutError(timeoutMs) {
+  const error = new Error(`Parser request exceeded ${timeoutMs}ms.`);
+  error.code = 'parser_request_timeout';
+  error.detail = `The parser request did not complete within ${timeoutMs}ms.`;
+  error.statusCode = 504;
+  return error;
+}
+
+async function withRequestTimeout(work, timeoutMs = REQUEST_TIMEOUT_MS) {
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(createTimeoutError(timeoutMs)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([work(), timeoutPromise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function serializeBridgeError(error) {
+  const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+  return {
+    error: error?.code || error?.message || 'Unknown parser bridge error',
+    detail: error?.detail,
+    statusCode,
+  };
+}
+
+/**
+ * @typedef {{
+ *   bridge?: {
+ *     getBridgeStatus: () => Promise<Record<string, unknown>>;
+ *     getExampleSkill: () => Promise<Record<string, unknown>>;
+ *     parseSkill: (text: string, skillName: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>;
+ *   };
+ *   explicitRoot?: string;
+ *   mode?: string;
+ *   projectRoot?: string;
+ * }} ServerAppOptions
+ */
+
+/** @param {ServerAppOptions} options */
 export function createServerApp({
+  bridge: providedBridge,
   explicitRoot = process.env.SKILL0_PARSER_ROOT || process.env.SKILL0_ROOT,
   mode = process.env.SKILL0_MODE || 'auto',
   projectRoot = __dirname,
 } = {}) {
   const app = express();
   const distDir = path.resolve(projectRoot, 'dist');
-  const bridge = createSkill0Bridge({
+  const bridge = providedBridge || createSkill0Bridge({
     explicitRoot,
     mode,
     projectRoot,
@@ -55,12 +101,16 @@ export function createServerApp({
         return;
       }
 
-      res.json(await bridge.parseSkill(text, skillName, {
+      res.json(await withRequestTimeout(() => bridge.parseSkill(text, skillName, {
         contextFiles,
         primaryPath,
-      }));
+      })));
     } catch (error) {
-      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown parser bridge error' });
+      const payload = serializeBridgeError(error);
+      res.status(payload.statusCode).json({
+        error: payload.error,
+        detail: payload.detail,
+      });
     }
   });
 

@@ -24,6 +24,39 @@ const VECTOR_SPACE_3D_PACKAGES = [
   'ngraph.merge',
   'ngraph.random',
 ];
+const REQUEST_TIMEOUT_MS = Number.parseInt(process.env.SKILL0_REQUEST_TIMEOUT_MS || '20000', 10);
+
+function createTimeoutError(timeoutMs: number) {
+  const error = new Error(`Parser request exceeded ${timeoutMs}ms.`);
+  (error as Error & { code?: string; detail?: string; statusCode?: number }).code = 'parser_request_timeout';
+  (error as Error & { code?: string; detail?: string; statusCode?: number }).detail = `The parser request did not complete within ${timeoutMs}ms.`;
+  (error as Error & { code?: string; detail?: string; statusCode?: number }).statusCode = 504;
+  return error;
+}
+
+async function withRequestTimeout<T>(work: () => Promise<T>, timeoutMs = REQUEST_TIMEOUT_MS) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => reject(createTimeoutError(timeoutMs)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([work(), timeoutPromise]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
+function serializeBridgeError(error: unknown) {
+  const candidate = error as { code?: string; detail?: string; message?: string; statusCode?: number };
+  return {
+    error: candidate.code || candidate.message || 'Unknown parser bridge error',
+    detail: candidate.detail,
+    statusCode: Number.isInteger(candidate.statusCode) ? candidate.statusCode : 500,
+  };
+}
 
 function isNodeModulePackage(id: string, packageName: string) {
   return id.includes(`/node_modules/${packageName}/`);
@@ -105,14 +138,18 @@ export default defineConfig(({ mode }) => {
 
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(await bridge.parseSkill(text, skillName, {
+              res.end(JSON.stringify(await withRequestTimeout(() => bridge.parseSkill(text, skillName, {
                 contextFiles,
                 primaryPath,
-              })));
+              }))));
             } catch (error) {
-              res.statusCode = 500;
+              const payload = serializeBridgeError(error);
+              res.statusCode = payload.statusCode;
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown parser bridge error' }));
+              res.end(JSON.stringify({
+                error: payload.error,
+                detail: payload.detail,
+              }));
             }
           });
 

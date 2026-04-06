@@ -190,12 +190,17 @@ export type ReviewPacket = {
   exportedAt: string;
   projectId: string;
   projectName: string;
-  parserMode: 'skill-0' | 'standalone' | 'unknown';
+  parserMode: 'skill-0' | 'standalone' | 'llm-assisted' | 'unknown';
   parserModeSource: string;
   reviewMode: string;
   equivalenceStatus: string;
   reviewDecisionGuidance: string;
   operatorReminders: Array<Record<string, unknown>>;
+  draftOnly?: boolean;
+  fallbackReason?: string | null;
+  llmProvider?: string | null;
+  llmModel?: string | null;
+  schemaValidation?: string | null;
   handoffState: HandoffState;
   reviewProfile: ReviewProfile;
   reviewState: ReviewState;

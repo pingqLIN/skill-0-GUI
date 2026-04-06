@@ -130,7 +130,7 @@ describe('Vite dev middleware API parity', () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(payload).toEqual({
+    expect(payload).toMatchObject({
       ok: true,
       mode: 'standalone',
       parserRootConfigured: false,
@@ -153,7 +153,8 @@ describe('Vite dev middleware API parity', () => {
     const examplePayload = await exampleResponse.json();
 
     expect(statusResponse.status).toBe(200);
-    expect(statusPayload).toEqual({
+    expect(statusPayload).toMatchObject({
+      llmFallbackAvailable: false,
       mode: 'standalone',
       skill0Root: null,
     });
@@ -247,7 +248,8 @@ describeCanonical('Vite dev middleware canonical parity', () => {
     const examplePayload = await exampleResponse.json();
 
     expect(statusResponse.status).toBe(200);
-    expect(statusPayload).toEqual({
+    expect(statusPayload).toMatchObject({
+      llmFallbackAvailable: false,
       mode: 'skill-0',
       skill0Root: canonicalRoot,
     });

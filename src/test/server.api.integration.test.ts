@@ -101,6 +101,7 @@ describe('server API integration (standalone mode)', () => {
 
     expect(response.ok).toBe(true);
     expect(payload).toMatchObject({
+      llmFallbackAvailable: false,
       mode: 'standalone',
       skill0Root: null,
     });
@@ -175,6 +176,7 @@ describeCanonical('server API integration (canonical skill-0 mode)', () => {
 
     expect(statusResponse.ok).toBe(true);
     expect(statusPayload).toMatchObject({
+      llmFallbackAvailable: false,
       mode: 'skill-0',
       skill0Root: canonicalRoot,
     });

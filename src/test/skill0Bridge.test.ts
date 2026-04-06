@@ -48,7 +48,8 @@ describe('createSkill0Bridge', () => {
       projectRoot,
     });
 
-    await expect(bridge.getBridgeStatus()).resolves.toEqual({
+    await expect(bridge.getBridgeStatus()).resolves.toMatchObject({
+      llmFallbackAvailable: false,
       mode: 'standalone',
       skill0Root: null,
     });
@@ -121,7 +122,8 @@ describe('createSkill0Bridge', () => {
       });
 
       const status = await bridge.getBridgeStatus();
-      expect(status).toEqual({
+      expect(status).toMatchObject({
+        llmFallbackAvailable: false,
         mode: 'skill-0',
         skill0Root: canonicalRoot,
       });
@@ -258,4 +260,152 @@ describe('createSkill0Bridge', () => {
       });
     },
   );
+
+  it('does not call the LLM fallback when deterministic standalone parsing succeeds', async () => {
+    const llmAdapter = {
+      getCapabilities() {
+        return {
+          enabled: true,
+          mode: 'fallback',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          reason: null,
+          supportsJsonSchema: true,
+          supportsReasoning: true,
+        };
+      },
+      parseUnknownSkill: async () => {
+        throw new Error('LLM fallback should not be called for healthy standalone parses.');
+      },
+    };
+
+    const bridge = createSkill0Bridge({
+      llmAdapter,
+      mode: 'standalone',
+      projectRoot,
+    });
+
+    const parsed = await bridge.parseSkill('# Demo Skill\n\n## Rules\n- Always validate input.\n', 'demo-skill');
+    expect(parsed.bridge.mode).toBe('standalone');
+  });
+
+  it('promotes sparse structured input into llm-assisted fallback mode', async () => {
+    let llmCalls = 0;
+    const llmAdapter = {
+      getCapabilities() {
+        return {
+          enabled: true,
+          mode: 'fallback',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          reason: null,
+          supportsJsonSchema: true,
+          supportsReasoning: true,
+        };
+      },
+      parseUnknownSkill: async ({ fallbackReason }: { fallbackReason: string }) => {
+        llmCalls += 1;
+        expect(fallbackReason).toContain('non-standard');
+        return {
+          parserResult: {
+            $schema: './standalone/skill-decomposition.schema.json',
+            analysis_findings: [],
+            command_references: [],
+            decomposition: {
+              actions: [{
+                action_type: 'transform',
+                description: 'Normalize a future-format payload into a review-ready document.',
+                deterministic: true,
+                id: 'a_001',
+                name: 'Normalize payload',
+                side_effects: [],
+              }],
+              directives: [],
+              rules: [],
+            },
+            execution_paths: [],
+            manifest: {
+              analysis_level: 'single_file',
+              command_references_count: 0,
+              supporting_files_count: 0,
+              unresolved_references_count: 0,
+            },
+            meta: {
+              description: 'Recovered from future-format input.',
+              name: 'future-format',
+              parsed_by: 'llm-assisted/openai',
+              parse_timestamp: new Date().toISOString(),
+              parser_version: 'skill-0-review-studio llm-assisted openai/gpt-4o-mini',
+              schema_version: '2.4.0',
+              skill_id: 'claude__future-format',
+              skill_layer: 'claude_skill',
+              title: 'Future Format Skill',
+            },
+            original_definition: {
+              fallback_reason: fallbackReason,
+              skill_description: 'Recovered from future-format input.',
+              skill_name: 'future-format',
+              source: 'llm-assisted/openai',
+            },
+            supporting_files: [],
+          },
+          schemaValidation: 'passed',
+        };
+      },
+    };
+
+    const bridge = createSkill0Bridge({
+      llmAdapter,
+      mode: 'standalone',
+      projectRoot,
+    });
+
+    const parsed = await bridge.parseSkill('{"workflow":["ingest","review","export"]}', 'future-format', {
+      primaryPath: 'skills/future/skill.json',
+    });
+
+    expect(llmCalls).toBe(1);
+    expect(parsed.bridge.mode).toBe('llm-assisted');
+    expect(parsed.bridge.provider).toBe('openai');
+    expect(parsed.bridge.model).toBe('gpt-4o-mini');
+    expect(parsed.bridge.schema_validation).toBe('passed');
+    expect(parsed.bridge.draft_only).toBe(true);
+    expect(parsed.reviewerSummary.mode).toBe('llm-assisted');
+    expect(parsed.reviewerSummary.draft_only).toBe(true);
+    expect(parsed.reviewerSummary.equivalenceNote).toBe('draft_only_ai_assisted');
+  });
+
+  it('fails clearly when llm fallback is required but unavailable', async () => {
+    const llmAdapter = {
+      getCapabilities() {
+        return {
+          enabled: false,
+          mode: 'fallback',
+          model: null,
+          provider: null,
+          reason: 'LLM fallback provider is not configured.',
+          supportsJsonSchema: false,
+          supportsReasoning: false,
+        };
+      },
+      parseUnknownSkill: async () => {
+        throw new Error('should not be called');
+      },
+    };
+
+    const bridge = createSkill0Bridge({
+      llmAdapter,
+      mode: 'standalone',
+      projectRoot,
+    });
+
+    await expect(
+      bridge.parseSkill('{"workflow":["ingest","review","export"]}', 'future-format', {
+        primaryPath: 'skills/future/skill.json',
+      }),
+    ).rejects.toMatchObject({
+      code: 'llm_fallback_required_unavailable',
+      statusCode: 503,
+    });
+  });
 });
