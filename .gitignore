@@ -3,6 +3,7 @@ build/
 dist/
 coverage/
 .playwright-cli/
+.vscode/
 output/
 .DS_Store
 *.log

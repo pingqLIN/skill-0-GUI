@@ -175,7 +175,10 @@ export function ReviewWorkspace({
     || (initialBridgeMode === 'skill-0' ? 'in_review' : 'draft');
   const [activeTab, setActiveTab] = useState<WorkspaceTabId>('pipeline');
   const [activePhase, setActivePhase] = useState<string | null>(null);
-  const [activeInsightTab, setActiveInsightTab] = useState<'review' | 'checks' | 'context'>('review');
+  const [activeBottomTab, setActiveBottomTab] = useState<'review' | 'checks' | 'context' | null>(null);
+  const [activeReviewSub, setActiveReviewSub] = useState<'decision' | 'notes' | 'diff'>('decision');
+  const [activeChecksSub, setActiveChecksSub] = useState<'posture' | 'schema' | 'consistency' | 'tests' | 'evidence'>('posture');
+  const [activeContextSub, setActiveContextSub] = useState<'summary' | 'policy' | 'files' | 'analysis' | 'source' | 'links'>('summary');
   const [isWorkspaceFocusMode, setIsWorkspaceFocusMode] = useState(false);
   const [isDerivedWorkflowOpen, setIsDerivedWorkflowOpen] = useState(false);
   const [showActions, setShowActions] = useState(false);
@@ -1367,65 +1370,62 @@ export function ReviewWorkspace({
           </div>
         </motion.div>
       )}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid gap-5 xl:grid-cols-[15rem_minmax(0,1fr)] 2xl:grid-cols-[15rem_minmax(0,1fr)_24rem]">
-        <aside className="space-y-4 xl:sticky xl:top-28 xl:self-start">
-          <div className="glass-panel space-y-5 p-4 sm:p-5">
-            <div>
-              <p className="editorial-kicker">{t('app.workspace')}</p>
-              <h2 className="text-pretty-wrap mt-2 text-lg font-semibold tracking-tight text-foreground">{t('app.primaryWorkspace')}</h2>
-              <p className="text-pretty-wrap mt-2 text-sm leading-6 text-muted-foreground">{t('app.phaseFlowHint')}</p>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-[calc(100vh-80px)] overflow-hidden relative">
+        <header className="shrink-0 flex items-center justify-between gap-4 px-4 py-3 sm:px-6 border-b border-border bg-card/80 backdrop-blur-md z-10">
+          <div className="flex items-center gap-4">
+            <div className="hidden lg:block">
+              <span className="editorial-kicker text-muted-foreground">{t('app.currentFocus')}</span>
+              <div className="text-sm font-medium text-foreground truncate max-w-[200px]" title={data?.parserResult?.meta?.title || data?.parserResult?.meta?.name || '--'}>
+                {data?.parserResult?.meta?.title || data?.parserResult?.meta?.name || '--'}
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="h-6 w-px bg-border hidden lg:block" />
+
+            <div className="flex flex-wrap items-center gap-1">
               {workspaceTabs.map((view, index) => (
-                <div key={view.id} className="space-y-2">
+                <div key={view.id} className="flex items-center gap-1">
                   <button
                     onClick={() => setActiveTab(view.id)}
-                    className={`workspace-nav-button ${activeTab === view.id ? 'workspace-nav-button--active' : ''}`}
+                    className={`flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 text-sm transition-colors ${activeTab === view.id ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground/70'}`}
                   >
-                    <div>
-                      <div className="flex items-center gap-2 text-pretty-wrap text-sm font-medium text-foreground">
-                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-foreground/8 text-[10px] font-bold text-foreground/60">{index + 1}</span>
-                        {view.label}
-                      </div>
-                      <div className="text-pretty-wrap mt-1 pl-7 text-[11px] text-muted-foreground">{view.meta}</div>
-                    </div>
-                    <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-muted-foreground/70">{view.id}</span>
+                    <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${activeTab === view.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-foreground/10 text-foreground/70'}`}>
+                      {index + 1}
+                    </span>
+                    <span>{view.label}</span>
                   </button>
-
                   {view.id === 'pipeline' && (
                     <button
                       type="button"
                       onClick={openDerivedWorkflow}
-                      className={`workspace-subnav-button text-pretty-wrap ${isDerivedWorkflowOpen ? 'workspace-subnav-button--active' : ''}`}
+                      className={`hidden sm:block px-3 py-1.5 text-xs rounded-[calc(var(--radius)*1.02)] transition-colors ${isDerivedWorkflowOpen ? 'bg-muted text-foreground font-medium' : 'text-muted-foreground hover:bg-card'}`}
                     >
-                      {t('app.tabs.pipeline')} {t('app.derivedWorkflow')}
+                      {t('app.derivedWorkflow')}
                     </button>
                   )}
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="surface-panel-muted">
+          <div className="flex items-center gap-2">
+            <div className="relative">
               <button
                 onClick={() => setShowActions((current) => !current)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-[calc(var(--radius)*1.02)] transition-colors ${showActions ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-card'}`}
               >
-                <div>
-                  <p className="editorial-kicker">{t('app.actionsTray')}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{t('app.quickActions')}</p>
-                </div>
-                {showActions ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
+                <span>{t('app.actionsTray')}</span>
+                {showActions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               </button>
 
-              <AnimatePresence initial={false}>
+              <AnimatePresence>
                 {showActions && (
                   <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-card p-2 shadow-xl z-50"
                   >
                     <div className="grid gap-2 px-4 pb-4">
                       <button
@@ -1510,40 +1510,18 @@ export function ReviewWorkspace({
                 )}
               </AnimatePresence>
             </div>
-
-            <div className="surface-panel-muted p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="editorial-kicker">{t('app.currentFocus')}</p>
-                <span className="editorial-chip px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
-                  {executionPaths.length > 0 ? `${executionPaths.length} ${t('app.executionPaths')}` : '--'}
-                </span>
-              </div>
-              <div className="text-pretty-wrap mt-3 text-sm font-medium text-foreground">
-                {data?.parserResult?.meta?.title || data?.parserResult?.meta?.name || '--'}
-              </div>
-              <p className="text-pretty-wrap mt-2 text-xs leading-5 text-foreground/68">{t('app.parserBoardHint')}</p>
-            </div>
-
-
             <div
-              data-testid="review-readiness-banner"
-              className={`surface-panel-muted p-4 ${reviewReadinessStyles}`}
+              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-[calc(var(--radius)*1.02)] ${reviewReadinessStyles}`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={15} className="shrink-0" />
-                  <p className="editorial-kicker text-current/80">{t('app.reviewEvidenceStatus')}</p>
-                </div>
-                <span className="editorial-chip px-2.5 py-1 text-[11px] font-medium text-current">
-                  {reviewReadinessLabel}
-                </span>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-current/80">{bridgeReviewGuidance}</p>
+              <AlertTriangle size={14} />
+              <span className="text-[11px] font-medium truncate max-w-[150px]">
+                {reviewReadinessLabel}
+              </span>
             </div>
           </div>
-        </aside>
+        </header>
 
-        <section className="min-w-0 space-y-5">
+        <section className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 z-0 pb-28 custom-scrollbar">
           {!isWorkspaceFocusMode && (
             <Suspense fallback={<PanelFallback heightClassName="min-h-[220px]" />}>
               <Dashboard data={data} onNavigatePhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} modifiedPaths={modifiedPaths} />
@@ -1709,12 +1687,14 @@ export function ReviewWorkspace({
                 className="space-y-7"
               >
                 <Suspense fallback={<PanelFallback heightClassName="min-h-[240px]" />}>
-                  <DecompositionBoard
-                    parserResult={data.parserResult}
-                    supportFiles={supportFiles}
-                    selectedContextPath={selectedContextPath}
-                    onSelectContext={onSelectContextPath}
-                  />
+                  <div className="max-h-[50vh] overflow-y-auto custom-scrollbar rounded-[calc(var(--radius)*1.1)] border border-border/40 bg-card/20 pb-4 shadow-sm relative z-0">
+                    <DecompositionBoard
+                      parserResult={data.parserResult}
+                      supportFiles={supportFiles}
+                      selectedContextPath={selectedContextPath}
+                      onSelectContext={onSelectContextPath}
+                    />
+                  </div>
                 </Suspense>
 
                 <InsightBlock
@@ -1729,7 +1709,7 @@ export function ReviewWorkspace({
                     <FlowStepper phases={data.phases} activePhase={activePhase} onSelectPhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} />
 
 	                    <div className="grid gap-6 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]">
-	                      <div className="glass-panel px-3 py-4 sm:px-4 xl:min-h-[640px]">
+	                      <div className="glass-panel px-3 py-4 sm:px-4 xl:min-h-[400px] xl:max-h-[50vh] flex flex-col">
                         <div className="flex items-center justify-between px-3 pb-2">
                           <div>
                             <p className="editorial-kicker">{t('flowchart.pipeline')}</p>
@@ -1739,14 +1719,14 @@ export function ReviewWorkspace({
                             {activePhase ?? '--'}
                           </span>
                         </div>
-	                        <div className="custom-scrollbar pr-1 xl:max-h-[70vh] xl:overflow-y-auto">
+	                        <div className="custom-scrollbar pr-1 flex-1 overflow-y-auto">
 	                          <Flowchart phases={data.phases} activePhase={activePhase} onSelectPhase={setActivePhase} />
 	                        </div>
 	                      </div>
 
-	                      <div className="xl:min-h-[640px]">
+	                      <div className="xl:min-h-[400px] xl:max-h-[50vh] flex flex-col">
 	                        {activePhaseData ? (
-	                          <Suspense fallback={<PanelFallback heightClassName="xl:min-h-[640px]" />}>
+	                          <Suspense fallback={<PanelFallback heightClassName="xl:min-h-[400px]" />}>
 	                            <PhaseDetails
 	                              phase={activePhaseData}
 	                              allPhases={data.phases}
@@ -1758,7 +1738,7 @@ export function ReviewWorkspace({
 	                            />
 	                          </Suspense>
 	                        ) : (
-	                          <div className="glass-panel flex items-center justify-center p-10 text-center xl:min-h-[640px]">
+	                          <div className="glass-panel flex-1 flex items-center justify-center p-10 text-center xl:min-h-[400px]">
 	                            <div className="max-w-sm space-y-3">
 	                              <p className="editorial-kicker">{t('app.detailsPanel')}</p>
 	                              <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('app.noActivePhase')}</h3>
@@ -1795,33 +1775,67 @@ export function ReviewWorkspace({
           </AnimatePresence>
         </section>
 
-        <aside className="order-last 2xl:sticky 2xl:top-28 2xl:self-start">
-          <div className="space-y-4">
-            <div className="glass-panel p-3">
-              <div className="segment-control">
-                {insightTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveInsightTab(tab.id)}
-                    className={`segment-control__button flex-1 px-3 py-2 text-left transition ${
-                      activeInsightTab === tab.id
-                        ? 'segment-control__button--active'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">{tab.id}</div>
-                    <div className="mt-1 text-sm font-medium">{tab.label}</div>
-                    <div className="mt-1 text-[11px] opacity-75">{tab.meta}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Bottom Toolbar & Drawer */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex flex-col items-center pointer-events-none">
+          {/* Overlay Drawer */}
+          <AnimatePresence>
+            {activeBottomTab && (
+              <motion.div
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "100%", opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="w-full max-w-[1980px] pointer-events-auto bg-card border-t border-border shadow-2xl rounded-t-3xl max-h-[70vh] flex flex-col"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-border/50">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <h3 className="font-semibold text-lg text-foreground whitespace-nowrap">
+                      {insightTabs.find(t => t.id === activeBottomTab)?.label}
+                    </h3>
 
-            {activeInsightTab === 'review' && (
+                    {activeBottomTab === 'review' && (
+                      <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 overflow-x-auto hide-scrollbar">
+                        <button onClick={() => setActiveReviewSub('decision')} className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeReviewSub === 'decision' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.reviewDecision')}</button>
+                        <button onClick={() => setActiveReviewSub('notes')} className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeReviewSub === 'notes' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.reviewNotes')}</button>
+                        <button onClick={() => setActiveReviewSub('diff')} className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeReviewSub === 'diff' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.diffSummary')}</button>
+                      </div>
+                    )}
+
+                    {activeBottomTab === 'checks' && (
+                      <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar">
+                        <button onClick={() => setActiveChecksSub('posture')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'posture' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.checksPosture')}</button>
+                        <button onClick={() => setActiveChecksSub('schema')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'schema' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.schemaValidation')}</button>
+                        <button onClick={() => setActiveChecksSub('consistency')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'consistency' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.consistencyChecks')}</button>
+                        <button onClick={() => setActiveChecksSub('tests')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'tests' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.reviewerTests')}</button>
+                        <button onClick={() => setActiveChecksSub('evidence')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'evidence' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.validationEvidence')}</button>
+                      </div>
+                    )}
+
+                    {activeBottomTab === 'context' && (
+                      <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar">
+                        <button onClick={() => setActiveContextSub('summary')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'summary' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.projectSummary')}</button>
+                        <button onClick={() => setActiveContextSub('policy')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'policy' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.commandReferences')}</button>
+                        <button onClick={() => setActiveContextSub('files')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'files' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.supportingFiles')}</button>
+                        <button onClick={() => setActiveContextSub('analysis')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'analysis' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.analysisResult')}</button>
+                        <button onClick={() => setActiveContextSub('source')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'source' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.contextBucketSourceProvenance')}</button>
+                        <button onClick={() => setActiveContextSub('links')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'links' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.sourceLinks')}</button>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setActiveBottomTab(null)}
+                    className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors shrink-0"
+                  >
+                    <ChevronDown size={20} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+                  <div className="max-w-7xl mx-auto">
+                    {activeBottomTab === 'review' && (
               <>
-                <InsightBlock
-                  kicker={t('app.reviewDecision')}
+                {activeReviewSub === 'decision' && (
+                  <InsightBlock
+                    kicker={t('app.reviewDecision')}
                   title={t('app.workflowCheckpoint')}
                   summary={handoffSummary}
                   accent={effectiveHandoffState === 'approved_for_export' ? 'emerald' : effectiveHandoffState === 'needs_changes' ? 'rose' : 'default'}
@@ -2028,9 +2042,11 @@ export function ReviewWorkspace({
                     )}
                   </div>
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.reviewNotes')}
+                {activeReviewSub === 'notes' && (
+                  <InsightBlock
+                    kicker={t('app.reviewNotes')}
                   title={t('app.reviewerNotes')}
                   summary={globalNotes.length + elementNotes.length > 0 ? `${globalNotes.length + elementNotes.length} ${t('app.notesCount')}` : t('app.reviewerNotesIdleShort')}
                   defaultOpen
@@ -2090,9 +2106,11 @@ export function ReviewWorkspace({
                     )}
                   </div>
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.analysisResult')}
+                {activeReviewSub === 'diff' && (
+                  <InsightBlock
+                    kicker={t('app.analysisResult')}
                   title={t('app.diffSummary')}
                   summary={diffSummary ? summarizeDiffSummary(t, diffSummary) : t('app.diffSummaryUnavailable')}
                   defaultOpen
@@ -2115,13 +2133,15 @@ export function ReviewWorkspace({
                     </div>
                   )}
                 </InsightBlock>
+                )}
               </>
             )}
 
-            {activeInsightTab === 'checks' && (
+            {activeBottomTab === 'checks' && (
               <>
-                <InsightBlock
-                  kicker={t('app.checksPosture')}
+                {activeChecksSub === 'posture' && (
+                  <InsightBlock
+                    kicker={t('app.checksPosture')}
                   title={t('app.checksPosture')}
                   summary={hasBlockingChecks ? t('app.checksBlocked') : hasAttentionChecks ? t('app.checksAttention') : t('app.checksClean')}
                   accent={hasBlockingChecks ? 'rose' : hasAttentionChecks ? 'default' : 'emerald'}
@@ -2134,9 +2154,11 @@ export function ReviewWorkspace({
                     <MiniMetric label={t('app.validationWarnings')} value={String(validationWarnings.length + consistencyWarnings.length)} highlight={hasAttentionChecks} />
                   </div>
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.schemaValidation')}
+                {activeChecksSub === 'schema' && (
+                  <InsightBlock
+                    kicker={t('app.schemaValidation')}
                   title={t('app.schemaValidation')}
                   summary={validationResult
                     ? validationErrors.length > 0
@@ -2199,9 +2221,11 @@ export function ReviewWorkspace({
                     </div>
                   )}
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.consistencyChecks')}
+                {activeChecksSub === 'consistency' && (
+                  <InsightBlock
+                    kicker={t('app.consistencyChecks')}
                   title={t('app.consistencyChecks')}
                   summary={consistencyResult
                     ? consistencyErrors.length > 0
@@ -2265,9 +2289,11 @@ export function ReviewWorkspace({
                     </div>
                   )}
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.reviewerTests')}
+                {activeChecksSub === 'tests' && (
+                  <InsightBlock
+                    kicker={t('app.reviewerTests')}
                   title={t('app.reviewerTests')}
                   summary={summarizeTestPanel(t, latestValidationRun, latestConsistencyRun, latestPathTestRun)}
                   accent={
@@ -2350,9 +2376,11 @@ export function ReviewWorkspace({
                     )}
                   </div>
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.validationEvidence')}
+                {activeChecksSub === 'evidence' && (
+                  <InsightBlock
+                    kicker={t('app.validationEvidence')}
                   title={validationStatusLabel}
                   summary={validationEvidence?.provenance.schemaVersion || 'n/a'}
                   accent={validationHasErrors ? 'rose' : validationHasWarnings ? 'default' : 'emerald'}
@@ -2423,13 +2451,15 @@ export function ReviewWorkspace({
                     )}
                   </div>
                 </InsightBlock>
+                )}
               </>
             )}
 
-            {activeInsightTab === 'context' && (
+            {activeBottomTab === 'context' && (
               <>
-                <InsightBlock
-                  kicker={t('app.projectSummary')}
+                {activeContextSub === 'summary' && (
+                  <InsightBlock
+                    kicker={t('app.projectSummary')}
                   title={t('app.contextLayers')}
                   summary={`${contextSummary.length} ${t('app.contextBuckets')}`}
                   defaultOpen
@@ -2455,9 +2485,11 @@ export function ReviewWorkspace({
                     ))}
                   </div>
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.contextBucketPolicyReference')}
+                {activeContextSub === 'policy' && (
+                  <InsightBlock
+                    kicker={t('app.contextBucketPolicyReference')}
                   title={t('app.contextBucketPolicyReference')}
                   summary={`${parserCommandReferences.length} ${t('app.commandReferences')}`}
                   accent={parserCommandReferences.length > 0 ? 'default' : 'rose'}
@@ -2487,9 +2519,11 @@ export function ReviewWorkspace({
                     )}
                   </div>
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.contextBucketSupportingFiles')}
+                {activeContextSub === 'files' && (
+                  <InsightBlock
+                    kicker={t('app.contextBucketSupportingFiles')}
                   title={t('app.contextBucketSupportingFiles')}
                   summary={supportFiles.length > 0 ? `${supportFiles.length} ${t('app.contextFiles')}` : t('app.noContextFiles')}
                 >
@@ -2517,9 +2551,11 @@ export function ReviewWorkspace({
                     )}
                   </div>
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.contextBucketAnalysisFindings')}
+                {activeContextSub === 'analysis' && (
+                  <InsightBlock
+                    kicker={t('app.contextBucketAnalysisFindings')}
                   title={t('app.contextBucketAnalysisFindings')}
                   summary={firstFinding ? firstFinding.ruleName : `${parserAnalysisFindings.length} ${t('app.analysisFindings')}`}
                   accent={firstFinding ? 'rose' : parserAnalysisFindings.length > 0 ? 'default' : 'emerald'}
@@ -2590,9 +2626,11 @@ export function ReviewWorkspace({
                     </div>
                   )}
                 </InsightBlock>
+                )}
 
-                <InsightBlock
-                  kicker={t('app.contextBucketSourceProvenance')}
+                {activeContextSub === 'source' && (
+                  <InsightBlock
+                    kicker={t('app.contextBucketSourceProvenance')}
                   title={t('app.contextBucketSourceProvenance')}
                   summary={bridgeModeSummary}
                 >
@@ -2614,8 +2652,10 @@ export function ReviewWorkspace({
                     )}
                   </div>
                 </InsightBlock>
+                )}
 
-                <InsightBlock kicker={t('app.sourceLinks')} title={t('app.projectSummary')} summary="GitHub">
+                {activeContextSub === 'links' && (
+                  <InsightBlock kicker={t('app.sourceLinks')} title={t('app.projectSummary')} summary="GitHub">
                   <div className="space-y-2">
                     <a
                       href={guiRepoUrl}
@@ -2637,10 +2677,42 @@ export function ReviewWorkspace({
                     </a>
                   </div>
                 </InsightBlock>
+                )}
               </>
             )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Fixed Toolbar Base */}
+          <div className="w-full pointer-events-auto bg-background/95 backdrop-blur-md border-t border-border/40 p-2 sm:p-3 flex justify-center">
+            <div className="flex flex-wrap items-center gap-2 max-w-5xl">
+              {insightTabs.map((tab) => {
+                const isActive = activeBottomTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveBottomTab(isActive ? null : tab.id)}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-full transition-all ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted/60 hover:bg-muted text-foreground'
+                    }`}
+                  >
+                    <div className="text-xs font-semibold uppercase tracking-[0.1em]">{tab.id}</div>
+                    <div className="text-sm font-medium hidden sm:block">{tab.label}</div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${isActive ? 'bg-primary-foreground/20' : 'bg-background text-muted-foreground'}`}>
+                      {tab.meta}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </aside>
+        </div>
       </motion.div>
 
       <Suspense fallback={null}>
