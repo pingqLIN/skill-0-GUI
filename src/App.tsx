@@ -8,7 +8,6 @@ import {
   Info,
   Languages,
   PlayCircle,
-  RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
   UploadCloud,
@@ -1075,32 +1074,23 @@ npm run release:preview
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
       <header className="frost-banner">
-        <div className="mx-auto flex max-w-[1980px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[calc(var(--radius)*1.05)] bg-primary text-sm font-bold text-primary-foreground">
-              S0
-            </div>
-            <div className="min-w-0">
-              <p className="editorial-kicker">{t('app.workspace')}</p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
-                <span className="hidden text-xs text-foreground/60 sm:inline">{t('app.subtitle')}</span>
+        <div className={`mx-auto flex max-w-[1980px] items-center gap-4 px-4 sm:px-6 lg:px-8 ${data ? 'justify-end py-2.5' : 'justify-between py-4'}`}>
+          {!data && (
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[calc(var(--radius)*1.05)] bg-primary text-sm font-bold text-primary-foreground">
+                S0
+              </div>
+              <div className="min-w-0">
+                <p className="editorial-kicker">{t('app.workspace')}</p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
+                  <span className="hidden text-xs text-foreground/60 sm:inline">{t('app.subtitle')}</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="flex items-center gap-2">
-            {data && (
-              <button
-                type="button"
-                onClick={handleResetWorkspace}
-                className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
-                title={t('app.resetWorkspace')}
-              >
-                <RefreshCw size={16} />
-                <span className="hidden lg:inline">{t('app.resetWorkspace')}</span>
-              </button>
-            )}
             <div className={`hidden rounded-[calc(var(--radius)*1.05)] px-3 py-2 text-left sm:block ${
               bridgeStatus?.mode === 'skill-0'
                 ? 'bg-emerald-500/14 text-emerald-950'
@@ -1150,8 +1140,8 @@ npm run release:preview
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1980px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        {workspaceDraftSavedAt && (
+      <main className={`mx-auto max-w-[1980px] ${data ? 'px-0 py-0' : 'px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}`}>
+        {!data && workspaceDraftSavedAt && (
           <div
             data-testid="workspace-draft-status"
             className="surface-panel-muted mb-5 flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm text-foreground"
@@ -1584,6 +1574,8 @@ npm run release:preview
               bridgeStatusError={bridgeStatusError}
               guiRepoUrl={GUI_REPO_URL}
               engineRepoUrl={ENGINE_REPO_URL}
+              workspaceDraftSavedAt={workspaceDraftSavedAt}
+              workspaceDraftRestored={workspaceDraftRestored}
               onSelectContextPath={setSelectedContextPath}
               onSaveEdit={handleSaveEdit}
               onUndo={handleUndo}

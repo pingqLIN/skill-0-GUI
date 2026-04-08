@@ -144,6 +144,8 @@ type ReviewWorkspaceProps = {
   bridgeStatusError: string | null;
   guiRepoUrl: string;
   engineRepoUrl: string;
+  workspaceDraftSavedAt?: string | null;
+  workspaceDraftRestored?: boolean;
   onSelectContextPath: (path: string | null) => void;
   onSaveEdit: (config: Exclude<EditorConfig, null>, updatedData: any) => void;
   onUndo: () => void;
@@ -162,6 +164,8 @@ export function ReviewWorkspace({
   bridgeStatusError,
   guiRepoUrl,
   engineRepoUrl,
+  workspaceDraftSavedAt = null,
+  workspaceDraftRestored = false,
   onSelectContextPath,
   onSaveEdit,
   onUndo,
@@ -328,6 +332,11 @@ export function ReviewWorkspace({
     { id: 'checks' as const, label: t('app.detailsPanel'), meta: `${validationErrors.length + consistencyErrors.length} ${t('app.validationErrors')}` },
     { id: 'context' as const, label: t('app.projectSummary'), meta: `${parserSupportingFiles.length} ${t('app.supportingFiles')}` },
   ];
+  const currentFocusTitle = data?.parserResult?.meta?.title || data?.parserResult?.meta?.name || '--';
+  const activeWorkspaceTab = workspaceTabs.find((view) => view.id === activeTab) ?? workspaceTabs[0];
+  const activeInsightSummary = activeBottomTab ? insightTabs.find((tab) => tab.id === activeBottomTab) ?? null : null;
+  const workspaceDraftStatusLabel = workspaceDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved');
+  const reviewDraftStatusLabel = reviewDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved');
   const noteTargets = [
     { label: t('app.noteTargetGlobal'), value: 'global' },
     ...skillDocument.decomposition.actions.map((action) => ({
@@ -1370,153 +1379,280 @@ export function ReviewWorkspace({
           </div>
         </motion.div>
       )}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-[calc(100vh-80px)] overflow-hidden relative">
-        <header className="shrink-0 flex items-center justify-between gap-4 px-4 py-3 sm:px-6 border-b border-border bg-card/80 backdrop-blur-md z-10">
-          <div className="flex items-center gap-4">
-            <div className="hidden lg:block">
-              <span className="editorial-kicker text-muted-foreground">{t('app.currentFocus')}</span>
-              <div className="text-sm font-medium text-foreground truncate max-w-[200px]" title={data?.parserResult?.meta?.title || data?.parserResult?.meta?.name || '--'}>
-                {data?.parserResult?.meta?.title || data?.parserResult?.meta?.name || '--'}
-              </div>
-            </div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-[calc(100vh-52px)] overflow-hidden relative">
+        <header className="shrink-0 border-b border-border bg-background/96 backdrop-blur-md z-10">
+          <div className="px-4 py-4 sm:px-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0 flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[calc(var(--radius)*1.05)] bg-primary text-sm font-bold text-primary-foreground">
+                    S0
+                  </div>
+                  <div className="min-w-0">
+                    <p className="editorial-kicker">{t('app.workspace')}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
+                      <span className="text-xs text-foreground/60">{data.projectId}</span>
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-foreground/68">{t('app.subtitle')}</p>
+                  </div>
+                </div>
 
-            <div className="h-6 w-px bg-border hidden lg:block" />
-
-            <div className="flex flex-wrap items-center gap-1">
-              {workspaceTabs.map((view, index) => (
-                <div key={view.id} className="flex items-center gap-1">
-                  <button
-                    onClick={() => setActiveTab(view.id)}
-                    className={`flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 text-sm transition-colors ${activeTab === view.id ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground/70'}`}
+                <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                  <div
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[calc(var(--radius)*1.02)] ${reviewReadinessStyles}`}
                   >
-                    <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${activeTab === view.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-foreground/10 text-foreground/70'}`}>
-                      {index + 1}
+                    <AlertTriangle size={14} />
+                    <span className="text-[11px] font-medium">{reviewReadinessLabel}</span>
+                  </div>
+                  <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5 text-xs text-foreground/68">
+                    {activeWorkspaceTab.label}: {activeWorkspaceTab.meta}
+                  </span>
+                  {activeInsightSummary && (
+                    <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5 text-xs text-foreground/68">
+                      {activeInsightSummary.label}: {activeInsightSummary.meta}
                     </span>
-                    <span>{view.label}</span>
-                  </button>
-                  {view.id === 'pipeline' && (
-                    <button
-                      type="button"
-                      onClick={openDerivedWorkflow}
-                      className={`hidden sm:block px-3 py-1.5 text-xs rounded-[calc(var(--radius)*1.02)] transition-colors ${isDerivedWorkflowOpen ? 'bg-muted text-foreground font-medium' : 'text-muted-foreground hover:bg-card'}`}
-                    >
-                      {t('app.derivedWorkflow')}
-                    </button>
+                  )}
+                  {isWorkspaceFocusMode && (
+                    <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5 text-xs text-foreground/68">
+                      {t('app.returnToOverview')}
+                    </span>
                   )}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <button
-                onClick={() => setShowActions((current) => !current)}
-                className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-[calc(var(--radius)*1.02)] transition-colors ${showActions ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-card'}`}
-              >
-                <span>{t('app.actionsTray')}</span>
-                {showActions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              </button>
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(15rem,0.8fr)_minmax(15rem,0.8fr)_minmax(18rem,0.95fr)]">
+                <div className="surface-panel-muted h-full px-4 py-3">
+                  <div className="flex h-full flex-col justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.currentFocus')}</div>
+                      <div className="mt-1 truncate text-sm font-semibold text-foreground" title={currentFocusTitle}>
+                        {currentFocusTitle}
+                      </div>
+                      <div className="mt-2 text-xs leading-6 text-foreground/68">{bridgeModeSummary} · {reviewStatusLabel}</div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/68">
+                      <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">
+                        {t('app.project')}: {data.projectName}
+                      </span>
+                      <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">
+                        {reviewStatusLabel}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-              <AnimatePresence>
-                {showActions && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-card p-2 shadow-xl z-50"
-                  >
-                    <div className="grid gap-2 px-4 pb-4">
+                <div className="surface-panel-muted h-full px-4 py-3">
+                  <div className="flex h-full flex-col justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.bridgeMode')}</div>
+                      <div className="mt-1 text-sm font-semibold text-foreground">{bridgeModeLabel}</div>
+                      <div className="mt-2 text-xs leading-6 text-foreground/68 break-words">{bridgeModeDetail}</div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/68">
+                      <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">{bridgeModeSummary}</span>
+                      <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">{reviewReadinessLabel}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div data-testid="review-draft-status" className="surface-panel-muted h-full px-4 py-3">
+                  <div className="flex h-full flex-col justify-between gap-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.localDraft')}</div>
+                    {workspaceDraftSavedAt || reviewDraftSavedAt ? (
+                      <div className="flex flex-wrap gap-2">
+                        {workspaceDraftSavedAt && (
+                          <DraftStatusBadge
+                            label={t('app.workspace')}
+                            status={workspaceDraftStatusLabel}
+                            timestamp={workspaceDraftSavedAt}
+                          />
+                        )}
+                        {reviewDraftSavedAt && (
+                          <DraftStatusBadge
+                            label={t('app.reviewDecisionPanel')}
+                            status={reviewDraftStatusLabel}
+                            timestamp={reviewDraftSavedAt}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-foreground/68">--</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="surface-panel-muted h-full px-4 py-3">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.workspaceViews')}</div>
+                        <div className="mt-1 text-sm font-semibold text-foreground">{activeWorkspaceTab.label}</div>
+                        <div className="mt-1 text-xs text-foreground/68">{activeWorkspaceTab.meta}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.reviewDecisionPanel')}</div>
+                        <div className="mt-1 text-sm font-semibold text-foreground">
+                          {activeInsightSummary?.label || t('app.reviewDecisionPanel')}
+                        </div>
+                        <div className="mt-1 text-xs text-foreground/68">
+                          {activeInsightSummary?.meta || reviewReadinessLabel}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto flex flex-wrap items-center gap-2">
                       <button
-                        onClick={() => setEditorConfig({ type: 'global', payload: data })}
-                        className="editorial-action-button px-3 py-2 text-sm text-foreground"
-                      >
-                        <span>{t('app.openGlobalEditor')}</span>
-                        <Edit2 size={14} className="text-muted-foreground" />
-                      </button>
-                      {skillDocument && (
-                        <button
-                          onClick={() => setEditorConfig({ type: 'skillDocument', payload: skillDocument })}
-                          className="editorial-action-button px-3 py-2 text-sm text-foreground"
-                        >
-                          <span>{t('app.openStructuredEditor')}</span>
-                          <Edit2 size={14} className="text-muted-foreground" />
-                        </button>
-                      )}
-                      {skillDocument && (
-                        <button
-                          onClick={() => setEditorConfig({ type: 'json', payload: skillDocument })}
-                          className="editorial-action-button px-3 py-2 text-sm text-foreground"
-                        >
-                          <span>{t('app.openJsonEditor')}</span>
-                          <FileCode2 size={14} className="text-muted-foreground" />
-                        </button>
-                      )}
-                      <button
-                        onClick={exportSkill}
-                        disabled={!canExportArtifacts}
-                        className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                      >
-                        <span>{t('app.export')}</span>
-                        <Download size={14} className="text-muted-foreground" />
-                      </button>
-                      {skillDocument && (
-                        <button
-                          onClick={exportSkillJson}
-                          disabled={!canExportArtifacts}
-                          className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                        >
-                          <span>{t('app.exportJson')}</span>
-                          <Download size={14} className="text-muted-foreground" />
-                        </button>
-                      )}
-                      {skillDocument && (
-                        <button
-                          onClick={exportReviewReport}
-                          disabled={!canExportArtifacts}
-                          className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                        >
-                          <span>{t('app.exportReviewReport')}</span>
-                          <Download size={14} className="text-muted-foreground" />
-                        </button>
-                      )}
-                      <button
-                        onClick={exportReviewPacket}
-                        disabled={!canExportArtifacts}
-                        className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                      >
-                        <span>{t('app.exportReviewPacket')}</span>
-                        <Download size={14} className="text-muted-foreground" />
-                      </button>
-                      <button
+                        type="button"
                         onClick={handleResetWorkspace}
-                        className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                        className="editorial-button-secondary px-3 py-2 text-xs font-medium"
                       >
+                        <RefreshCw size={14} />
                         <span>{t('app.resetWorkspace')}</span>
-                        <RefreshCw size={14} className="text-muted-foreground" />
                       </button>
-                      {modifiedPaths.size > 0 && (
+
+                      <div className="relative">
                         <button
-                          onClick={onUndo}
-                          className="inline-flex items-center justify-between rounded-[calc(var(--radius)*1.02)] bg-amber-500/12 px-3 py-2 text-sm text-amber-900 transition hover:bg-amber-500/18"
+                          onClick={() => setShowActions((current) => !current)}
+                          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-[calc(var(--radius)*1.02)] transition-colors ${showActions ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-card'}`}
                         >
-                          <span>{t('app.undo')}</span>
-                          <Undo2 size={14} />
+                          <span>{t('app.actionsTray')}</span>
+                          {showActions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+
+                        <AnimatePresence>
+                          {showActions && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-card p-2 shadow-xl z-50"
+                            >
+                              <div className="grid gap-2 px-4 pb-4">
+                                <button
+                                  onClick={() => setEditorConfig({ type: 'global', payload: data })}
+                                  className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                                >
+                                  <span>{t('app.openGlobalEditor')}</span>
+                                  <Edit2 size={14} className="text-muted-foreground" />
+                                </button>
+                                {skillDocument && (
+                                  <button
+                                    onClick={() => setEditorConfig({ type: 'skillDocument', payload: skillDocument })}
+                                    className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                                  >
+                                    <span>{t('app.openStructuredEditor')}</span>
+                                    <Edit2 size={14} className="text-muted-foreground" />
+                                  </button>
+                                )}
+                                {skillDocument && (
+                                  <button
+                                    onClick={() => setEditorConfig({ type: 'json', payload: skillDocument })}
+                                    className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                                  >
+                                    <span>{t('app.openJsonEditor')}</span>
+                                    <FileCode2 size={14} className="text-muted-foreground" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={exportSkill}
+                                  disabled={!canExportArtifacts}
+                                  className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                >
+                                  <span>{t('app.export')}</span>
+                                  <Download size={14} className="text-muted-foreground" />
+                                </button>
+                                {skillDocument && (
+                                  <button
+                                    onClick={exportSkillJson}
+                                    disabled={!canExportArtifacts}
+                                    className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                  >
+                                    <span>{t('app.exportJson')}</span>
+                                    <Download size={14} className="text-muted-foreground" />
+                                  </button>
+                                )}
+                                {skillDocument && (
+                                  <button
+                                    onClick={exportReviewReport}
+                                    disabled={!canExportArtifacts}
+                                    className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                  >
+                                    <span>{t('app.exportReviewReport')}</span>
+                                    <Download size={14} className="text-muted-foreground" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={exportReviewPacket}
+                                  disabled={!canExportArtifacts}
+                                  className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                >
+                                  <span>{t('app.exportReviewPacket')}</span>
+                                  <Download size={14} className="text-muted-foreground" />
+                                </button>
+                                <button
+                                  onClick={handleResetWorkspace}
+                                  className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                                >
+                                  <span>{t('app.resetWorkspace')}</span>
+                                  <RefreshCw size={14} className="text-muted-foreground" />
+                                </button>
+                                {modifiedPaths.size > 0 && (
+                                  <button
+                                    onClick={onUndo}
+                                    className="inline-flex items-center justify-between rounded-[calc(var(--radius)*1.02)] bg-amber-500/12 px-3 py-2 text-sm text-amber-900 transition hover:bg-amber-500/18"
+                                  >
+                                    <span>{t('app.undo')}</span>
+                                    <Undo2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-1">
+                  {workspaceTabs.map((view, index) => (
+                    <div key={view.id} className="flex items-center gap-1">
+                      <button
+                        onClick={() => setActiveTab(view.id)}
+                        className={`flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 text-sm transition-colors ${activeTab === view.id ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground/70'}`}
+                      >
+                        <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${activeTab === view.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-foreground/10 text-foreground/70'}`}>
+                          {index + 1}
+                        </span>
+                        <span>{view.label}</span>
+                      </button>
+                      {view.id === 'pipeline' && (
+                        <button
+                          type="button"
+                          onClick={openDerivedWorkflow}
+                          className={`hidden sm:block px-3 py-1.5 text-xs rounded-[calc(var(--radius)*1.02)] transition-colors ${isDerivedWorkflowOpen ? 'bg-muted text-foreground font-medium' : 'text-muted-foreground hover:bg-card'}`}
+                        >
+                          {t('app.derivedWorkflow')}
                         </button>
                       )}
                     </div>
-                  </motion.div>
+                  ))}
+                </div>
+
+                {isWorkspaceFocusMode && (
+                  <button
+                    type="button"
+                    onClick={() => setIsWorkspaceFocusMode(false)}
+                    className="editorial-button-secondary w-fit px-4 py-2 text-xs font-medium"
+                  >
+                    {t('app.returnToOverview')}
+                  </button>
                 )}
-              </AnimatePresence>
-            </div>
-            <div
-              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-[calc(var(--radius)*1.02)] ${reviewReadinessStyles}`}
-            >
-              <AlertTriangle size={14} />
-              <span className="text-[11px] font-medium truncate max-w-[150px]">
-                {reviewReadinessLabel}
-              </span>
+              </div>
             </div>
           </div>
         </header>
@@ -1863,22 +1999,6 @@ export function ReviewWorkspace({
                       <p className="mt-2 font-medium text-foreground">{nextActionLabel}</p>
                       <p className="mt-1 text-sm leading-6 text-foreground/72">{handoffGuidance}</p>
                     </div>
-                    {reviewDraftSavedAt && (
-                      <div
-                        data-testid="review-draft-status"
-                        className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-3 text-sm text-foreground"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{t('app.localDraft')}</div>
-                            <div className="mt-1 font-medium">
-                              {reviewDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved')}
-                            </div>
-                          </div>
-                          <div className="text-xs font-mono text-muted-foreground">{formatDraftTimestamp(reviewDraftSavedAt)}</div>
-                        </div>
-                      </div>
-                    )}
                     <div className="space-y-2">
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div className="space-y-1">
@@ -3201,6 +3321,16 @@ function reviewStatusLabelKey(value: 'draft' | 'in_review' | 'changes_requested'
     return 'app.reviewStatusApproved';
   }
   return 'app.reviewStatusDraft';
+}
+
+function DraftStatusBadge({ label, status, timestamp }: { label: string; status: string; timestamp: string }) {
+  return (
+    <div className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-2 text-xs text-foreground">
+      <div className="font-semibold">{label}</div>
+      <div className="mt-1 text-foreground/72">{status}</div>
+      <div className="mt-1 font-mono text-[11px] text-muted-foreground">{formatDraftTimestamp(timestamp)}</div>
+    </div>
+  );
 }
 
 function formatDraftTimestamp(value: string) {
