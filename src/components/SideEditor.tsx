@@ -13,6 +13,10 @@ type SideEditorProps = {
 
 type SkillCollectionKey = 'actions' | 'rules' | 'directives' | 'execution_paths';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
 function parseLineList(value: string) {
   return value
     .split('\n')
@@ -112,6 +116,24 @@ function escapeAttributeValue(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+function normalizeSkillDocumentFormData(value: unknown): SkillDocument {
+  const document = isRecord(value) ? value : {};
+  const decomposition = isRecord(document.decomposition) ? document.decomposition : {};
+
+  return {
+    decomposition: {
+      actions: Array.isArray(decomposition.actions) ? decomposition.actions as ActionNode[] : [],
+      directives: Array.isArray(decomposition.directives) ? decomposition.directives as DirectiveNode[] : [],
+      rules: Array.isArray(decomposition.rules) ? decomposition.rules as RuleNode[] : [],
+    },
+    execution_paths: Array.isArray(document.execution_paths) ? document.execution_paths as ExecutionPath[] : [],
+    meta: isRecord(document.meta) ? document.meta as SkillDocument['meta'] : {},
+    original_definition: isRecord(document.original_definition)
+      ? document.original_definition as SkillDocument['original_definition']
+      : undefined,
+  };
+}
+
 export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<any>(null);
@@ -124,7 +146,10 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
 
   useEffect(() => {
     if (config) {
-      setFormData(JSON.parse(JSON.stringify(config.payload)));
+      const nextFormData = config.type === 'skillDocument'
+        ? normalizeSkillDocumentFormData(config.payload)
+        : JSON.parse(JSON.stringify(config.payload));
+      setFormData(nextFormData);
       if (config.type === 'json') {
         setJsonText(JSON.stringify(config.payload, null, 2));
         setJsonError(null);
@@ -244,7 +269,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
       ...prev,
       decomposition: {
         ...prev.decomposition,
-        [collection]: prev.decomposition[collection].map((item, itemIndex) => (
+        [collection]: (prev.decomposition?.[collection] ?? []).map((item, itemIndex) => (
           itemIndex === index
             ? { ...item, [field]: value }
             : item
@@ -263,7 +288,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
       ...prev,
       decomposition: {
         ...prev.decomposition,
-        [collection]: prev.decomposition[collection].map((item, itemIndex) => (
+        [collection]: (prev.decomposition?.[collection] ?? []).map((item, itemIndex) => (
           itemIndex === index
             ? { ...item, [field]: value }
             : item
@@ -307,7 +332,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
         ...prev,
         decomposition: {
           ...prev.decomposition,
-          [collection]: [...prev.decomposition[collection], nextItem],
+          [collection]: [...(prev.decomposition?.[collection] ?? []), nextItem],
         },
       };
     });
@@ -326,7 +351,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
         ...prev,
         decomposition: {
           ...prev.decomposition,
-          [collection]: prev.decomposition[collection].filter((_, itemIndex) => itemIndex !== index),
+          [collection]: (prev.decomposition?.[collection] ?? []).filter((_, itemIndex) => itemIndex !== index),
         },
       };
     });
@@ -402,6 +427,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
+            data-testid="side-editor-dialog"
             className={`fixed inset-y-0 right-0 z-50 flex h-full w-full ${panelMaxWidth} flex-col border-l border-border/60 bg-card shadow-2xl`}
           >
             <div className="border-b border-border/50 bg-muted/10 p-5">
@@ -641,7 +667,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                         </button>,
                       )}
                       <div className="mt-4 space-y-4">
-                        {formData.decomposition.actions.map((action: ActionNode, index: number) => (
+                        {(formData.decomposition?.actions ?? []).map((action: ActionNode, index: number) => (
                           <div key={`action-${index}`} className="rounded-2xl border border-border/55 bg-card/70 p-4">
                             <div className="mb-3 flex items-center justify-between gap-3">
                               <p className="text-sm font-semibold text-foreground">{action.id || `${t('editor.actionLabel')} ${index + 1}`}</p>
@@ -715,7 +741,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                         </button>,
                       )}
                       <div className="mt-4 space-y-4">
-                        {formData.decomposition.rules.map((rule: RuleNode, index: number) => (
+                        {(formData.decomposition?.rules ?? []).map((rule: RuleNode, index: number) => (
                           <div key={`rule-${index}`} className="rounded-2xl border border-border/55 bg-card/70 p-4">
                             <div className="mb-3 flex items-center justify-between gap-3">
                               <p className="text-sm font-semibold text-foreground">{rule.id || `${t('editor.ruleLabel')} ${index + 1}`}</p>
@@ -777,7 +803,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                         </button>,
                       )}
                       <div className="mt-4 space-y-4">
-                        {formData.decomposition.directives.map((directive: DirectiveNode, index: number) => (
+                        {(formData.decomposition?.directives ?? []).map((directive: DirectiveNode, index: number) => (
                           <div key={`directive-${index}`} className="rounded-2xl border border-border/55 bg-card/70 p-4">
                             <div className="mb-3 flex items-center justify-between gap-3">
                               <p className="text-sm font-semibold text-foreground">{directive.id || `${t('editor.directiveLabel')} ${index + 1}`}</p>
@@ -908,6 +934,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                     </div>
                     <textarea
                       ref={initialFieldRef}
+                      data-testid="side-editor-json-input"
                       value={jsonText}
                       onChange={(event) => {
                         setJsonText(event.target.value);
@@ -920,7 +947,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                     />
                     <p className="text-xs leading-6 text-muted-foreground">{t('editor.jsonHelp')}</p>
                     {jsonError && (
-                      <div className="rounded-lg border border-destructive/20 bg-destructive/8 px-3 py-2 text-xs leading-6 text-destructive">
+                      <div data-testid="side-editor-json-error" className="rounded-lg border border-destructive/20 bg-destructive/8 px-3 py-2 text-xs leading-6 text-destructive">
                         {jsonError}
                       </div>
                     )}
@@ -932,6 +959,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
             <div className="border-t border-border/50 bg-muted/5 p-5">
               <button
                 onClick={handleSave}
+                data-testid="side-editor-save"
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
               >
                 <Save size={16} /> {t('editor.save')}

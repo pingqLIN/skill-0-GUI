@@ -78,3 +78,32 @@ export function buildSkillDocumentDiffSummary(before: SkillDocument, after: Skil
     },
   };
 }
+
+export function buildModifiedPathsDiffSummary(modifiedPaths: Iterable<string> | undefined): DiffSummary | null {
+  if (!modifiedPaths) {
+    return null;
+  }
+
+  const changed = Array.from(modifiedPaths)
+    .filter((path): path is string => typeof path === 'string' && path !== 'metrics')
+    .sort();
+
+  if (changed.length === 0) {
+    return null;
+  }
+
+  return {
+    added: [],
+    changed,
+    removed: [],
+    stats: {
+      actionsAdded: 0,
+      actionsRemoved: 0,
+      directivesAdded: 0,
+      directivesRemoved: 0,
+      fieldsChanged: changed.length,
+      rulesAdded: 0,
+      rulesRemoved: 0,
+    },
+  };
+}

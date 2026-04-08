@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { LlmSettingsDialog } from './components/LlmSettingsDialog';
 import { ReviewWorkspace } from './components/ReviewWorkspace';
+import { applyEditorSave } from './services/editorSaveService';
 import { analyzeSkillText, resolveSkillUrl } from './services/parserBridgeService';
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
@@ -686,75 +687,19 @@ export default function App() {
   };
 
   const handleSaveEdit = (editorConfig: Exclude<EditorConfig, null>, updatedData: any) => {
-    if (!data) return;
+    const result = applyEditorSave({
+      data,
+      editorConfig,
+      modifiedPaths,
+      updatedData,
+    });
 
-    if (editorConfig.type === 'json' || editorConfig.type === 'skillDocument') {
-      const sourceLabel = data?.parserResult?.original_definition?.source || 'json/editor';
-      const rebuiltData = buildReviewDataFromSkillDocument(updatedData, {
-        editSource: editorConfig.type === 'json' ? 'json' : 'structured',
-        existingSession: data,
-        fileName: `${data.projectId || 'skill-document'}.json`,
-        sourceLabel,
-      });
-      setData(rebuiltData);
-      setModifiedPaths(new Set([editorConfig.type === 'json' ? 'skillDocument.json' : 'skillDocument.structured']));
+    if (!result) {
       return;
     }
 
-    const newData = JSON.parse(JSON.stringify(data));
-    const newModified = new Set(modifiedPaths);
-    let metricsChanged = false;
-
-    if (editorConfig.type === 'global') {
-      if (newData.projectName !== updatedData.projectName) newModified.add('projectName');
-      if (newData.riskAssessment.level !== updatedData.riskAssessment.level) newModified.add('riskAssessment.level');
-      if (newData.threeClassification.category !== updatedData.threeClassification.category) newModified.add('threeClassification.category');
-
-      newData.projectName = updatedData.projectName;
-      newData.riskAssessment = updatedData.riskAssessment;
-      newData.threeClassification = updatedData.threeClassification;
-      metricsChanged = true;
-    } else if (editorConfig.type === 'phase') {
-      const phaseIndex = newData.phases.findIndex((phase: any) => phase.id === updatedData.id);
-      if (phaseIndex !== -1) {
-        const oldPhase = newData.phases[phaseIndex];
-        const basePath = `phases.${updatedData.id}`;
-
-        if (oldPhase.name !== updatedData.name) newModified.add(`${basePath}.name`);
-        if (JSON.stringify(oldPhase.input) !== JSON.stringify(updatedData.input)) newModified.add(`${basePath}.input`);
-        if (JSON.stringify(oldPhase.tasks) !== JSON.stringify(updatedData.tasks)) newModified.add(`${basePath}.tasks`);
-        if (JSON.stringify(oldPhase.output) !== JSON.stringify(updatedData.output)) newModified.add(`${basePath}.output`);
-
-        newData.phases[phaseIndex] = { ...oldPhase, ...updatedData };
-        metricsChanged = true;
-      }
-    } else if (editorConfig.type === 'decision') {
-      const phaseIndex = newData.phases.findIndex((phase: any) => phase.id === editorConfig.phaseId);
-      if (phaseIndex !== -1) {
-        const nodeIndex = newData.phases[phaseIndex].decisionNodes.findIndex((node: any) => node.id === updatedData.id);
-        if (nodeIndex !== -1) {
-          const oldNode = newData.phases[phaseIndex].decisionNodes[nodeIndex];
-          const basePath = `phases.${editorConfig.phaseId}.decisionNodes.${updatedData.id}`;
-
-          if (oldNode.question !== updatedData.question) newModified.add(`${basePath}.question`);
-          if (oldNode.threshold !== updatedData.threshold) newModified.add(`${basePath}.threshold`);
-          if (oldNode.outcomes.yes !== updatedData.outcomes.yes) newModified.add(`${basePath}.outcomes.yes`);
-          if (oldNode.outcomes.no !== updatedData.outcomes.no) newModified.add(`${basePath}.outcomes.no`);
-
-          newData.phases[phaseIndex].decisionNodes[nodeIndex] = updatedData;
-          metricsChanged = true;
-        }
-      }
-    }
-
-    if (metricsChanged) {
-      newData.globalMetrics.decisionConfidence = Math.min(100, Math.max(0, newData.globalMetrics.decisionConfidence + Math.floor(Math.random() * 11) - 5));
-      newData.globalMetrics.reworkRate = Math.min(100, Math.max(0, newData.globalMetrics.reworkRate + Math.floor(Math.random() * 5) - 2));
-      newModified.add('metrics');
-    }
-
-    setData(newData);
-    setModifiedPaths(newModified);
+    setData(result.data);
+    setModifiedPaths(result.modifiedPaths);
   };
 
   const handleUndo = () => {
@@ -1073,9 +1018,9 @@ npm run release:preview
   ];
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
-      <header className="frost-banner">
-        <div className={`mx-auto flex max-w-[1980px] items-center gap-4 px-4 sm:px-6 lg:px-8 ${data ? 'justify-end py-2.5' : 'justify-between py-4'}`}>
-          {!data && (
+      {!data && (
+        <header className="frost-banner">
+          <div className="mx-auto flex max-w-[1980px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-[calc(var(--radius)*1.05)] bg-primary text-sm font-bold text-primary-foreground">
                 S0
@@ -1088,57 +1033,57 @@ npm run release:preview
                 </div>
               </div>
             </div>
-          )}
 
-          <div className="flex items-center gap-2">
-            <div className={`hidden rounded-[calc(var(--radius)*1.05)] px-3 py-2 text-left sm:block ${
-              bridgeStatus?.mode === 'skill-0'
-                ? 'bg-emerald-500/14 text-emerald-950'
-                : bridgeStatus?.mode === 'standalone'
-                  ? 'bg-amber-500/14 text-amber-950'
-                  : 'bg-muted text-muted-foreground'
-            }`}>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.bridgeMode')}</div>
-              <div className="mt-1 text-xs font-medium">{bridgeModeLabel}</div>
-              <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={bridgeModeDetail}>
-                {bridgeModeDetail}
+            <div className="flex items-center gap-2">
+              <div className={`hidden rounded-[calc(var(--radius)*1.05)] px-3 py-2 text-left sm:block ${
+                bridgeStatus?.mode === 'skill-0'
+                  ? 'bg-emerald-500/14 text-emerald-950'
+                  : bridgeStatus?.mode === 'standalone'
+                    ? 'bg-amber-500/14 text-amber-950'
+                    : 'bg-muted text-muted-foreground'
+              }`}>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.bridgeMode')}</div>
+                <div className="mt-1 text-xs font-medium">{bridgeModeLabel}</div>
+                <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={bridgeModeDetail}>
+                  {bridgeModeDetail}
+                </div>
+                <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.llmFallbackStatus')}</div>
+                <div className="mt-1 text-xs font-medium">{llmFallbackLabel}</div>
+                <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={llmFallbackDetail}>
+                  {llmFallbackDetail}
+                </div>
               </div>
-              <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.llmFallbackStatus')}</div>
-              <div className="mt-1 text-xs font-medium">{llmFallbackLabel}</div>
-              <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={llmFallbackDetail}>
-                {llmFallbackDetail}
-              </div>
+              <a
+                href={GUI_REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                title={t('app.guiRepo')}
+              >
+                <Github size={16} />
+                <span className="hidden sm:inline">GitHub</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setIsLlmSettingsOpen(true)}
+                className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                title={t('app.llmAdminTitle')}
+              >
+                <SlidersHorizontal size={16} />
+                <span className="hidden sm:inline">{t('app.aiSettings')}</span>
+              </button>
+              <button
+                onClick={toggleLanguage}
+                className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                title="Toggle Language"
+              >
+                <Languages size={16} />
+                <span className="uppercase">{i18n.language.startsWith('zh') ? 'EN' : '中文'}</span>
+              </button>
             </div>
-            <a
-              href={GUI_REPO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
-              title={t('app.guiRepo')}
-            >
-              <Github size={16} />
-              <span className="hidden sm:inline">GitHub</span>
-            </a>
-            <button
-              type="button"
-              onClick={() => setIsLlmSettingsOpen(true)}
-              className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
-              title={t('app.llmAdminTitle')}
-            >
-              <SlidersHorizontal size={16} />
-              <span className="hidden sm:inline">{t('app.aiSettings')}</span>
-            </button>
-            <button
-              onClick={toggleLanguage}
-              className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
-              title="Toggle Language"
-            >
-              <Languages size={16} />
-              <span className="uppercase">{i18n.language.startsWith('zh') ? 'EN' : '中文'}</span>
-            </button>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <main className={`mx-auto max-w-[1980px] ${data ? 'px-0 py-0' : 'px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}`}>
         {!data && workspaceDraftSavedAt && (
@@ -1576,8 +1521,11 @@ npm run release:preview
               engineRepoUrl={ENGINE_REPO_URL}
               workspaceDraftSavedAt={workspaceDraftSavedAt}
               workspaceDraftRestored={workspaceDraftRestored}
+              currentLanguage={i18n.language}
+              onOpenLlmSettings={() => setIsLlmSettingsOpen(true)}
               onSelectContextPath={setSelectedContextPath}
               onSaveEdit={handleSaveEdit}
+              onToggleLanguage={toggleLanguage}
               onUndo={handleUndo}
               onResetWorkspace={handleResetWorkspace}
             />

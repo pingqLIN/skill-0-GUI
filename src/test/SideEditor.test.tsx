@@ -179,4 +179,51 @@ describe('SideEditor', () => {
       },
     });
   });
+
+  it('normalizes incomplete structured payloads instead of crashing', () => {
+    const onSave = vi.fn();
+
+    render(
+      <SideEditor
+        config={{
+          type: 'skillDocument',
+          payload: {
+            meta: {
+              title: 'Partial Skill',
+            },
+          },
+        }}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    expect(screen.getByDisplayValue('Partial Skill')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('editor.addAction'));
+    fireEvent.click(screen.getByText('editor.save'));
+
+    expect(onSave).toHaveBeenCalledWith({
+      decomposition: {
+        actions: [{
+          action_type: '',
+          description: '',
+          deterministic: undefined,
+          id: '',
+          immutable_elements: [],
+          mutable_elements: [],
+          name: '',
+          notes: '',
+          side_effects: [],
+        }],
+        directives: [],
+        rules: [],
+      },
+      execution_paths: [],
+      meta: {
+        title: 'Partial Skill',
+      },
+      original_definition: undefined,
+    });
+  });
 });

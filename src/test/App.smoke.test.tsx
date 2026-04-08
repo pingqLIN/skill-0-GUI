@@ -20,7 +20,16 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('../components/ReviewWorkspace', () => ({
-  ReviewWorkspace: () => <div data-testid="review-workspace" />,
+  ReviewWorkspace: (props: any) => (
+    <div>
+      <div data-testid="review-workspace" />
+      {(props.workspaceDraftSavedAt || props.workspaceDraftRestored) && (
+        <div data-testid="workspace-draft-status">
+          app.localDraft {props.workspaceDraftRestored ? 'app.localDraftRestored' : 'app.localDraftAutosaved'}
+        </div>
+      )}
+    </div>
+  ),
 }));
 vi.mock('jszip', () => ({
   default: {
@@ -192,7 +201,7 @@ describe('App smoke test', () => {
 
     expect(await screen.findByTestId('llm-settings-dialog')).toBeInTheDocument();
     expect(fetchLlmSettings).toHaveBeenCalled();
-    expect(screen.getByDisplayValue('gpt-4o-mini')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('gpt-4o-mini')).toBeInTheDocument();
 
     fireEvent.change(screen.getByDisplayValue('gpt-4o-mini'), {
       target: { value: 'gpt-4.1-mini' },

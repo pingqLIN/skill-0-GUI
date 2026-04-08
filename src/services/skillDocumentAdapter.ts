@@ -15,6 +15,7 @@ import type {
   ValidationEvidence,
   ValidationRun,
 } from '../types/skillDocument';
+import { buildModifiedPathsDiffSummary } from './reviewDiffService';
 
 type BuildReviewDataOptions = {
   fileName?: string;
@@ -147,34 +148,6 @@ function buildReviewGuidance(reviewMode: 'canonical' | 'standalone' | 'llm-assis
     return `This SkillDocument was updated in the ${editorLabel} after an AI-assisted recovery run. Keep it draft-only and re-run through the canonical bridge before any final equivalence decision.`;
   }
   return `This SkillDocument was updated in the ${editorLabel} after an unverified or imported session. Confirm parser mode and re-run through the canonical bridge before final equivalence decisions.`;
-}
-
-function buildDiffSummaryFromModifiedPaths(modifiedPaths: Iterable<string> | undefined): DiffSummary | undefined {
-  if (!modifiedPaths) {
-    return undefined;
-  }
-
-  const changed = Array.from(modifiedPaths)
-    .filter((path): path is string => typeof path === 'string' && path !== 'metrics')
-    .sort();
-  if (changed.length === 0) {
-    return undefined;
-  }
-
-  return {
-    added: [],
-    changed,
-    removed: [],
-    stats: {
-      actionsAdded: 0,
-      actionsRemoved: 0,
-      directivesAdded: 0,
-      directivesRemoved: 0,
-      fieldsChanged: changed.length,
-      rulesAdded: 0,
-      rulesRemoved: 0,
-    },
-  };
 }
 
 function buildReviewChecklist(
@@ -508,7 +481,7 @@ export function buildReviewPacketFromReviewData(
   const validationEvidence = options.validationEvidence ?? buildValidationEvidenceFromReviewData(data, {
     reviewMode: options.reviewMode,
   });
-  const diffSummary = options.reviewState.diffSummary ?? buildDiffSummaryFromModifiedPaths(options.modifiedPaths);
+  const diffSummary = options.reviewState.diffSummary ?? buildModifiedPathsDiffSummary(options.modifiedPaths) ?? undefined;
   const reviewState = diffSummary
     ? { ...options.reviewState, diffSummary }
     : options.reviewState;

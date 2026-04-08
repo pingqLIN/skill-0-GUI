@@ -8,7 +8,9 @@ import {
   FileCode2,
   ChevronDown,
   ChevronUp,
+  Languages,
   RefreshCw,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +22,7 @@ import {
   extractSkillDocumentFromReviewData,
 } from '../services/skillDocumentAdapter';
 import { checkSkillDocumentConsistency } from '../services/skillDocumentConsistency';
-import { buildSkillDocumentDiffSummary } from '../services/reviewDiffService';
+import { buildModifiedPathsDiffSummary, buildSkillDocumentDiffSummary } from '../services/reviewDiffService';
 import {
   createConsistencyRun,
   createPathTestRun,
@@ -49,6 +51,8 @@ import type {
 } from '../types/skillDocument';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
 import type { DemoReviewPreset } from '../App';
+
+type PipelineSubviewId = 'summary' | 'analysis' | 'decomposition' | 'pipeline' | 'derived';
 
 const Dashboard = lazy(() => import('./Dashboard').then((module) => ({ default: module.Dashboard })));
 const PhaseDetails = lazy(() => import('./PhaseDetails').then((module) => ({ default: module.PhaseDetails })));
@@ -146,8 +150,11 @@ type ReviewWorkspaceProps = {
   engineRepoUrl: string;
   workspaceDraftSavedAt?: string | null;
   workspaceDraftRestored?: boolean;
+  currentLanguage: string;
+  onOpenLlmSettings: () => void;
   onSelectContextPath: (path: string | null) => void;
   onSaveEdit: (config: Exclude<EditorConfig, null>, updatedData: any) => void;
+  onToggleLanguage: () => void;
   onUndo: () => void;
   onResetWorkspace: () => void;
 };
@@ -166,8 +173,11 @@ export function ReviewWorkspace({
   engineRepoUrl,
   workspaceDraftSavedAt = null,
   workspaceDraftRestored = false,
+  currentLanguage,
+  onOpenLlmSettings,
   onSelectContextPath,
   onSaveEdit,
+  onToggleLanguage,
   onUndo,
   onResetWorkspace,
 }: ReviewWorkspaceProps) {
@@ -183,8 +193,9 @@ export function ReviewWorkspace({
   const [activeReviewSub, setActiveReviewSub] = useState<'decision' | 'notes' | 'diff'>('decision');
   const [activeChecksSub, setActiveChecksSub] = useState<'posture' | 'schema' | 'consistency' | 'tests' | 'evidence'>('posture');
   const [activeContextSub, setActiveContextSub] = useState<'summary' | 'policy' | 'files' | 'analysis' | 'source' | 'links'>('summary');
+  const [activePipelineSubview, setActivePipelineSubview] = useState<PipelineSubviewId>('summary');
   const [isWorkspaceFocusMode, setIsWorkspaceFocusMode] = useState(false);
-  const [isDerivedWorkflowOpen, setIsDerivedWorkflowOpen] = useState(false);
+  const [isTopToolbarExpanded, setIsTopToolbarExpanded] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [editorConfig, setEditorConfig] = useState<EditorConfig>(null);
   const [validationRuns, setValidationRuns] = useState<ValidationRun[]>([]);
@@ -266,6 +277,33 @@ export function ReviewWorkspace({
       meta: `${decisionCount} ${t('app.totalDecisions')}`,
     },
   ];
+  const pipelineSubviews = [
+    {
+      id: 'summary' as PipelineSubviewId,
+      label: t('app.summary'),
+      meta: `${data?.globalMetrics?.decisionConfidence ?? '--'}% ${t('dashboard.confidence')}`,
+    },
+    {
+      id: 'analysis' as PipelineSubviewId,
+      label: t('app.analysisResult'),
+      meta: `${parserAnalysisFindings.length} ${t('app.analysisFindings')}`,
+    },
+    {
+      id: 'decomposition' as PipelineSubviewId,
+      label: t('app.standardDecomposition'),
+      meta: `${parserActions.length}/${parserRules.length}/${parserDirectives.length}`,
+    },
+    {
+      id: 'pipeline' as PipelineSubviewId,
+      label: t('app.standardPipeline'),
+      meta: t('app.stepReview'),
+    },
+    {
+      id: 'derived' as PipelineSubviewId,
+      label: t('app.derivedWorkflow'),
+      meta: `${decisionCount} ${t('app.totalDecisions')}`,
+    },
+  ];
   const bridgeModeLabel = activeBridgeMode === 'skill-0'
     ? t('app.bridgeModeCanonical')
     : activeBridgeMode === 'standalone'
@@ -292,6 +330,14 @@ export function ReviewWorkspace({
       : activeBridgeMode === 'llm-assisted'
         ? t('app.bridgeModeLlmAssistedShort')
       : t('app.bridgeModeUnavailableShort');
+  const llmFallbackLabel = activeBridgeMode === 'llm-assisted' || bridgeStatus?.llmFallbackAvailable
+    ? t('app.llmFallbackAvailable')
+    : t('app.llmFallbackUnavailable');
+  const llmFallbackDetail = activeBridgeMode === 'llm-assisted'
+    ? [activeBridgeProvider, activeBridgeModel].filter(Boolean).join('/') || activeBridgeFallbackReason || t('app.llmFallbackReady')
+    : bridgeStatus?.llmFallbackAvailable
+      ? [bridgeStatus?.llmProvider, bridgeStatus?.llmModel].filter(Boolean).join('/') || t('app.llmFallbackReady')
+      : bridgeStatus?.llmReason || t('app.llmFallbackDisabledHint');
   const bridgeReviewGuidance = activeBridgeMode === 'skill-0'
     ? t('app.bridgeHelpCanonical')
     : activeBridgeMode === 'standalone'
@@ -316,9 +362,19 @@ export function ReviewWorkspace({
   const skillDocument = extractSkillDocumentFromReviewData(data);
   const originalSkillDocument = originalData ? extractSkillDocumentFromReviewData(originalData) : null;
   const reviewDraftStorageKey = data?.projectId ? `${REVIEW_DRAFT_STORAGE_PREFIX}:${data.projectId}` : null;
-  const diffSummary: DiffSummary | null = skillDocument && originalSkillDocument
+  const skillDocumentDiffSummary = skillDocument && originalSkillDocument
     ? buildSkillDocumentDiffSummary(originalSkillDocument, skillDocument)
     : null;
+  const modifiedPathsDiffSummary = buildModifiedPathsDiffSummary(modifiedPaths);
+  const skillDocumentDiffHasEntries = Boolean(skillDocumentDiffSummary)
+    && (skillDocumentDiffSummary.added.length > 0
+      || skillDocumentDiffSummary.removed.length > 0
+      || skillDocumentDiffSummary.changed.length > 0);
+  const diffSummary: DiffSummary | null = skillDocumentDiffHasEntries
+    ? skillDocumentDiffSummary
+    : modifiedPathsDiffSummary ?? skillDocumentDiffSummary;
+  const visibleModifiedPaths = Array.from(modifiedPaths)
+    .filter((path): path is string => typeof path === 'string' && path !== 'metrics');
   const validationResult = skillDocument ? validateSkillDocument(skillDocument) : null;
   const validationIssues = validationResult?.issues ?? [];
   const validationErrors = validationIssues.filter((issue) => issue.severity === 'error');
@@ -334,9 +390,12 @@ export function ReviewWorkspace({
   ];
   const currentFocusTitle = data?.parserResult?.meta?.title || data?.parserResult?.meta?.name || '--';
   const activeWorkspaceTab = workspaceTabs.find((view) => view.id === activeTab) ?? workspaceTabs[0];
+  const activePipelineSubviewMeta = pipelineSubviews.find((view) => view.id === activePipelineSubview) ?? pipelineSubviews[0];
   const activeInsightSummary = activeBottomTab ? insightTabs.find((tab) => tab.id === activeBottomTab) ?? null : null;
   const workspaceDraftStatusLabel = workspaceDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved');
   const reviewDraftStatusLabel = reviewDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved');
+  const languageToggleLabel = currentLanguage.startsWith('zh') ? 'EN' : '中文';
+  const hasDraftStatus = Boolean(workspaceDraftSavedAt || reviewDraftSavedAt);
   const noteTargets = [
     { label: t('app.noteTargetGlobal'), value: 'global' },
     ...skillDocument.decomposition.actions.map((action) => ({
@@ -880,14 +939,17 @@ export function ReviewWorkspace({
 
     return message.startsWith('app.') ? t(message) : message;
   };
-
-  const openDerivedWorkflow = () => {
-    setActiveTab('pipeline');
-    setIsDerivedWorkflowOpen(true);
-    window.setTimeout(() => {
-      document.getElementById('derived-workflow-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
+  const handleTopToolbarToggle = () => {
+    setShowActions(false);
+    setIsTopToolbarExpanded((current) => !current);
   };
+
+  useEffect(() => {
+    if (activeBottomTab) {
+      setShowActions(false);
+      setIsTopToolbarExpanded(false);
+    }
+  }, [activeBottomTab]);
 
   const buildReviewStateSnapshot = (): ReviewState => {
     const timestamp = new Date().toISOString();
@@ -917,6 +979,7 @@ export function ReviewWorkspace({
     return {
       checklist: reviewChecklist,
       decisionLog: decisionLog.length > 0 ? decisionLog : [synthesizedDecision],
+      diffSummary: diffSummary ?? undefined,
       elementNotes,
       globalNotes: [
         ...synthesizedNotes,
@@ -1379,250 +1442,379 @@ export function ReviewWorkspace({
           </div>
         </motion.div>
       )}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-[calc(100vh-52px)] overflow-hidden relative">
-        <header className="shrink-0 border-b border-border bg-background/96 backdrop-blur-md z-10">
-          <div className="px-4 py-4 sm:px-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative flex h-screen flex-col overflow-x-hidden">
+        <header className="sticky top-0 z-20 shrink-0">
+          <div className="review-top-dock px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                <div className="min-w-0 flex items-start gap-3">
+                <div className="min-w-0 flex flex-1 items-start gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[calc(var(--radius)*1.05)] bg-primary text-sm font-bold text-primary-foreground">
                     S0
                   </div>
-                  <div className="min-w-0">
-                    <p className="editorial-kicker">{t('app.workspace')}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <p className="editorial-kicker">{t('app.workspace')}</p>
+                      <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        {t('app.toolbarContextZone')}
+                      </span>
                       <span className="text-xs text-foreground/60">{data.projectId}</span>
                     </div>
-                    <p className="mt-1 text-sm leading-6 text-foreground/68">{t('app.subtitle')}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
+                      <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5 text-xs text-foreground/72">
+                        {t('app.currentFocus')}: <span className="font-medium text-foreground">{currentFocusTitle}</span>
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-foreground/72">
+                      <div
+                        className={`inline-flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 ${reviewReadinessStyles}`}
+                      >
+                        <AlertTriangle size={14} />
+                        <span className="font-medium">{reviewReadinessLabel}</span>
+                      </div>
+                      <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5">
+                        {t('app.bridgeMode')}: {bridgeModeSummary}
+                      </span>
+                      <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5">
+                        {activeWorkspaceTab.label}: {activeWorkspaceTab.meta}
+                      </span>
+                      {activeInsightSummary && (
+                        <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5">
+                          {activeInsightSummary.label}: {activeInsightSummary.meta}
+                        </span>
+                      )}
+                      {hasDraftStatus && (
+                        <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5">
+                          {t('app.localDraft')}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-                  <div
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[calc(var(--radius)*1.02)] ${reviewReadinessStyles}`}
-                  >
-                    <AlertTriangle size={14} />
-                    <span className="text-[11px] font-medium">{reviewReadinessLabel}</span>
-                  </div>
-                  <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5 text-xs text-foreground/68">
-                    {activeWorkspaceTab.label}: {activeWorkspaceTab.meta}
+                  <span className="hidden rounded-[calc(var(--radius)*1.02)] bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground xl:inline-flex">
+                    {t('app.toolbarFixedTools')}
                   </span>
-                  {activeInsightSummary && (
-                    <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5 text-xs text-foreground/68">
-                      {activeInsightSummary.label}: {activeInsightSummary.meta}
-                    </span>
-                  )}
-                  {isWorkspaceFocusMode && (
-                    <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5 text-xs text-foreground/68">
-                      {t('app.returnToOverview')}
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={handleTopToolbarToggle}
+                    aria-expanded={isTopToolbarExpanded}
+                    aria-controls="top-toolbar-context-deck"
+                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                    title={isTopToolbarExpanded ? t('app.toolbarCollapse') : t('app.toolbarExpand')}
+                  >
+                    {isTopToolbarExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    <span className="hidden sm:inline">{isTopToolbarExpanded ? t('app.toolbarCollapse') : t('app.toolbarExpand')}</span>
+                  </button>
+                  <a
+                    href={guiRepoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                    title={t('app.guiRepo')}
+                  >
+                    <Github size={16} />
+                    <span className="hidden sm:inline">GitHub</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={onOpenLlmSettings}
+                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                    title={t('app.llmAdminTitle')}
+                  >
+                    <SlidersHorizontal size={16} />
+                    <span className="hidden sm:inline">{t('app.aiSettings')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onToggleLanguage}
+                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                    title="Toggle Language"
+                  >
+                    <Languages size={16} />
+                    <span className="uppercase">{languageToggleLabel}</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(15rem,0.8fr)_minmax(15rem,0.8fr)_minmax(18rem,0.95fr)]">
-                <div className="surface-panel-muted h-full px-4 py-3">
-                  <div className="flex h-full flex-col justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.currentFocus')}</div>
-                      <div className="mt-1 truncate text-sm font-semibold text-foreground" title={currentFocusTitle}>
-                        {currentFocusTitle}
-                      </div>
-                      <div className="mt-2 text-xs leading-6 text-foreground/68">{bridgeModeSummary} · {reviewStatusLabel}</div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/68">
-                      <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">
-                        {t('app.project')}: {data.projectName}
-                      </span>
-                      <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">
-                        {reviewStatusLabel}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="surface-panel-muted h-full px-4 py-3">
-                  <div className="flex h-full flex-col justify-between gap-3">
-                    <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.bridgeMode')}</div>
-                      <div className="mt-1 text-sm font-semibold text-foreground">{bridgeModeLabel}</div>
-                      <div className="mt-2 text-xs leading-6 text-foreground/68 break-words">{bridgeModeDetail}</div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/68">
-                      <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">{bridgeModeSummary}</span>
-                      <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">{reviewReadinessLabel}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div data-testid="review-draft-status" className="surface-panel-muted h-full px-4 py-3">
-                  <div className="flex h-full flex-col justify-between gap-3">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.localDraft')}</div>
-                    {workspaceDraftSavedAt || reviewDraftSavedAt ? (
-                      <div className="flex flex-wrap gap-2">
-                        {workspaceDraftSavedAt && (
-                          <DraftStatusBadge
-                            label={t('app.workspace')}
-                            status={workspaceDraftStatusLabel}
-                            timestamp={workspaceDraftSavedAt}
-                          />
-                        )}
-                        {reviewDraftSavedAt && (
-                          <DraftStatusBadge
-                            label={t('app.reviewDecisionPanel')}
-                            status={reviewDraftStatusLabel}
-                            timestamp={reviewDraftSavedAt}
-                          />
-                        )}
+              <AnimatePresence initial={false}>
+                {isTopToolbarExpanded && (
+                  <motion.div
+                    id="top-toolbar-context-deck"
+                    data-testid="top-toolbar-context-deck"
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    className={`grid items-start gap-3 ${isWorkspaceFocusMode ? 'xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.9fr)]' : 'xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(18rem,0.95fr)]'}`}
+                  >
+                    {isWorkspaceFocusMode ? (
+                      <div className="surface-panel-muted px-4 py-3">
+                        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                          <div className="min-w-0 xl:max-w-[28rem]">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.currentFocus')}</div>
+                            <div className="mt-1 truncate text-sm font-semibold text-foreground" title={currentFocusTitle}>
+                              {currentFocusTitle}
+                            </div>
+                            <div className="mt-2 text-xs leading-6 text-foreground/68">
+                              {activeWorkspaceTab.label} · {activeWorkspaceTab.meta}
+                            </div>
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[23rem]">
+                            <div className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-2">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.bridgeMode')}</div>
+                              <div className="mt-1 text-xs font-semibold text-foreground">{bridgeModeSummary}</div>
+                            </div>
+                            <div className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-2">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.llmFallbackStatus')}</div>
+                              <div className="mt-1 text-xs font-semibold text-foreground">{llmFallbackLabel}</div>
+                            </div>
+                            <div className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-2">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.reviewDecisionPanel')}</div>
+                              <div className="mt-1 text-xs font-semibold text-foreground">{reviewStatusLabel}</div>
+                            </div>
+                            <div className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-2">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.validationEvidence')}</div>
+                              <div className="mt-1 text-xs font-semibold text-foreground">{reviewReadinessLabel}</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ) : (
-                      <div className="text-sm text-foreground/68">--</div>
+                      <>
+                        <div className="surface-panel-muted px-4 py-3">
+                          <div className="flex flex-col gap-3">
+                            <div className="min-w-0">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.currentFocus')}</div>
+                              <div className="mt-1 truncate text-sm font-semibold text-foreground" title={currentFocusTitle}>
+                                {currentFocusTitle}
+                              </div>
+                              <div className="mt-2 text-xs leading-6 text-foreground/68">{bridgeModeSummary} · {reviewStatusLabel}</div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/68">
+                              <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">
+                                {t('app.project')}: {data.projectName}
+                              </span>
+                              <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">
+                                {reviewStatusLabel}
+                              </span>
+                              <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">
+                                {reviewReadinessLabel}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="surface-panel-muted px-4 py-3">
+                          <div className="flex flex-col gap-3">
+                            <div>
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.bridgeMode')}</div>
+                              <div className="mt-1 text-sm font-semibold text-foreground">{bridgeModeLabel}</div>
+                              <div className="mt-2 text-xs leading-6 text-foreground/68 break-words">{bridgeModeDetail}</div>
+                              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.llmFallbackStatus')}</div>
+                              <div className="mt-1 text-sm font-semibold text-foreground">{llmFallbackLabel}</div>
+                              <div className="mt-1 text-xs leading-6 text-foreground/68 break-words">{llmFallbackDetail}</div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/68">
+                              <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">{bridgeModeSummary}</span>
+                              <span className="rounded-[calc(var(--radius)*1.02)] bg-background px-3 py-1.5">{reviewReadinessLabel}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     )}
-                  </div>
-                </div>
 
-                <div className="surface-panel-muted h-full px-4 py-3">
-                  <div className="flex h-full flex-col gap-3">
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                      <div>
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.workspaceViews')}</div>
-                        <div className="mt-1 text-sm font-semibold text-foreground">{activeWorkspaceTab.label}</div>
-                        <div className="mt-1 text-xs text-foreground/68">{activeWorkspaceTab.meta}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.reviewDecisionPanel')}</div>
-                        <div className="mt-1 text-sm font-semibold text-foreground">
-                          {activeInsightSummary?.label || t('app.reviewDecisionPanel')}
-                        </div>
-                        <div className="mt-1 text-xs text-foreground/68">
-                          {activeInsightSummary?.meta || reviewReadinessLabel}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-auto flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleResetWorkspace}
-                        className="editorial-button-secondary px-3 py-2 text-xs font-medium"
-                      >
-                        <RefreshCw size={14} />
-                        <span>{t('app.resetWorkspace')}</span>
-                      </button>
-
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowActions((current) => !current)}
-                          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-[calc(var(--radius)*1.02)] transition-colors ${showActions ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-card'}`}
-                        >
-                          <span>{t('app.actionsTray')}</span>
-                          {showActions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
-
-                        <AnimatePresence>
-                          {showActions && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-card p-2 shadow-xl z-50"
-                            >
-                              <div className="grid gap-2 px-4 pb-4">
-                                <button
-                                  onClick={() => setEditorConfig({ type: 'global', payload: data })}
-                                  className="editorial-action-button px-3 py-2 text-sm text-foreground"
-                                >
-                                  <span>{t('app.openGlobalEditor')}</span>
-                                  <Edit2 size={14} className="text-muted-foreground" />
-                                </button>
-                                {skillDocument && (
-                                  <button
-                                    onClick={() => setEditorConfig({ type: 'skillDocument', payload: skillDocument })}
-                                    className="editorial-action-button px-3 py-2 text-sm text-foreground"
-                                  >
-                                    <span>{t('app.openStructuredEditor')}</span>
-                                    <Edit2 size={14} className="text-muted-foreground" />
-                                  </button>
+                    <div className="surface-panel-muted px-4 py-3">
+                      <div className="flex flex-col gap-3">
+                        <div className={`grid gap-3 ${isWorkspaceFocusMode ? 'lg:grid-cols-[minmax(0,1fr)_minmax(12rem,0.85fr)]' : 'sm:grid-cols-2 xl:grid-cols-1'}`}>
+                          <div data-testid="review-draft-status">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.localDraft')}</div>
+                            {hasDraftStatus ? (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {workspaceDraftSavedAt && (
+                                  <DraftStatusBadge
+                                    label={t('app.workspace')}
+                                    status={workspaceDraftStatusLabel}
+                                    timestamp={workspaceDraftSavedAt}
+                                  />
                                 )}
-                                {skillDocument && (
-                                  <button
-                                    onClick={() => setEditorConfig({ type: 'json', payload: skillDocument })}
-                                    className="editorial-action-button px-3 py-2 text-sm text-foreground"
-                                  >
-                                    <span>{t('app.openJsonEditor')}</span>
-                                    <FileCode2 size={14} className="text-muted-foreground" />
-                                  </button>
-                                )}
-                                <button
-                                  onClick={exportSkill}
-                                  disabled={!canExportArtifacts}
-                                  className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                                >
-                                  <span>{t('app.export')}</span>
-                                  <Download size={14} className="text-muted-foreground" />
-                                </button>
-                                {skillDocument && (
-                                  <button
-                                    onClick={exportSkillJson}
-                                    disabled={!canExportArtifacts}
-                                    className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                                  >
-                                    <span>{t('app.exportJson')}</span>
-                                    <Download size={14} className="text-muted-foreground" />
-                                  </button>
-                                )}
-                                {skillDocument && (
-                                  <button
-                                    onClick={exportReviewReport}
-                                    disabled={!canExportArtifacts}
-                                    className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                                  >
-                                    <span>{t('app.exportReviewReport')}</span>
-                                    <Download size={14} className="text-muted-foreground" />
-                                  </button>
-                                )}
-                                <button
-                                  onClick={exportReviewPacket}
-                                  disabled={!canExportArtifacts}
-                                  className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                                >
-                                  <span>{t('app.exportReviewPacket')}</span>
-                                  <Download size={14} className="text-muted-foreground" />
-                                </button>
-                                <button
-                                  onClick={handleResetWorkspace}
-                                  className="editorial-action-button px-3 py-2 text-sm text-foreground"
-                                >
-                                  <span>{t('app.resetWorkspace')}</span>
-                                  <RefreshCw size={14} className="text-muted-foreground" />
-                                </button>
-                                {modifiedPaths.size > 0 && (
-                                  <button
-                                    onClick={onUndo}
-                                    className="inline-flex items-center justify-between rounded-[calc(var(--radius)*1.02)] bg-amber-500/12 px-3 py-2 text-sm text-amber-900 transition hover:bg-amber-500/18"
-                                  >
-                                    <span>{t('app.undo')}</span>
-                                    <Undo2 size={14} />
-                                  </button>
+                                {reviewDraftSavedAt && (
+                                  <DraftStatusBadge
+                                    label={t('app.reviewDecisionPanel')}
+                                    status={reviewDraftStatusLabel}
+                                    timestamp={reviewDraftSavedAt}
+                                  />
                                 )}
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                            ) : (
+                              <div className="mt-1 text-sm text-foreground/68">--</div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.workspaceViews')}</div>
+                            <div className="mt-1 text-sm font-semibold text-foreground">{activeWorkspaceTab.label}</div>
+                            <div className="mt-1 text-xs text-foreground/68">{activeWorkspaceTab.meta}</div>
+                            <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.reviewDecisionPanel')}</div>
+                            <div className="mt-1 text-sm font-semibold text-foreground">
+                              {activeInsightSummary?.label || t('app.reviewDecisionPanel')}
+                            </div>
+                            <div className="mt-1 text-xs text-foreground/68">
+                              {activeInsightSummary?.meta || reviewReadinessLabel}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border/55 pt-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditorConfig({ type: 'global', payload: data })}
+                              data-testid="top-toolbar-open-global-editor-shortcut"
+                              className="editorial-button-secondary px-3 py-2 text-xs font-medium"
+                            >
+                              <Edit2 size={14} />
+                              <span>{t('app.openGlobalEditor')}</span>
+                            </button>
+                            {skillDocument && (
+                              <button
+                                type="button"
+                                onClick={() => setEditorConfig({ type: 'skillDocument', payload: skillDocument })}
+                                data-testid="top-toolbar-open-structured-editor-shortcut"
+                                className="editorial-button-secondary px-3 py-2 text-xs font-medium"
+                              >
+                                <Edit2 size={14} />
+                                <span>{t('app.openStructuredEditor')}</span>
+                              </button>
+                            )}
+                            {skillDocument && (
+                              <button
+                                type="button"
+                                onClick={() => setEditorConfig({ type: 'json', payload: skillDocument })}
+                                data-testid="top-toolbar-open-json-editor-shortcut"
+                                className="editorial-button-secondary px-3 py-2 text-xs font-medium"
+                              >
+                                <FileCode2 size={14} />
+                                <span>{t('app.openJsonEditor')}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="relative">
+                            <button
+                              onClick={() => setShowActions((current) => !current)}
+                              data-testid="top-toolbar-actions-trigger"
+                              className={`flex items-center gap-2 px-3 py-2 text-sm rounded-[calc(var(--radius)*1.02)] transition-colors ${showActions ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-card'}`}
+                            >
+                              <span>{t('app.actionsTray')}</span>
+                              {showActions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+
+                            <AnimatePresence>
+                              {showActions && (
+                                <motion.div
+                                  data-testid="top-toolbar-actions-menu"
+                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  transition={{ duration: 0.15 }}
+                                  className="absolute right-0 top-full z-50 mt-2 max-h-[min(32rem,calc(100vh-7rem))] w-64 overflow-y-auto rounded-xl border border-border bg-card p-2 shadow-xl"
+                                >
+                                  <div className="grid gap-2 px-4 pb-4">
+                                    <button
+                                      onClick={() => {
+                                        setShowActions(false);
+                                        exportSkill();
+                                      }}
+                                      disabled={!canExportArtifacts}
+                                      className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    >
+                                      <span>{t('app.export')}</span>
+                                      <Download size={14} className="text-muted-foreground" />
+                                    </button>
+                                    {skillDocument && (
+                                      <button
+                                        onClick={() => {
+                                          setShowActions(false);
+                                          exportSkillJson();
+                                        }}
+                                        disabled={!canExportArtifacts}
+                                        className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                      >
+                                        <span>{t('app.exportJson')}</span>
+                                        <Download size={14} className="text-muted-foreground" />
+                                      </button>
+                                    )}
+                                    {skillDocument && (
+                                      <button
+                                        onClick={() => {
+                                          setShowActions(false);
+                                          exportReviewReport();
+                                        }}
+                                        disabled={!canExportArtifacts}
+                                        className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                      >
+                                        <span>{t('app.exportReviewReport')}</span>
+                                        <Download size={14} className="text-muted-foreground" />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => {
+                                        setShowActions(false);
+                                        exportReviewPacket();
+                                      }}
+                                      disabled={!canExportArtifacts}
+                                      data-testid="top-toolbar-export-review-packet"
+                                      className="editorial-action-button px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    >
+                                      <span>{t('app.exportReviewPacket')}</span>
+                                      <Download size={14} className="text-muted-foreground" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setShowActions(false);
+                                        handleResetWorkspace();
+                                      }}
+                                      className="editorial-action-button px-3 py-2 text-sm text-foreground"
+                                    >
+                                      <span>{t('app.resetWorkspace')}</span>
+                                      <RefreshCw size={14} className="text-muted-foreground" />
+                                    </button>
+                                    {modifiedPaths.size > 0 && (
+                                      <button
+                                        onClick={() => {
+                                          setShowActions(false);
+                                          onUndo();
+                                        }}
+                                        className="inline-flex items-center justify-between rounded-[calc(var(--radius)*1.02)] bg-amber-500/12 px-3 py-2 text-sm text-amber-900 transition hover:bg-amber-500/18"
+                                      >
+                                        <span>{t('app.undo')}</span>
+                                        <Undo2 size={14} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center gap-1">
                   {workspaceTabs.map((view, index) => (
                     <div key={view.id} className="flex items-center gap-1">
                       <button
-                        onClick={() => setActiveTab(view.id)}
+                        onClick={() => {
+                          setActiveTab(view.id);
+                          setIsWorkspaceFocusMode(view.id !== 'pipeline');
+                        }}
                         className={`flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 text-sm transition-colors ${activeTab === view.id ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground/70'}`}
                       >
                         <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${activeTab === view.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-foreground/10 text-foreground/70'}`}>
@@ -1630,268 +1822,282 @@ export function ReviewWorkspace({
                         </span>
                         <span>{view.label}</span>
                       </button>
-                      {view.id === 'pipeline' && (
-                        <button
-                          type="button"
-                          onClick={openDerivedWorkflow}
-                          className={`hidden sm:block px-3 py-1.5 text-xs rounded-[calc(var(--radius)*1.02)] transition-colors ${isDerivedWorkflowOpen ? 'bg-muted text-foreground font-medium' : 'text-muted-foreground hover:bg-card'}`}
-                        >
-                          {t('app.derivedWorkflow')}
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
 
-                {isWorkspaceFocusMode && (
-                  <button
-                    type="button"
-                    onClick={() => setIsWorkspaceFocusMode(false)}
-                    className="editorial-button-secondary w-fit px-4 py-2 text-xs font-medium"
-                  >
-                    {t('app.returnToOverview')}
-                  </button>
+                {activeTab === 'pipeline' && (
+                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-wrap items-center gap-1" data-testid="pipeline-subview-nav">
+                      {pipelineSubviews.map((view) => (
+                        <button
+                          key={view.id}
+                          type="button"
+                          onClick={() => setActivePipelineSubview(view.id)}
+                          data-testid={`pipeline-subview-${view.id}`}
+                          className={`rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 text-xs transition-colors ${activePipelineSubview === view.id ? 'bg-muted text-foreground font-medium shadow-sm' : 'text-muted-foreground hover:bg-card'}`}
+                        >
+                          {view.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="text-xs text-foreground/60">
+                      {activePipelineSubviewMeta.label}: {activePipelineSubviewMeta.meta}
+                    </div>
+                  </div>
                 )}
+
               </div>
             </div>
           </div>
         </header>
 
-        <section className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 z-0 pb-28 custom-scrollbar">
-          {!isWorkspaceFocusMode && (
-            <Suspense fallback={<PanelFallback heightClassName="min-h-[220px]" />}>
-              <Dashboard data={data} onNavigatePhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} modifiedPaths={modifiedPaths} />
-            </Suspense>
-          )}
-
-          <div className="glass-panel-strong relative overflow-hidden px-5 py-5 sm:px-6">
-            {/* Progress breadcrumb — directional cue */}
-            <div className="parser-stepper mb-4">
-              <div className="parser-stepper__step parser-stepper__step--done">
-                <span className="parser-stepper__num">1</span>
-                <span>{t('app.stepIntake')}</span>
-              </div>
-              <div className="parser-stepper__connector parser-stepper__connector--done" />
-              <div className="parser-stepper__step parser-stepper__step--done">
-                <span className="parser-stepper__num">2</span>
-                <span>{t('app.stepParse')}</span>
-              </div>
-              <div className="parser-stepper__connector parser-stepper__connector--done" />
-              <div className="parser-stepper__step parser-stepper__step--active">
-                <span className="parser-stepper__num">3</span>
-                <span>{t('app.stepReview')}</span>
-              </div>
-              <div className="parser-stepper__connector" />
-              <div className="parser-stepper__step">
-                <span className="parser-stepper__num">4</span>
-                <span>{t('app.stepExport')}</span>
-              </div>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
-              <div>
-                {!isWorkspaceFocusMode && (
-                  <>
-                    <p className="editorial-kicker">{t('app.analysisResult')}</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                      <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-muted-foreground">
-                        {t('app.project')}: {data.projectId}
-                      </span>
-                      <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] text-muted-foreground">
-                        {t('app.parserVersion')}: {data?.parserResult?.meta?.parser_version || '--'}
-                      </span>
-                      {parserManifest && (
-                        <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] text-muted-foreground">
-                          {t('app.analysisLevel')}: {parserManifest.analysis_level}
-                        </span>
-                      )}
-                    </div>
-                  </>
-                )}
-                <div
-                  className={`${isWorkspaceFocusMode ? '' : 'mt-4'} group flex w-fit cursor-pointer items-center gap-2`}
-                  onClick={() => setEditorConfig({ type: 'global', payload: data })}
-                  title={t('editor.editGlobal')}
-                >
-                  <h2 className={`display-serif text-[2.3rem] leading-none sm:text-[2.8rem] ${modifiedPaths.has('projectName') ? 'text-amber-600' : 'text-foreground'}`}>
-                    {data.projectName}
-                  </h2>
-                  <Edit2 size={16} className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </div>
-                <p className="mt-3 max-w-3xl text-[0.95rem] leading-7 text-foreground/74">{bridgeReviewGuidance}</p>
-              </div>
-
-              <div data-testid="review-decision-panel" className="surface-panel-muted px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="editorial-kicker">{t('app.reviewDecisionPanel')}</p>
-                    <p className="mt-2 text-sm leading-6 text-foreground/72">{t('app.reviewPacketHint')}</p>
-                  </div>
-                  <span className="editorial-chip px-3 py-1 text-[11px] font-medium text-foreground">
-                    {reviewStatusLabel}
-                  </span>
-                </div>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <MiniMetric label={t('app.reviewerName')} value={reviewerName.trim() || t('app.reviewerUnassigned')} highlight={Boolean(reviewerName.trim())} />
-                  <MiniMetric label={t('app.validationEvidence')} value={validationStatusLabel} highlight={!validationHasErrors} />
-                  <MiniMetric label={t('app.bridgeMode')} value={bridgeModeSummary} highlight={activeBridgeMode === 'skill-0'} />
-                  <MiniMetric label={t('app.equivalenceStatus')} value={reviewEquivalenceLabel} highlight={reviewEquivalenceLabel === t('app.equivalenceImplementationIdentity')} />
-                </div>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <MiniMetric label={t('app.handoffState')} value={handoffSummary} highlight={effectiveHandoffState === 'approved_for_export'} />
-                  <MiniMetric label={t('app.reviewProfile')} value={reviewProfileSummary} highlight />
-                </div>
-                {reviewerNotes.trim() && (
-                  <p className="mt-3 text-sm leading-6 text-foreground/72">{reviewerNotes.trim()}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Compact truth strip — merged from separate banners */}
-            <div data-testid="review-truth-banner" className={`truth-strip mt-4 ${bridgeToneClass}`}>
-              <AlertTriangle size={14} className="shrink-0" />
-              <span className="truth-strip__tag">{bridgeModeSummary}</span>
-              <span className="truth-strip__divider" />
-              <span className="truth-strip__tag">{reviewReadinessLabel}</span>
-              <span className="truth-strip__divider" />
-              <span className="truth-strip__tag">{reviewEquivalenceLabel}</span>
-              <span className="truth-strip__divider" />
-              <span className="truth-strip__tag">{handoffSummary}</span>
-              {activeBridgeDraftOnly && (
-                <>
-                  <span className="truth-strip__divider" />
-                  <span className="truth-strip__tag truth-strip__tag--wrap text-amber-800">{t('app.bridgeDraftOnlyWarning')}</span>
-                </>
-              )}
-            </div>
-
-            <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
-              <StatPill label={t('app.totalActions')} value={String(parserActions.length)} />
-              <StatPill label={t('app.totalRules')} value={String(parserRules.length)} />
-              <StatPill label={t('app.totalDirectives')} value={String(parserDirectives.length)} accent={parserDirectives.length > 8 ? 'warn' : 'default'} />
-              <StatPill label={t('app.supportingFiles')} value={String(parserSupportingFiles.length)} />
-              <StatPill label={t('app.commandReferences')} value={String(parserCommandReferences.length)} accent={parserCommandReferences.length > 0 ? 'warn' : 'default'} />
-              <StatPill label={t('app.analysisFindings')} value={String(parserAnalysisFindings.length)} accent={parserAnalysisFindings.length > 0 ? 'danger' : 'default'} />
-            </div>
-          </div>
-
-          <div className="glass-panel px-4 py-4 sm:px-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div>
-                <p className="editorial-kicker">{t('app.workspaceViews')}</p>
-                <p className="mt-2 text-sm text-foreground/68">{t('app.phaseFlowHint')}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {isWorkspaceFocusMode && (
-                  <button
-                    type="button"
-                    onClick={() => setIsWorkspaceFocusMode(false)}
-                    className="editorial-button-secondary px-4 py-2 text-xs font-medium"
-                  >
-                    {t('app.returnToOverview')}
-                  </button>
-                )}
-                <div className="segment-control">
-                  {workspaceTabs.map((view) => (
-                    <button
-                      key={view.id}
-                      onClick={() => {
-                        setActiveTab(view.id);
-                        setIsWorkspaceFocusMode(true);
-                      }}
-                      className={`segment-control__button px-4 py-2 text-xs font-medium transition-all ${
-                        activeTab === view.id
-                          ? 'segment-control__button--active'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      {view.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <section className="review-stage-shell z-0 flex-1 overflow-y-auto px-4 py-2 pb-24 sm:px-6 sm:py-3 custom-scrollbar">
           <AnimatePresence mode="wait">
             {activeTab === 'pipeline' && (
               <motion.div
-                key="pipeline"
+                key={`pipeline-${activePipelineSubview}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="space-y-7"
+                className="space-y-4 lg:space-y-5"
+                data-testid={`pipeline-section-content-${activePipelineSubview}`}
               >
-                <Suspense fallback={<PanelFallback heightClassName="min-h-[240px]" />}>
-                  <div className="max-h-[50vh] overflow-y-auto custom-scrollbar rounded-[calc(var(--radius)*1.1)] border border-border/40 bg-card/20 pb-4 shadow-sm relative z-0">
-                    <DecompositionBoard
-                      parserResult={data.parserResult}
-                      supportFiles={supportFiles}
-                      selectedContextPath={selectedContextPath}
-                      onSelectContext={onSelectContextPath}
-                    />
+                {activePipelineSubview === 'summary' && (
+                  <Suspense fallback={<PanelFallback heightClassName="min-h-[220px]" />}>
+                    <div className="review-main-surface glass-panel-strong overflow-hidden px-4 py-4 sm:px-5">
+                      <Dashboard
+                        data={data}
+                        onNavigatePhase={(id) => {
+                          setActiveTab('pipeline');
+                          setIsWorkspaceFocusMode(false);
+                          setActivePipelineSubview('derived');
+                          setActivePhase(id);
+                        }}
+                        modifiedPaths={modifiedPaths}
+                      />
+                    </div>
+                  </Suspense>
+                )}
+
+                {activePipelineSubview === 'analysis' && (
+                  <div className="review-main-surface glass-panel-strong relative overflow-hidden px-4 py-4 sm:px-5">
+                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.28fr)_minmax(17rem,0.72fr)]">
+                      <div>
+                        <p className="editorial-kicker">{t('app.analysisResult')}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-muted-foreground">
+                            {t('app.project')}: {data.projectId}
+                          </span>
+                          <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] text-muted-foreground">
+                            {t('app.parserVersion')}: {data?.parserResult?.meta?.parser_version || '--'}
+                          </span>
+                          {parserManifest && (
+                            <span className="editorial-chip editorial-chip--truncate px-3 py-1 text-[11px] text-muted-foreground">
+                              {t('app.analysisLevel')}: {parserManifest.analysis_level}
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className="mt-2 group flex w-fit cursor-pointer items-center gap-2"
+                          onClick={() => setEditorConfig({ type: 'global', payload: data })}
+                          title={t('editor.editGlobal')}
+                        >
+                          <h2 className={`display-serif text-[1.72rem] leading-[0.98] sm:text-[2.02rem] ${modifiedPaths.has('projectName') ? 'text-amber-600' : 'text-foreground'}`}>
+                            {data.projectName}
+                          </h2>
+                          <Edit2 size={16} className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                        </div>
+                        <p className="mt-1.5 max-w-3xl text-[0.88rem] leading-5 text-foreground/74">{bridgeReviewGuidance}</p>
+                      </div>
+
+                      <div data-testid="review-decision-panel" className="review-structural-panel surface-panel-muted px-4 py-3.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="editorial-kicker">{t('app.reviewDecisionPanel')}</p>
+                            <p className="mt-1.5 text-sm leading-5 text-foreground/72">{t('app.reviewPacketHint')}</p>
+                          </div>
+                          <span className="editorial-chip px-3 py-1 text-[11px] font-medium text-foreground">
+                            {reviewStatusLabel}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          <MiniMetric label={t('app.reviewerName')} value={reviewerName.trim() || t('app.reviewerUnassigned')} highlight={Boolean(reviewerName.trim())} />
+                          <MiniMetric label={t('app.validationEvidence')} value={validationStatusLabel} highlight={!validationHasErrors} />
+                          <MiniMetric label={t('app.handoffState')} value={handoffSummary} highlight={effectiveHandoffState === 'approved_for_export'} />
+                          <MiniMetric label={t('app.reviewProfile')} value={reviewProfileSummary} highlight />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div data-testid="review-truth-banner" className={`truth-strip mt-3 ${bridgeToneClass}`}>
+                      <AlertTriangle size={14} className="shrink-0" />
+                      <span className="truth-strip__tag">{bridgeModeSummary}</span>
+                      <span className="truth-strip__divider" />
+                      <span className="truth-strip__tag">{reviewReadinessLabel}</span>
+                      <span className="truth-strip__divider" />
+                      <span className="truth-strip__tag">{reviewEquivalenceLabel}</span>
+                      <span className="truth-strip__divider" />
+                      <span className="truth-strip__tag">{handoffSummary}</span>
+                      {activeBridgeDraftOnly && (
+                        <>
+                          <span className="truth-strip__divider" />
+                          <span className="truth-strip__tag truth-strip__tag--wrap text-amber-800">{t('app.bridgeDraftOnlyWarning')}</span>
+                        </>
+                      )}
+                    </div>
+
+                    {visibleModifiedPaths.length > 0 && (
+                      <div data-testid="edit-verification-strip" className="review-structural-panel mt-2.5 flex flex-col gap-2.5 rounded-[calc(var(--radius)*1.02)] border border-amber-500/18 bg-amber-500/8 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-900/80">{t('app.editVerification')}</div>
+                          <div className="mt-1 text-sm font-medium text-amber-950">{t('app.editVerificationSummary', { count: visibleModifiedPaths.length })}</div>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {visibleModifiedPaths.slice(0, 4).map((path) => (
+                              <span key={path} className="rounded-[calc(var(--radius)*1.02)] bg-background/90 px-2.5 py-1 text-[11px] text-foreground/78">
+                                {path}
+                              </span>
+                            ))}
+                            {visibleModifiedPaths.length > 4 && (
+                              <span className="rounded-[calc(var(--radius)*1.02)] bg-background/90 px-2.5 py-1 text-[11px] text-foreground/78">
+                                +{visibleModifiedPaths.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-[calc(var(--radius)*1.02)] bg-background/90 px-3 py-1.5 text-xs text-foreground/72">
+                            {diffSummary ? `${diffSummary.stats.fieldsChanged} ${t('app.diffEntries')}` : t('app.editVerificationPending')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveBottomTab('review');
+                              setActiveReviewSub('diff');
+                            }}
+                            className="editorial-button-secondary px-3 py-2 text-xs font-medium"
+                          >
+                            {t('app.compareChanges')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                      <StatPill label={t('app.totalActions')} value={String(parserActions.length)} />
+                      <StatPill label={t('app.totalRules')} value={String(parserRules.length)} />
+                      <StatPill label={t('app.totalDirectives')} value={String(parserDirectives.length)} accent={parserDirectives.length > 8 ? 'warn' : 'default'} />
+                      <StatPill label={t('app.supportingFiles')} value={String(parserSupportingFiles.length)} />
+                      <StatPill label={t('app.commandReferences')} value={String(parserCommandReferences.length)} accent={parserCommandReferences.length > 0 ? 'warn' : 'default'} />
+                      <StatPill label={t('app.analysisFindings')} value={String(parserAnalysisFindings.length)} accent={parserAnalysisFindings.length > 0 ? 'danger' : 'default'} />
+                    </div>
                   </div>
-                </Suspense>
+                )}
 
-                <InsightBlock
-                  id="derived-workflow-panel"
-                  kicker={t('flowchart.pipeline')}
-                  title={t('app.derivedWorkflow')}
-                  summary={t('app.derivedWorkflowHint')}
-                  isOpen={isDerivedWorkflowOpen}
-                  onToggle={() => setIsDerivedWorkflowOpen((current) => !current)}
-                >
-                  <div className="space-y-6">
-                    <FlowStepper phases={data.phases} activePhase={activePhase} onSelectPhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }} />
+                {activePipelineSubview === 'decomposition' && (
+                  <Suspense fallback={<PanelFallback heightClassName="min-h-[240px]" />}>
+                    <section className="review-structural-panel glass-panel overflow-hidden p-4 sm:p-4">
+                      <div className="mb-3 flex flex-col gap-1.5 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                        <p className="editorial-kicker">{t('app.standardDecomposition')}</p>
+                          <p className="mt-1 max-w-3xl text-sm leading-5 text-foreground/72">{t('app.standardDecompositionHint')}</p>
+                        </div>
+                        <span className="editorial-chip w-fit px-3 py-1 text-[11px] text-muted-foreground">
+                          {parserActions.length} {t('app.totalActions')}
+                        </span>
+                      </div>
+                      <div className="max-h-[72vh] overflow-y-auto custom-scrollbar rounded-[calc(var(--radius)*1.05)] border border-border/40 bg-card/20 pb-3">
+                        <DecompositionBoard
+                          parserResult={data.parserResult}
+                          supportFiles={supportFiles}
+                          selectedContextPath={selectedContextPath}
+                          onSelectContext={onSelectContextPath}
+                        />
+                      </div>
+                    </section>
+                  </Suspense>
+                )}
 
-	                    <div className="grid gap-6 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]">
-	                      <div className="glass-panel px-3 py-4 sm:px-4 xl:min-h-[400px] xl:max-h-[50vh] flex flex-col">
+                {activePipelineSubview === 'pipeline' && (
+                  <StandardPipelineView
+                    bridgeModeSummary={bridgeModeSummary}
+                    handoffSummary={handoffSummary}
+                    reviewReadinessLabel={reviewReadinessLabel}
+                    reviewStatusLabel={reviewStatusLabel}
+                  />
+                )}
+
+                {activePipelineSubview === 'derived' && (
+                  <section id="derived-workflow-panel" className="space-y-4">
+                    <div className="review-main-surface glass-panel-strong overflow-hidden px-4 py-4 sm:px-5">
+                      <div className="flex flex-col gap-1.5 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                          <p className="editorial-kicker">{t('app.derivedWorkflow')}</p>
+                          <p className="mt-1 max-w-3xl text-sm leading-5 text-foreground/72">{t('app.derivedWorkflowHint')}</p>
+                        </div>
+                        <span className="editorial-chip w-fit px-3 py-1 text-[11px] text-muted-foreground">
+                          {data.phases.length} {t('app.phaseStep')}
+                        </span>
+                      </div>
+
+                      <div className="mt-3">
+                        <FlowStepper
+                          phases={data.phases}
+                          activePhase={activePhase}
+                          compact
+                          onSelectPhase={(id) => { setActiveTab('pipeline'); setActivePhase(id); }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 xl:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)]">
+                      <div className="review-structural-panel glass-panel px-3 py-3.5 sm:px-4 xl:min-h-[360px] xl:max-h-[44vh] flex flex-col">
                         <div className="flex items-center justify-between px-3 pb-2">
                           <div>
                             <p className="editorial-kicker">{t('flowchart.pipeline')}</p>
-                            <h3 className="mt-2 text-lg font-semibold tracking-tight text-foreground">{t('app.flowSequence')}</h3>
+                            <h3 className="mt-1.5 text-base font-semibold tracking-tight text-foreground">{t('app.flowSequence')}</h3>
                           </div>
                           <span className="editorial-chip px-2.5 py-1 text-[11px] font-mono text-muted-foreground">
                             {activePhase ?? '--'}
                           </span>
                         </div>
-	                        <div className="custom-scrollbar pr-1 flex-1 overflow-y-auto">
-	                          <Flowchart phases={data.phases} activePhase={activePhase} onSelectPhase={setActivePhase} />
-	                        </div>
-	                      </div>
+                        <div className="custom-scrollbar pr-1 flex-1 overflow-y-auto">
+                          <Flowchart phases={data.phases} activePhase={activePhase} onSelectPhase={setActivePhase} />
+                        </div>
+                      </div>
 
-	                      <div className="xl:min-h-[400px] xl:max-h-[50vh] flex flex-col">
-	                        {activePhaseData ? (
-	                          <Suspense fallback={<PanelFallback heightClassName="xl:min-h-[400px]" />}>
-	                            <PhaseDetails
-	                              phase={activePhaseData}
-	                              allPhases={data.phases}
+                      <div className="xl:min-h-[360px] xl:max-h-[44vh] flex flex-col">
+                        {activePhaseData ? (
+                          <Suspense fallback={<PanelFallback heightClassName="xl:min-h-[400px]" />}>
+                            <PhaseDetails
+                              phase={activePhaseData}
+                              allPhases={data.phases}
                               onNavigatePhase={setActivePhase}
                               onClose={() => setActivePhase(null)}
                               onEditPhase={(phaseData) => setEditorConfig({ type: 'phase', payload: phaseData, phaseId: phaseData.id })}
                               onEditDecision={(node) => setEditorConfig({ type: 'decision', payload: node, phaseId: activePhaseData.id })}
                               modifiedPaths={modifiedPaths}
-	                            />
-	                          </Suspense>
-	                        ) : (
-	                          <div className="glass-panel flex-1 flex items-center justify-center p-10 text-center xl:min-h-[400px]">
-	                            <div className="max-w-sm space-y-3">
-	                              <p className="editorial-kicker">{t('app.detailsPanel')}</p>
-	                              <h3 className="text-2xl font-semibold tracking-tight text-foreground">{t('app.noActivePhase')}</h3>
-                              <p className="text-sm leading-6 text-foreground/70">{t('app.selectPhaseHint')}</p>
+                            />
+                          </Suspense>
+                        ) : (
+                          <div className="review-structural-panel glass-panel flex-1 flex items-center justify-center p-8 text-center xl:min-h-[360px]">
+                            <div className="max-w-sm space-y-3">
+                              <p className="editorial-kicker">{t('app.detailsPanel')}</p>
+                              <h3 className="text-xl font-semibold tracking-tight text-foreground">{t('app.noActivePhase')}</h3>
+                              <p className="text-sm leading-5 text-foreground/70">{t('app.selectPhaseHint')}</p>
                             </div>
                           </div>
                         )}
                       </div>
                     </div>
-                  </div>
-                </InsightBlock>
+                  </section>
+                )}
               </motion.div>
             )}
 
             {activeTab === 'vector' && (
               <motion.div key="vector" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <div className="glass-panel overflow-hidden p-3 sm:p-4">
+                <div className="review-structural-panel glass-panel overflow-hidden p-3 sm:p-4">
                   <Suspense fallback={<PanelFallback heightClassName="min-h-[420px]" />}>
                     <VectorSpace data={data} darkMode={darkMode} />
                   </Suspense>
@@ -1901,7 +2107,7 @@ export function ReviewWorkspace({
 
             {activeTab === 'matrix' && (
               <motion.div key="matrix" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <div className="glass-panel overflow-hidden p-3 sm:p-4">
+                <div className="review-structural-panel glass-panel overflow-hidden p-3 sm:p-4">
                   <Suspense fallback={<PanelFallback heightClassName="min-h-[420px]" />}>
                     <SecurityMatrix data={data} />
                   </Suspense>
@@ -1921,9 +2127,9 @@ export function ReviewWorkspace({
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="w-full max-w-[1980px] pointer-events-auto bg-card border-t border-border shadow-2xl rounded-t-3xl max-h-[70vh] flex flex-col"
+                className="review-bottom-drawer w-full max-w-[1980px] pointer-events-auto bg-card border-t border-border shadow-2xl rounded-t-3xl max-h-[78vh] flex flex-col"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-border/50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3 border-b border-border/50">
                   <div className="flex flex-wrap items-center gap-4">
                     <h3 className="font-semibold text-lg text-foreground whitespace-nowrap">
                       {insightTabs.find(t => t.id === activeBottomTab)?.label}
@@ -1965,7 +2171,7 @@ export function ReviewWorkspace({
                     <ChevronDown size={20} />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar">
                   <div className="max-w-7xl mx-auto">
                     {activeBottomTab === 'review' && (
               <>
@@ -2807,7 +3013,7 @@ export function ReviewWorkspace({
           </AnimatePresence>
 
           {/* Fixed Toolbar Base */}
-          <div className="w-full pointer-events-auto bg-background/95 backdrop-blur-md border-t border-border/40 p-2 sm:p-3 flex justify-center">
+          <div className="review-bottom-toolbar w-full pointer-events-auto bg-background/95 backdrop-blur-md border-t border-border/40 p-2 sm:p-3 flex justify-center">
             <div className="flex flex-wrap items-center gap-2 max-w-5xl">
               {insightTabs.map((tab) => {
                 const isActive = activeBottomTab === tab.id;
@@ -2852,6 +3058,86 @@ export function ReviewWorkspace({
   );
 }
 
+function StandardPipelineView({
+  bridgeModeSummary,
+  handoffSummary,
+  reviewReadinessLabel,
+  reviewStatusLabel,
+}: {
+  bridgeModeSummary: string;
+  handoffSummary: string;
+  reviewReadinessLabel: string;
+  reviewStatusLabel: string;
+}) {
+  const { t } = useTranslation();
+  const steps = [
+    { description: t('app.stepIntakeDesc'), id: '1', label: t('app.stepIntake'), status: 'done' as const },
+    { description: t('app.stepParseDesc'), id: '2', label: t('app.stepParse'), status: 'done' as const },
+    { description: t('app.stepReviewDesc'), id: '3', label: t('app.stepReview'), status: 'active' as const },
+    { description: t('app.stepExportDesc'), id: '4', label: t('app.stepExport'), status: 'next' as const },
+  ];
+
+  return (
+    <div className="review-main-surface glass-panel-strong relative overflow-hidden px-4 py-4 sm:px-5">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.8fr)]">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1.5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="editorial-kicker">{t('app.standardPipeline')}</p>
+              <p className="mt-1 text-sm leading-5 text-foreground/72">{t('app.standardPipelineHint')}</p>
+            </div>
+            <span className="editorial-chip w-fit px-3 py-1 text-[11px] text-muted-foreground">
+              4 {t('app.phaseStep')}
+            </span>
+          </div>
+
+          <div className="parser-stepper parser-stepper--compact">
+            {steps.map((step, index) => (
+              <React.Fragment key={step.id}>
+                <div className={`parser-stepper__step ${step.status === 'done' ? 'parser-stepper__step--done' : step.status === 'active' ? 'parser-stepper__step--active' : ''}`}>
+                  <span className="parser-stepper__num">{step.id}</span>
+                  <span>{step.label}</span>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`parser-stepper__connector ${index < 2 ? 'parser-stepper__connector--done' : ''}`} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            {steps.map((step) => (
+              <div key={step.id} className="review-structural-panel surface-panel-muted px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      {t('app.phaseStep')} {step.id}
+                    </div>
+                    <div className="mt-1.5 text-base font-semibold tracking-tight text-foreground">{step.label}</div>
+                  </div>
+                  <span className="editorial-chip px-2.5 py-1 text-[10px] text-muted-foreground">
+                    {step.status}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-5 text-foreground/72">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="review-structural-panel surface-panel-muted px-4 py-3.5">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+            <MiniMetric label={t('app.bridgeMode')} value={bridgeModeSummary} highlight />
+            <MiniMetric label={t('app.validationEvidence')} value={reviewReadinessLabel} highlight />
+            <MiniMetric label={t('app.reviewDecisionPanel')} value={reviewStatusLabel} highlight />
+            <MiniMetric label={t('app.handoffState')} value={handoffSummary} highlight={handoffSummary === t('app.handoffStateApprovedForExport')} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PanelFallback({ heightClassName = 'min-h-[200px]' }: { heightClassName?: string }) {
   const { t } = useTranslation();
 
@@ -2870,18 +3156,18 @@ function StatPill({ label, value, accent = 'default' }: { label: string; value: 
       : 'bg-muted text-foreground';
 
   return (
-    <div className={`rounded-[calc(var(--radius)*1.02)] px-4 py-3 ${accentClass}`}>
+    <div className={`rounded-[calc(var(--radius)*1.02)] px-3.5 py-2.5 ${accentClass}`}>
       <div className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">{label}</div>
-      <div className="mt-2 text-xl font-semibold tracking-tight">{value}</div>
+      <div className="mt-1.5 text-lg font-semibold tracking-tight">{value}</div>
     </div>
   );
 }
 
 function MiniMetric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-[calc(var(--radius)*1.02)] px-3 py-3 ${highlight ? 'bg-amber-500/12' : 'bg-muted'}`}>
+    <div className={`rounded-[calc(var(--radius)*1.02)] px-3 py-2.5 ${highlight ? 'bg-amber-500/12' : 'bg-muted'}`}>
       <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
-      <div className={`mt-2 text-sm font-medium leading-6 ${highlight ? 'text-amber-900' : 'text-foreground'}`}>{value}</div>
+      <div className={`mt-1.5 text-sm font-medium leading-5 ${highlight ? 'text-amber-900' : 'text-foreground'}`}>{value}</div>
     </div>
   );
 }
@@ -3365,20 +3651,36 @@ function ChecklistToggle({ label, checked, onToggle }: { label: string; checked:
   );
 }
 
-function FlowStepper({ phases, activePhase, onSelectPhase }: { phases: any[]; activePhase: string | null; onSelectPhase: (phaseId: string) => void }) {
+function FlowStepper({
+  phases,
+  activePhase,
+  onSelectPhase,
+  compact = false,
+}: {
+  phases: any[];
+  activePhase: string | null;
+  onSelectPhase: (phaseId: string) => void;
+  compact?: boolean;
+}) {
   const { t } = useTranslation();
 
   return (
-    <div className="glass-panel px-4 py-4 sm:px-5">
-      <div>
-        <p className="editorial-kicker">{t('app.flowSequence')}</p>
-        <p className="mt-2 text-sm text-muted-foreground">{t('app.phaseFlowHint')}</p>
-      </div>
-      <div className="custom-scrollbar mt-4 flex gap-3 overflow-x-auto pb-1">
+    <div className={`glass-panel ${compact ? 'px-0 py-0' : 'px-4 py-4 sm:px-5'}`}>
+      {!compact && (
+        <div>
+          <p className="editorial-kicker">{t('app.flowSequence')}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t('app.phaseFlowHint')}</p>
+        </div>
+      )}
+      <div className={`custom-scrollbar flex overflow-x-auto pb-1 ${compact ? 'gap-2' : 'mt-4 gap-3'}`}>
         {phases.map((phase: any, index: number) => {
           const isActive = phase.id === activePhase;
           return (
-            <button key={phase.id} onClick={() => onSelectPhase(phase.id)} className={`flow-step-card min-w-[190px] ${isActive ? 'flow-step-card--active' : ''}`}>
+            <button
+              key={phase.id}
+              onClick={() => onSelectPhase(phase.id)}
+              className={`flow-step-card ${compact ? 'min-w-[168px] px-3 py-3' : 'min-w-[190px]'} ${isActive ? 'flow-step-card--active' : ''}`}
+            >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                   {t('app.phaseStep')} {index + 1}
@@ -3387,8 +3689,8 @@ function FlowStepper({ phases, activePhase, onSelectPhase }: { phases: any[]; ac
                   {phase.id}
                 </span>
               </div>
-              <div className="mt-3 text-sm font-medium leading-5 text-foreground">{phase.name}</div>
-              <div className="mt-2 text-xs leading-5 text-muted-foreground">{phase.tasks.slice(0, 2).join(' · ')}</div>
+              <div className={`text-sm font-medium leading-5 text-foreground ${compact ? 'mt-2' : 'mt-3'}`}>{phase.name}</div>
+              <div className={`text-xs leading-5 text-muted-foreground ${compact ? 'mt-1.5' : 'mt-2'}`}>{phase.tasks.slice(0, 2).join(' · ')}</div>
             </button>
           );
         })}
@@ -3432,7 +3734,7 @@ function InsightBlock({
   };
 
   return (
-    <section id={id} className={`glass-panel relative overflow-hidden ${accentTone}`}>
+    <section id={id} className={`review-structural-panel glass-panel relative overflow-hidden ${accentTone}`}>
       <div className="relative p-5">
         <button onClick={handleToggle} className="w-full text-left">
           <p className="editorial-kicker">{kicker}</p>
