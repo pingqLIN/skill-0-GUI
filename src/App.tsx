@@ -1035,22 +1035,21 @@ npm run release:preview
             </div>
 
             <div className="flex items-center gap-2">
-              <div className={`hidden rounded-[calc(var(--radius)*1.05)] px-3 py-2 text-left sm:block ${
+              <div className={`hidden items-center gap-2 rounded-[calc(var(--radius)*1.05)] px-3 py-2 text-left sm:flex ${
                 bridgeStatus?.mode === 'skill-0'
                   ? 'bg-emerald-500/14 text-emerald-950'
                   : bridgeStatus?.mode === 'standalone'
                     ? 'bg-amber-500/14 text-amber-950'
                     : 'bg-muted text-muted-foreground'
-              }`}>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.bridgeMode')}</div>
-                <div className="mt-1 text-xs font-medium">{bridgeModeLabel}</div>
-                <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={bridgeModeDetail}>
-                  {bridgeModeDetail}
-                </div>
-                <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">{t('app.llmFallbackStatus')}</div>
-                <div className="mt-1 text-xs font-medium">{llmFallbackLabel}</div>
-                <div className="mt-1 max-w-[18rem] truncate text-[11px] opacity-80" title={llmFallbackDetail}>
-                  {llmFallbackDetail}
+              }`} title={`${bridgeModeLabel} · ${bridgeModeDetail}\n${llmFallbackLabel} · ${llmFallbackDetail}`}>
+                <span className={`status-led ${
+                  bridgeStatus?.mode === 'skill-0' ? 'status-led--canonical'
+                    : bridgeStatus?.mode === 'standalone' ? 'status-led--standalone'
+                    : 'status-led--unavailable'
+                }`} />
+                <div>
+                  <div className="text-xs font-semibold">{bridgeModeLabel}</div>
+                  <div className="text-[10px] opacity-70">{llmFallbackLabel}</div>
                 </div>
               </div>
               <a
@@ -1103,7 +1102,7 @@ npm run release:preview
         {!data ? (
           <div className="space-y-6">
             <section className="grid gap-6 2xl:grid-cols-[minmax(0,1.12fr)_minmax(30rem,0.88fr)]">
-              <div className="glass-panel-strong px-5 py-6 sm:px-7 sm:py-7">
+              <div className="glass-panel-strong hero-pattern px-5 py-6 sm:px-7 sm:py-7">
                 <div className="space-y-6">
                   <div className="flex flex-wrap gap-2">
                     {landingPaneTabs.map((tab) => (
@@ -1190,11 +1189,11 @@ npm run release:preview
                       <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {t('app.sampleScenariosLead')}
                       </p>
-                      <div className="custom-scrollbar flex gap-3 overflow-x-auto pb-2">
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {curatedScenarios.map((scenario) => (
                           <div
                             key={scenario.id}
-                            className="surface-raised flex min-w-[280px] max-w-[340px] shrink-0 flex-col p-4"
+                            className="scenario-card flex flex-col"
                           >
                             <div className="text-sm font-semibold text-foreground">{scenario.title}</div>
                             <p className="mt-2 flex-1 text-sm leading-6 text-foreground/72">{scenario.body}</p>
@@ -1265,7 +1264,7 @@ npm run release:preview
                 </div>
               </div>
 
-              <div className="surface-elevated px-5 py-5 sm:px-6 sm:py-6 2xl:sticky 2xl:top-28 2xl:self-start">
+              <div className="intake-section px-5 py-5 sm:px-6 sm:py-6 2xl:sticky 2xl:top-28 2xl:self-start">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="editorial-kicker">{t('app.inputStudio')}</p>

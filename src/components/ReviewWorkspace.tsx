@@ -1472,7 +1472,12 @@ export function ReviewWorkspace({
                         <AlertTriangle size={14} />
                         <span className="font-medium">{reviewReadinessLabel}</span>
                       </div>
-                      <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5">
+                      <span className="inline-flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5">
+                        <span className={`status-led ${
+                          activeBridgeMode === 'skill-0' ? 'status-led--canonical'
+                            : activeBridgeMode === 'standalone' ? 'status-led--standalone'
+                            : 'status-led--unavailable'
+                        }`} />
                         {t('app.bridgeMode')}: {bridgeModeSummary}
                       </span>
                       <span className="rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-1.5">
@@ -2127,7 +2132,7 @@ export function ReviewWorkspace({
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="review-bottom-drawer w-full max-w-[1980px] pointer-events-auto bg-card border-t border-border shadow-2xl rounded-t-3xl max-h-[78vh] flex flex-col"
+                className="review-bottom-drawer w-full max-w-[1980px] pointer-events-auto bg-card border-t border-border shadow-2xl rounded-t-3xl max-h-[55vh] flex flex-col"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3 border-b border-border/50">
                   <div className="flex flex-wrap items-center gap-4">
@@ -2334,7 +2339,7 @@ export function ReviewWorkspace({
                     </div>
                     <div className={`rounded-[calc(var(--radius)*1.02)] px-3 py-3 text-sm leading-6 ${
                       canExportArtifacts
-                        ? 'bg-emerald-500/12 text-emerald-950'
+                        ? 'bg-emerald-500/12 text-emerald-950 export-ready-glow'
                         : 'bg-amber-500/12 text-amber-950'
                     }`}>
                       <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">{t('app.exportReadiness')}</div>
@@ -3028,9 +3033,8 @@ export function ReviewWorkspace({
                         : 'bg-muted/60 hover:bg-muted text-foreground'
                     }`}
                   >
-                    <div className="text-xs font-semibold uppercase tracking-[0.1em]">{tab.id}</div>
-                    <div className="text-sm font-medium hidden sm:block">{tab.label}</div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${isActive ? 'bg-primary-foreground/20' : 'bg-background text-muted-foreground'}`}>
+                    <div className="text-sm font-semibold">{tab.label}</div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full hidden sm:inline ${isActive ? 'bg-primary-foreground/20' : 'bg-background text-muted-foreground'}`}>
                       {tab.meta}
                     </span>
                   </button>
@@ -3163,11 +3167,24 @@ function StatPill({ label, value, accent = 'default' }: { label: string; value: 
   );
 }
 
-function MiniMetric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+function MiniMetric({ label, value, highlight = false, variant }: { label: string; value: string; highlight?: boolean; variant?: 'default' | 'success' | 'warning' | 'danger' }) {
+  const effectiveVariant = variant || (highlight ? 'warning' : 'default');
+  const variantClasses = {
+    default: 'bg-muted',
+    success: 'bg-emerald-500/10 border-l-4 border-emerald-500',
+    warning: 'bg-amber-500/10 border-l-4 border-amber-500',
+    danger: 'bg-destructive/10 border-l-4 border-destructive',
+  };
+  const valueClasses = {
+    default: 'text-foreground',
+    success: 'text-emerald-900',
+    warning: 'text-amber-900',
+    danger: 'text-destructive',
+  };
   return (
-    <div className={`rounded-[calc(var(--radius)*1.02)] px-3 py-2.5 ${highlight ? 'bg-amber-500/12' : 'bg-muted'}`}>
+    <div className={`rounded-[calc(var(--radius)*1.02)] px-3 py-2.5 ${variantClasses[effectiveVariant]}`}>
       <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
-      <div className={`mt-1.5 text-sm font-medium leading-5 ${highlight ? 'text-amber-900' : 'text-foreground'}`}>{value}</div>
+      <div className={`mt-1.5 text-base font-semibold leading-5 tracking-tight ${valueClasses[effectiveVariant]}`}>{value}</div>
     </div>
   );
 }
@@ -3720,47 +3737,18 @@ function InsightBlock({
   isOpen?: boolean;
   onToggle?: () => void;
 }) {
-  const [internalOpen, setInternalOpen] = useState(defaultOpen);
-  const isControlled = typeof controlledOpen === 'boolean';
-  const isOpen = isControlled ? controlledOpen : internalOpen;
-  const accentTone = accent === 'emerald' ? 'bg-emerald-500/10' : accent === 'rose' ? 'bg-rose-500/10' : 'bg-card';
-
-  const handleToggle = () => {
-    if (isControlled) {
-      onToggle?.();
-      return;
-    }
-    setInternalOpen((current) => !current);
-  };
+  const accentClass = accent === 'emerald' ? 'drawer-section--emerald' : accent === 'rose' ? 'drawer-section--rose' : '';
 
   return (
-    <section id={id} className={`review-structural-panel glass-panel relative overflow-hidden ${accentTone}`}>
-      <div className="relative p-5">
-        <button onClick={handleToggle} className="w-full text-left">
-          <p className="editorial-kicker">{kicker}</p>
-          <div className="mt-2 flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold tracking-tight text-foreground">{title}</h3>
-              {summary && <p className="mt-1 text-sm text-muted-foreground">{summary}</p>}
-            </div>
-            {isOpen ? <ChevronUp size={16} className="mt-1 text-muted-foreground" /> : <ChevronDown size={16} className="mt-1 text-muted-foreground" />}
-          </div>
-        </button>
-
-        <AnimatePresence initial={false}>
-          {isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-4">{children}</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <section id={id} className={`drawer-section ${accentClass}`}>
+      <p className="editorial-kicker">{kicker}</p>
+      <div className="mt-2 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">{title}</h3>
+          {summary && <p className="mt-1 text-sm text-muted-foreground">{summary}</p>}
+        </div>
       </div>
+      <div className="mt-4">{children}</div>
     </section>
   );
 }
