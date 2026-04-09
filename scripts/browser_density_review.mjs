@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { resolveBrowserReviewUrl } from './browser_review_url.mjs';
 
-const baseUrl = process.env.BROWSER_REVIEW_URL || 'http://127.0.0.1:3006/';
 const roundLabel = process.env.BROWSER_REVIEW_ROUND || 'round-1';
 const outputDir = path.resolve('output/playwright', roundLabel);
 const reportPath = path.resolve('output/review-notes', `${roundLabel}.json`);
@@ -289,6 +289,7 @@ async function dumpButtonTexts(page, slug) {
 
 async function run() {
   await ensureOutput();
+  const baseUrl = await resolveBrowserReviewUrl();
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1200 },

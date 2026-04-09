@@ -1,11 +1,13 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { chromium } from 'playwright';
+import { resolveBrowserReviewUrl } from './browser_review_url.mjs';
 
-const baseUrl = process.env.BROWSER_REVIEW_URL || 'http://127.0.0.1:3006/';
 const roundLabel = process.env.BROWSER_EDITOR_REVIEW_ROUND || 'editor-round-1';
 const outputDir = path.resolve('output/playwright', roundLabel);
 const reportPath = path.resolve('output/review-notes', `${roundLabel}.json`);
+const WORKSPACE_DRAFT_STORAGE_KEY = 'skill-0-review-studio.workspace-draft.v1';
+const REVIEW_DRAFT_STORAGE_KEY = 'skill-0-review-studio.review-draft.v1:editor-verification-demo';
 const workspaceData = {
   projectId: 'editor-verification-demo',
   projectName: 'Editor Verification Workspace',
@@ -289,12 +291,20 @@ async function openDiffComparison(page) {
   await page.locator('h3').filter({ hasText: /Diff summary/i }).first().waitFor();
 }
 
+async function openAnalysisSubview(page) {
+  const analysisButton = page.getByTestId('pipeline-subview-analysis');
+  await analysisButton.waitFor({ state: 'visible' });
+  await analysisButton.click();
+  await page.getByTestId('pipeline-section-content-analysis').waitFor({ state: 'visible' });
+}
+
 function workspaceTitle(page, value) {
   return page.locator('h2.display-serif').filter({ hasText: value }).first();
 }
 
 async function run() {
   await ensureOutput();
+  const baseUrl = await resolveBrowserReviewUrl();
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1200 } });
@@ -307,6 +317,10 @@ async function run() {
       console.error('[editor-review][console-error]', message.text());
     }
   });
+  await page.addInitScript(([workspaceDraftStorageKey, reviewDraftStorageKey, workspaceDraftState, reviewDraftState]) => {
+    window.localStorage.setItem(workspaceDraftStorageKey, JSON.stringify(workspaceDraftState));
+    window.localStorage.setItem(reviewDraftStorageKey, JSON.stringify(reviewDraftState));
+  }, [WORKSPACE_DRAFT_STORAGE_KEY, REVIEW_DRAFT_STORAGE_KEY, workspaceDraft, reviewDraft]);
 
   const report = {
     round: roundLabel,
@@ -318,16 +332,12 @@ async function run() {
   try {
     logStep('open workspace');
     await page.goto(baseUrl, { waitUntil: 'networkidle' });
-    await page.evaluate(({ workspaceDraftState, reviewDraftState }) => {
-      window.localStorage.setItem('skill-0-review-studio.workspace-draft.v1', JSON.stringify(workspaceDraftState));
-      window.localStorage.setItem('skill-0-review-studio.review-draft.v1:editor-verification-demo', JSON.stringify(reviewDraftState));
-    }, { workspaceDraftState: workspaceDraft, reviewDraftState: reviewDraft });
-    await page.reload({ waitUntil: 'networkidle' });
+    await openAnalysisSubview(page);
 
     await workspaceTitle(page, 'Editor Verification Workspace').waitFor();
     report.captures.initial = await capture(page, 'editor-workspace-initial');
 
-    const summaryBefore = await page.getByRole('button', { name: /Executive Summary/i }).textContent();
+    const reviewDecisionPanelBefore = await page.getByTestId('review-decision-panel').textContent();
 
     logStep('run global edit');
     await workspaceTitle(page, 'Editor Verification Workspace').click();
@@ -336,7 +346,7 @@ async function run() {
     await page.getByTestId('side-editor-save').click();
     await workspaceTitle(page, 'Editor Verification Workspace Renamed').waitFor();
 
-    const summaryAfter = await page.getByRole('button', { name: /Executive Summary/i }).textContent();
+    const reviewDecisionPanelAfter = await page.getByTestId('review-decision-panel').textContent();
     report.captures.globalSaved = await capture(page, 'editor-global-saved');
     report.assertions.push({
       step: 'global-edit-ui',
@@ -344,9 +354,9 @@ async function run() {
       detail: 'Global editor updated the project title in the main workspace shell.',
     });
     report.assertions.push({
-      step: 'global-edit-deterministic-summary',
-      passed: summaryBefore === summaryAfter,
-      detail: 'Executive summary compact metrics remained stable after a global edit.',
+      step: 'global-edit-deterministic-panel',
+      passed: reviewDecisionPanelBefore === reviewDecisionPanelAfter,
+      detail: 'Review decision panel signals remained stable after a global edit.',
     });
 
     await openDiffComparison(page);
