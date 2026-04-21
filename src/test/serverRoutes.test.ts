@@ -4,6 +4,7 @@ import type { Server } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import { createLLMRuntimeConfigStore } from '../../bridge/llmRuntimeConfigStore.mjs';
 import { createServerApp } from '../../server.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -227,7 +228,7 @@ describe('server runtime routes', () => {
       getPublicSettings: () => ({
         options: {
           modeValues: ['disabled', 'fallback', 'force'],
-          providerValues: ['openai', 'gemini', 'anthropic'],
+          providerValues: ['openai'],
         },
         settings: {
           apiKeyConfigured: false,
@@ -262,7 +263,7 @@ describe('server runtime routes', () => {
         return {
           options: {
             modeValues: ['disabled', 'fallback', 'force'],
-            providerValues: ['openai', 'gemini', 'anthropic'],
+            providerValues: ['openai'],
           },
           settings: {
             apiKeyConfigured: Boolean(input.apiKey),
@@ -332,6 +333,51 @@ describe('server runtime routes', () => {
       llmFallbackAvailable: true,
       llmModel: 'gpt-4.1-mini',
       llmProvider: 'openai',
+    });
+  });
+
+  it('rejects providers that are known but not implemented in this build', async () => {
+    const llmAdmin = createLLMRuntimeConfigStore({ mutable: true });
+    const runtime = await startTestServer('standalone', {
+      getBridgeStatus: async () => ({
+        llmFallbackAvailable: false,
+        llmModel: null,
+        llmProvider: null,
+        llmReason: 'LLM fallback mode is disabled.',
+        llmSupportsJsonSchema: false,
+        llmSupportsReasoning: false,
+        mode: 'standalone',
+        skill0Root: null,
+      }),
+      getExampleSkill: async () => ({
+        mode: 'standalone',
+        name: 'standalone-sample',
+        skill0Root: null,
+        source: 'standalone/example-skill.md',
+        text: '# Example',
+      }),
+      parseSkill: async () => ({ bridge: { mode: 'standalone' } }),
+    } as never, llmAdmin as never);
+    activeServer = runtime.server;
+
+    const updateResponse = await fetch(`${runtime.url}/api/llm-settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: 'sk-runtime-test',
+        maxInputChars: 16000,
+        mode: 'fallback',
+        model: 'gemini-2.5-pro',
+        provider: 'gemini',
+        timeoutMs: 18000,
+      }),
+    });
+    const updatePayload = await updateResponse.json();
+
+    expect(updateResponse.status).toBe(400);
+    expect(updatePayload).toEqual({
+      detail: 'Only openai is implemented in this build.',
+      error: 'llm_settings_provider_not_implemented',
     });
   });
 });

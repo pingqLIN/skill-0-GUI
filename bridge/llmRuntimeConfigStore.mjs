@@ -2,6 +2,7 @@ const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_MAX_INPUT_CHARS = 12000;
 const SUPPORTED_PROVIDERS = ['openai', 'gemini', 'anthropic'];
+const IMPLEMENTED_RUNTIME_PROVIDERS = ['openai'];
 const SUPPORTED_MODES = ['disabled', 'fallback', 'force'];
 
 function clamp(value, min, max) {
@@ -12,9 +13,29 @@ function trimString(value, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
+function normalizeApiKey(value) {
+  const trimmed = trimString(value);
+  if (!trimmed) {
+    return '';
+  }
+
+  return trimmed
+    .replace(/^authorization:\s*/i, '')
+    .replace(/^bearer\s+/i, '')
+    .trim();
+}
+
+function hasSuspiciousApiKeyWhitespace(value) {
+  return /\s/.test(value);
+}
+
 function normalizeProvider(value) {
   const candidate = trimString(value).toLowerCase();
   return SUPPORTED_PROVIDERS.includes(candidate) ? candidate : null;
+}
+
+function isImplementedRuntimeProvider(value) {
+  return typeof value === 'string' && IMPLEMENTED_RUNTIME_PROVIDERS.includes(value);
 }
 
 function normalizeMode(value) {
@@ -65,7 +86,7 @@ export function createLLMRuntimeConfigStore({
 } = {}) {
   const initialProvider = normalizeProvider(process.env.SKILL0_LLM_PROVIDER || '');
   const initialMode = normalizeMode(process.env.SKILL0_LLM_MODE || 'disabled');
-  const envApiKey = trimString(process.env.SKILL0_LLM_API_KEY || process.env.OPENAI_API_KEY || '');
+  const envApiKey = normalizeApiKey(process.env.SKILL0_LLM_API_KEY || process.env.OPENAI_API_KEY || '');
   const state = {
     apiKey: envApiKey,
     apiKeySource: envApiKey ? 'env' : 'none',
@@ -93,7 +114,7 @@ export function createLLMRuntimeConfigStore({
     return {
       options: {
         modeValues: SUPPORTED_MODES,
-        providerValues: SUPPORTED_PROVIDERS,
+        providerValues: IMPLEMENTED_RUNTIME_PROVIDERS,
       },
       settings: {
         apiKeyConfigured: Boolean(state.apiKey),
@@ -135,6 +156,15 @@ export function createLLMRuntimeConfigStore({
           },
         );
       }
+      if (!isImplementedRuntimeProvider(provider)) {
+        throw createSettingsError(
+          `${provider} is not implemented in this build.`,
+          {
+            code: 'llm_settings_provider_not_implemented',
+            detail: 'Only openai is implemented in this build.',
+          },
+        );
+      }
       state.provider = provider;
       if (!trimString(state.model) && provider === 'openai') {
         state.model = DEFAULT_OPENAI_MODEL;
@@ -160,7 +190,17 @@ export function createLLMRuntimeConfigStore({
       state.apiKey = '';
       state.apiKeySource = 'none';
     } else if ('apiKey' in input) {
-      state.apiKey = trimString(input.apiKey);
+      const normalizedApiKey = normalizeApiKey(input.apiKey);
+      if (normalizedApiKey && hasSuspiciousApiKeyWhitespace(normalizedApiKey)) {
+        throw createSettingsError(
+          'Enter the raw OpenAI API key only.',
+          {
+            code: 'llm_settings_invalid_api_key_format',
+            detail: 'Paste only the API key value. Do not include Authorization:, Bearer, or whitespace-separated text.',
+          },
+        );
+      }
+      state.apiKey = normalizedApiKey;
       state.apiKeySource = state.apiKey ? 'runtime' : 'none';
     }
 

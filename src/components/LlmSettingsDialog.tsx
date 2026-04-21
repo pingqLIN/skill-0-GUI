@@ -27,13 +27,17 @@ type FormState = {
 };
 
 function buildFormState(payload: LlmSettingsResponse): FormState {
+  const preferredProvider = payload.settings.provider && payload.options.providerValues.includes(payload.settings.provider)
+    ? payload.settings.provider
+    : payload.options.providerValues[0] || 'openai';
+
   return {
     apiKey: '',
     clearApiKey: false,
     maxInputChars: payload.settings.maxInputChars,
     mode: payload.settings.mode,
     model: payload.settings.model,
-    provider: payload.settings.provider || 'openai',
+    provider: preferredProvider,
     timeoutMs: payload.settings.timeoutMs,
   };
 }

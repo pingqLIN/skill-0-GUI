@@ -269,6 +269,79 @@ function createLLMParserError(message, {
   return error;
 }
 
+function isStructuredLLMParserError(error) {
+  return Boolean(
+    error
+      && typeof error === 'object'
+      && typeof error.code === 'string'
+      && Number.isInteger(error.statusCode),
+  );
+}
+
+function getProviderEndpointLabel(provider) {
+  if (provider === 'openai') {
+    return 'OpenAI Responses API';
+  }
+
+  return `${provider || 'LLM'} provider endpoint`;
+}
+
+function buildProviderNetworkErrorDetail(provider, error) {
+  const messages = [];
+
+  if (error instanceof Error) {
+    const errorMessage = trimString(error.message);
+    if (errorMessage && errorMessage.toLowerCase() !== 'fetch failed') {
+      messages.push(errorMessage);
+    }
+
+    const cause = error.cause;
+    if (cause instanceof Error) {
+      const causeMessage = trimString(cause.message);
+      if (causeMessage) {
+        messages.push(causeMessage);
+      }
+    } else if (cause != null) {
+      const causeMessage = trimString(String(cause));
+      if (causeMessage) {
+        messages.push(causeMessage);
+      }
+    }
+  } else if (error != null) {
+    const errorMessage = trimString(String(error));
+    if (errorMessage) {
+      messages.push(errorMessage);
+    }
+  }
+
+  const detailSuffix = [...new Set(messages)].join(' ');
+  const baseDetail = detailSuffix
+    ? `Unable to reach the ${getProviderEndpointLabel(provider)}. ${detailSuffix}`
+    : `Unable to reach the ${getProviderEndpointLabel(provider)}.`;
+
+  if (/self-signed certificate in certificate chain|unable to verify the first certificate/i.test(detailSuffix)) {
+    return `${baseDetail} Node could not verify the outbound TLS certificate chain. Configure NODE_EXTRA_CA_CERTS with the required root or proxy CA certificate.`;
+  }
+
+  return baseDetail;
+}
+
+function buildProviderRequestFailureDetail(provider, status, providerMessage) {
+  const baseDetail = trimString(providerMessage) || `${getProviderEndpointLabel(provider)} returned ${status}.`;
+
+  if (provider === 'openai' && status === 401) {
+    if (/missing bearer authentication/i.test(baseDetail)) {
+      return 'OpenAI rejected the configured API key. Save the raw API key only, without Authorization: or Bearer text.';
+    }
+
+    if (/invalid api key|incorrect api key/i.test(baseDetail)) {
+      return 'OpenAI rejected the configured API key. Re-save a valid API key for this environment.';
+    }
+  }
+
+  return baseDetail;
+}
+
 function buildCapabilities({
   enabled,
   mode,
@@ -640,7 +713,7 @@ async function parseUnknownSkillWithOpenAI({
         `LLM fallback provider request failed: ${providerMessage}`,
         {
           code: response.status === 429 ? 'llm_provider_rate_limited' : 'llm_provider_request_failed',
-          detail: providerMessage,
+          detail: buildProviderRequestFailureDetail(provider, response.status, providerMessage),
           provider,
           statusCode: response.status === 429 ? 503 : response.status,
         },
@@ -687,7 +760,19 @@ async function parseUnknownSkillWithOpenAI({
       );
     }
 
-    throw error;
+    if (isStructuredLLMParserError(error)) {
+      throw error;
+    }
+
+    throw createLLMParserError(
+      'LLM fallback provider network request failed.',
+      {
+        code: 'llm_provider_network_error',
+        detail: buildProviderNetworkErrorDetail(provider, error),
+        provider,
+        statusCode: 503,
+      },
+    );
   } finally {
     clearTimeout(timeoutHandle);
   }
