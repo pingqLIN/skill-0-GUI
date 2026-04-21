@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { createLLMParserAdapter } from './bridge/llmParserAdapter.mjs';
 import { createLLMRuntimeConfigStore } from './bridge/llmRuntimeConfigStore.mjs';
+import { resolveParserRequestTimeoutMs } from './bridge/requestTimeout.mjs';
 import { createSkill0Bridge } from './bridge/skill0Bridge.mjs';
 import { resolveSkillUrlImport, serializeSkillUrlError } from './bridge/skillUrlResolver.mjs';
 
@@ -136,10 +137,15 @@ export function createServerApp({
         return;
       }
 
+      const parseRequestTimeoutMs = resolveParserRequestTimeoutMs({
+        baseTimeoutMs: REQUEST_TIMEOUT_MS,
+        runtimeConfig: llmAdmin.getRuntimeConfig(),
+      });
+
       res.json(await withRequestTimeout(() => bridge.parseSkill(text, skillName, {
         contextFiles,
         primaryPath,
-      })));
+      }), parseRequestTimeoutMs));
     } catch (error) {
       const payload = serializeBridgeError(error);
       res.status(payload.statusCode).json({

@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
 import { createLLMParserAdapter } from './bridge/llmParserAdapter.mjs';
 import { createLLMRuntimeConfigStore } from './bridge/llmRuntimeConfigStore.mjs';
+import { resolveParserRequestTimeoutMs } from './bridge/requestTimeout.mjs';
 import { createSkill0Bridge, readJsonBody } from './bridge/skill0Bridge.mjs';
 import { resolveSkillUrlImport, serializeSkillUrlError } from './bridge/skillUrlResolver.mjs';
 
@@ -27,6 +28,7 @@ const VECTOR_SPACE_3D_PACKAGES = [
   'ngraph.random',
 ];
 const REQUEST_TIMEOUT_MS = Number.parseInt(process.env.SKILL0_REQUEST_TIMEOUT_MS || '20000', 10);
+const DEFAULT_VITE_PORT = 5173;
 
 function createTimeoutError(timeoutMs: number) {
   const error = new Error(`Parser request exceeded ${timeoutMs}ms.`);
@@ -64,9 +66,15 @@ function isNodeModulePackage(id: string, packageName: string) {
   return id.includes(`/node_modules/${packageName}/`);
 }
 
+function resolvePort(rawPort: string | undefined, fallback = DEFAULT_VITE_PORT) {
+  const parsed = Number.parseInt(rawPort || '', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const enable3D = env.VITE_ENABLE_3D !== 'false';
+  const vitePort = resolvePort(env.VITE_PORT);
   const llmAdmin = createLLMRuntimeConfigStore({
     mutable: env.SKILL0_RUNTIME_CONFIG_MUTABLE,
   });
@@ -180,12 +188,17 @@ export default defineConfig(({ mode }) => {
                 return;
               }
 
+              const parseRequestTimeoutMs = resolveParserRequestTimeoutMs({
+                baseTimeoutMs: REQUEST_TIMEOUT_MS,
+                runtimeConfig: llmAdmin.getRuntimeConfig(),
+              });
+
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify(await withRequestTimeout(() => bridge.parseSkill(text, skillName, {
                 contextFiles,
                 primaryPath,
-              }))));
+              }), parseRequestTimeoutMs)));
             } catch (error) {
               const payload = serializeBridgeError(error);
               res.statusCode = payload.statusCode;
@@ -256,7 +269,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: '0.0.0.0',
+      port: vitePort,
       hmr: process.env.DISABLE_HMR !== 'true',
+    },
+    preview: {
+      host: '0.0.0.0',
+      port: vitePort,
     },
     test: {
       pool: 'forks',
