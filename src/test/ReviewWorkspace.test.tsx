@@ -318,6 +318,25 @@ describe('ReviewWorkspace', () => {
     expect(screen.getByText('SCHEMA_PATH_ID')).toBeInTheDocument();
   });
 
+  it('renders safely when a restored draft lacks a full SkillDocument payload', async () => {
+    const restoredDraftData = {
+      projectId: 'restored-skill',
+      projectName: 'Restored Skill',
+      phases: [],
+      riskAssessment: { level: 'SAFE', details: '' },
+      threeClassification: { category: 'demo', granularity: 'task', operability: 90 },
+      parserResult: {
+        decomposition: { actions: [], rules: [], directives: [] },
+      },
+      globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
+    };
+
+    render(<ReviewWorkspace data={restoredDraftData} {...createProps()} />);
+
+    expect(await screen.findByTestId('pipeline-section-content-summary')).toBeInTheDocument();
+    expect(screen.getByText('app.title')).toBeInTheDocument();
+  });
+
   it('opens the structured editor at the validation issue field path', async () => {
     const malformedData = {
       ...sampleData,

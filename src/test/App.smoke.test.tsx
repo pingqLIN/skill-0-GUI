@@ -67,7 +67,7 @@ vi.mock('../services/llmSettingsService', () => ({
     },
     options: {
       modeValues: ['disabled', 'fallback', 'force'],
-      providerValues: ['openai', 'gemini', 'anthropic'],
+      providerValues: ['openai'],
     },
     settings: {
       apiKeyConfigured: false,
@@ -94,7 +94,7 @@ vi.mock('../services/llmSettingsService', () => ({
     },
     options: {
       modeValues: ['disabled', 'fallback', 'force'],
-      providerValues: ['openai', 'gemini', 'anthropic'],
+      providerValues: ['openai'],
     },
     settings: {
       apiKeyConfigured: true,
@@ -441,7 +441,7 @@ describe('App smoke test', () => {
     });
   });
 
-  it('restores the last workspace draft from localStorage on load', async () => {
+  it('offers the last workspace draft for manual restore instead of auto-opening it', async () => {
     window.localStorage.setItem(WORKSPACE_DRAFT_STORAGE_KEY, JSON.stringify({
       data: {
         projectId: 'restored-skill',
@@ -474,11 +474,17 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
+    expect(screen.queryByTestId('review-workspace')).not.toBeInTheDocument();
+    expect(analyzeSkillText).not.toHaveBeenCalled();
+    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('app.localDraft');
+    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('app.localDraftAvailable');
+    expect(screen.getByText('app.restoreDraft')).toBeInTheDocument();
+    expect(screen.getByText('app.discardDraft')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('app.restoreDraft'));
+
     await waitFor(() => {
       expect(screen.getByTestId('review-workspace')).toBeInTheDocument();
     });
-    expect(analyzeSkillText).not.toHaveBeenCalled();
-    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('app.localDraft');
-    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('app.localDraftRestored');
   });
 });

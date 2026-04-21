@@ -175,12 +175,38 @@ export default function App() {
   const [selectedContextPath, setSelectedContextPath] = useState<string | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
   const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
+  const [availableWorkspaceDraft, setAvailableWorkspaceDraft] = useState<WorkspaceDraftSnapshot | null>(null);
   const [workspaceDraftSavedAt, setWorkspaceDraftSavedAt] = useState<string | null>(null);
   const [workspaceDraftRestored, setWorkspaceDraftRestored] = useState(false);
   const [activeDemoPreset, setActiveDemoPreset] = useState<DemoReviewPreset | null>(null);
   const [isLlmSettingsOpen, setIsLlmSettingsOpen] = useState(false);
   const hasHydratedWorkspaceDraftRef = useRef(false);
   const skipNextWorkspaceDraftPersistRef = useRef(false);
+
+  const applyWorkspaceDraftSnapshot = useCallback((snapshot: WorkspaceDraftSnapshot, options: { restored?: boolean } = {}) => {
+    const { restored = true } = options;
+    setData(snapshot.data);
+    setOriginalData(snapshot.originalData);
+    setModifiedPaths(new Set(snapshot.modifiedPaths));
+    setInputText(snapshot.inputText);
+    setSkillUrlInput(snapshot.skillUrlInput);
+    setPendingUploadFiles(snapshot.pendingUploadFiles);
+    setPendingPrimaryPath(snapshot.pendingPrimaryPath);
+    setSupportFiles(snapshot.supportFiles);
+    setSelectedContextPath(snapshot.selectedContextPath);
+    setWorkspaceDraftSavedAt(snapshot.updatedAt);
+    setWorkspaceDraftRestored(restored);
+    setActiveDemoPreset(null);
+    setAvailableWorkspaceDraft(snapshot);
+    skipNextWorkspaceDraftPersistRef.current = true;
+  }, []);
+
+  const discardWorkspaceDraft = useCallback(() => {
+    clearWorkspaceDraft();
+    setAvailableWorkspaceDraft(null);
+    setWorkspaceDraftSavedAt(null);
+    setWorkspaceDraftRestored(false);
+  }, []);
 
   useEffect(() => {
     const preventWindowDrop = (event: DragEvent) => {
@@ -233,18 +259,9 @@ export default function App() {
   useEffect(() => {
     const snapshot = readWorkspaceDraft();
     if (snapshot) {
-      setData(snapshot.data);
-      setOriginalData(snapshot.originalData);
-      setModifiedPaths(new Set(snapshot.modifiedPaths));
-      setInputText(snapshot.inputText);
-      setSkillUrlInput(snapshot.skillUrlInput);
-      setPendingUploadFiles(snapshot.pendingUploadFiles);
-      setPendingPrimaryPath(snapshot.pendingPrimaryPath);
-      setSupportFiles(snapshot.supportFiles);
-      setSelectedContextPath(snapshot.selectedContextPath);
+      setAvailableWorkspaceDraft(snapshot);
       setWorkspaceDraftSavedAt(snapshot.updatedAt);
-      setWorkspaceDraftRestored(true);
-      setActiveDemoPreset(null);
+      setWorkspaceDraftRestored(false);
       skipNextWorkspaceDraftPersistRef.current = true;
     }
 
@@ -271,7 +288,12 @@ export default function App() {
     );
 
     if (!hasDraftState) {
+      if (availableWorkspaceDraft) {
+        return;
+      }
+
       clearWorkspaceDraft();
+      setAvailableWorkspaceDraft(null);
       setWorkspaceDraftSavedAt(null);
       setWorkspaceDraftRestored(false);
       return;
@@ -297,13 +319,15 @@ export default function App() {
     }
 
     const updatedAt = new Date().toISOString();
-    writeWorkspaceDraft({
+    const savedSnapshot = {
       ...nextSnapshot,
       updatedAt,
-    });
+    };
+    writeWorkspaceDraft(savedSnapshot);
+    setAvailableWorkspaceDraft(savedSnapshot);
     setWorkspaceDraftSavedAt(updatedAt);
     setWorkspaceDraftRestored(false);
-  }, [data, originalData, modifiedPaths, inputText, skillUrlInput, pendingUploadFiles, pendingPrimaryPath, supportFiles, selectedContextPath]);
+  }, [availableWorkspaceDraft, data, originalData, modifiedPaths, inputText, skillUrlInput, pendingUploadFiles, pendingPrimaryPath, supportFiles, selectedContextPath]);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
@@ -711,6 +735,7 @@ export default function App() {
 
   const handleResetWorkspace = () => {
     clearWorkspaceDraft();
+    setAvailableWorkspaceDraft(null);
     setData(null);
     setOriginalData(null);
     setModifiedPaths(new Set());
@@ -1093,10 +1118,30 @@ npm run release:preview
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.localDraft')}</div>
               <div className="mt-1 font-medium">
-                {workspaceDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAutosaved')}
+                {workspaceDraftRestored ? t('app.localDraftRestored') : t('app.localDraftAvailable')}
               </div>
             </div>
-            <div className="text-xs font-mono text-muted-foreground">{formatDraftTimestamp(workspaceDraftSavedAt)}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-xs font-mono text-muted-foreground">{formatDraftTimestamp(workspaceDraftSavedAt)}</div>
+              {availableWorkspaceDraft && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => applyWorkspaceDraftSnapshot(availableWorkspaceDraft)}
+                    className="editorial-button-secondary px-3 py-2 text-sm font-medium"
+                  >
+                    {t('app.restoreDraft')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={discardWorkspaceDraft}
+                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                  >
+                    {t('app.discardDraft')}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
         {!data ? (

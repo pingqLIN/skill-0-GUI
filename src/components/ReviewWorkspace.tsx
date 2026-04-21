@@ -384,6 +384,10 @@ export function ReviewWorkspace({
   const consistencyIssues = consistencyResult?.issues ?? [];
   const consistencyErrors = consistencyIssues.filter((issue) => issue.severity === 'error');
   const consistencyWarnings = consistencyIssues.filter((issue) => issue.severity === 'warning');
+  const skillDocumentActions = skillDocument?.decomposition.actions ?? [];
+  const skillDocumentRules = skillDocument?.decomposition.rules ?? [];
+  const skillDocumentDirectives = skillDocument?.decomposition.directives ?? [];
+  const skillDocumentExecutionPaths = skillDocument?.execution_paths ?? [];
   const insightTabs = [
     { id: 'review' as const, label: t('app.reviewDecisionPanel'), meta: `${decisionLog.length} ${t('app.decisionCount')}` },
     { id: 'checks' as const, label: t('app.detailsPanel'), meta: `${validationErrors.length + consistencyErrors.length} ${t('app.validationErrors')}` },
@@ -399,15 +403,15 @@ export function ReviewWorkspace({
   const hasDraftStatus = Boolean(workspaceDraftSavedAt || reviewDraftSavedAt);
   const noteTargets = [
     { label: t('app.noteTargetGlobal'), value: 'global' },
-    ...skillDocument.decomposition.actions.map((action) => ({
+    ...skillDocumentActions.map((action) => ({
       label: `${t('app.noteTargetAction')} · ${action.id} · ${action.name}`,
       value: `action:${action.id}`,
     })),
-    ...skillDocument.decomposition.rules.map((rule) => ({
+    ...skillDocumentRules.map((rule) => ({
       label: `${t('app.noteTargetRule')} · ${rule.id} · ${rule.name}`,
       value: `rule:${rule.id}`,
     })),
-    ...skillDocument.decomposition.directives.map((directive) => ({
+    ...skillDocumentDirectives.map((directive) => ({
       label: `${t('app.noteTargetDirective')} · ${directive.id} · ${directive.name}`,
       value: `directive:${directive.id}`,
     })),
@@ -1292,10 +1296,10 @@ export function ReviewWorkspace({
       '',
       '## SkillDocument Snapshot',
       '',
-      `- actions: ${skillDocument.decomposition.actions.length}`,
-      `- rules: ${skillDocument.decomposition.rules.length}`,
-      `- directives: ${skillDocument.decomposition.directives.length}`,
-      `- execution_paths: ${(skillDocument.execution_paths ?? []).length}`,
+      `- actions: ${skillDocumentActions.length}`,
+      `- rules: ${skillDocumentRules.length}`,
+      `- directives: ${skillDocumentDirectives.length}`,
+      `- execution_paths: ${skillDocumentExecutionPaths.length}`,
       '',
     ];
 
