@@ -12,7 +12,7 @@ import {
   RefreshCw,
   SlidersHorizontal,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Flowchart } from './Flowchart';
 import type { BridgeStatus } from '../services/bridgeStatusService';
@@ -182,6 +182,7 @@ export function ReviewWorkspace({
   onResetWorkspace,
 }: ReviewWorkspaceProps) {
   const { t } = useTranslation();
+  const prefersReducedMotion = useReducedMotion();
   const initialBridgeMode = data?.bridge?.mode === 'skill-0' || data?.bridge?.mode === 'standalone' || data?.bridge?.mode === 'llm-assisted'
     ? data.bridge.mode
     : bridgeStatus?.mode ?? 'unknown';
@@ -430,6 +431,25 @@ export function ReviewWorkspace({
     hasBlockingChecks,
     reviewStatus,
   });
+  const topDeckTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.15, ease: [0.22, 1, 0.36, 1] };
+  const surfaceTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.20, ease: [0.22, 1, 0.36, 1] };
+  const shellTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.28, ease: [0.22, 1, 0.36, 1] };
+  const drawerTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { type: 'spring', damping: 30, stiffness: 260, mass: 0.85 };
+  const drawerSubviewKey = activeBottomTab === 'review'
+    ? `review-${activeReviewSub}`
+    : activeBottomTab === 'checks'
+      ? `checks-${activeChecksSub}`
+      : activeBottomTab === 'context'
+        ? `context-${activeContextSub}`
+        : 'closed';
 
   useEffect(() => {
     if (!reviewDraftStorageKey || typeof window === 'undefined') {
@@ -1442,7 +1462,12 @@ export function ReviewWorkspace({
           </div>
         </motion.div>
       )}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative flex h-screen flex-col overflow-x-hidden">
+      <motion.div
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={shellTransition}
+        className="relative flex h-screen flex-col overflow-x-hidden"
+      >
         <header className="sticky top-0 z-20 shrink-0">
           <div className="review-top-dock px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-4">
@@ -1497,8 +1522,8 @@ export function ReviewWorkspace({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-                  <span className="hidden rounded-[calc(var(--radius)*1.02)] bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground xl:inline-flex">
+                <div className="flex flex-wrap items-stretch gap-2 xl:justify-end">
+                  <span className="landing-toolbar-control hidden rounded-[calc(var(--radius)*1.02)] bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground xl:inline-flex">
                     {t('app.toolbarFixedTools')}
                   </span>
                   <button
@@ -1506,7 +1531,7 @@ export function ReviewWorkspace({
                     onClick={handleTopToolbarToggle}
                     aria-expanded={isTopToolbarExpanded}
                     aria-controls="top-toolbar-context-deck"
-                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                    className="landing-toolbar-control editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
                     title={isTopToolbarExpanded ? t('app.toolbarCollapse') : t('app.toolbarExpand')}
                   >
                     {isTopToolbarExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -1516,7 +1541,7 @@ export function ReviewWorkspace({
                     href={guiRepoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                    className="landing-toolbar-control editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
                     title={t('app.guiRepo')}
                   >
                     <Github size={16} />
@@ -1525,7 +1550,7 @@ export function ReviewWorkspace({
                   <button
                     type="button"
                     onClick={onOpenLlmSettings}
-                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                    className="landing-toolbar-control editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
                     title={t('app.llmAdminTitle')}
                   >
                     <SlidersHorizontal size={16} />
@@ -1534,7 +1559,7 @@ export function ReviewWorkspace({
                   <button
                     type="button"
                     onClick={onToggleLanguage}
-                    className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                    className="landing-toolbar-control editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
                     title="Toggle Language"
                   >
                     <Languages size={16} />
@@ -1548,10 +1573,10 @@ export function ReviewWorkspace({
                   <motion.div
                     id="top-toolbar-context-deck"
                     data-testid="top-toolbar-context-deck"
-                    initial={{ opacity: 0, y: -12 }}
+                    initial={prefersReducedMotion ? false : { opacity: 0, y: -12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -12 }}
-                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
+                    transition={topDeckTransition}
                     className={`grid items-start gap-3 ${isWorkspaceFocusMode ? 'xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.9fr)]' : 'xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(18rem,0.95fr)]'}`}
                   >
                     {isWorkspaceFocusMode ? (
@@ -1720,10 +1745,10 @@ export function ReviewWorkspace({
                               {showActions && (
                                 <motion.div
                                   data-testid="top-toolbar-actions-menu"
-                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.98, y: 10 }}
                                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                                  transition={{ duration: 0.15 }}
+                                  exit={prefersReducedMotion ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.98, y: 10 }}
+                                  transition={surfaceTransition}
                                   className="absolute right-0 top-full z-50 mt-2 max-h-[min(32rem,calc(100vh-7rem))] w-64 overflow-y-auto rounded-xl border border-border bg-card p-2 shadow-xl"
                                 >
                                   <div className="grid gap-2 px-4 pb-4">
@@ -1862,9 +1887,10 @@ export function ReviewWorkspace({
             {activeTab === 'pipeline' && (
               <motion.div
                 key={`pipeline-${activePipelineSubview}`}
-                initial={{ opacity: 0, y: 10 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+                exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
+                transition={surfaceTransition}
                 className="space-y-4 lg:space-y-5"
                 data-testid={`pipeline-section-content-${activePipelineSubview}`}
               >
@@ -2101,7 +2127,13 @@ export function ReviewWorkspace({
             )}
 
             {activeTab === 'vector' && (
-              <motion.div key="vector" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <motion.div
+                key="vector"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
+                transition={surfaceTransition}
+              >
                 <div className="review-structural-panel glass-panel overflow-hidden p-3 sm:p-4">
                   <Suspense fallback={<PanelFallback heightClassName="min-h-[420px]" />}>
                     <VectorSpace data={data} darkMode={darkMode} />
@@ -2111,7 +2143,13 @@ export function ReviewWorkspace({
             )}
 
             {activeTab === 'matrix' && (
-              <motion.div key="matrix" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <motion.div
+                key="matrix"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
+                transition={surfaceTransition}
+              >
                 <div className="review-structural-panel glass-panel overflow-hidden p-3 sm:p-4">
                   <Suspense fallback={<PanelFallback heightClassName="min-h-[420px]" />}>
                     <SecurityMatrix data={data} />
@@ -2128,10 +2166,10 @@ export function ReviewWorkspace({
           <AnimatePresence>
             {activeBottomTab && (
               <motion.div
-                initial={{ y: "100%", opacity: 0 }}
+                initial={prefersReducedMotion ? false : { y: '100%', opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                exit={prefersReducedMotion ? { y: 0, opacity: 1 } : { y: '100%', opacity: 0 }}
+                transition={drawerTransition}
                 className="review-bottom-drawer w-full max-w-[1980px] pointer-events-auto bg-card border-t border-border shadow-2xl rounded-t-3xl max-h-[55vh] flex flex-col"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3 border-b border-border/50">
@@ -2142,30 +2180,30 @@ export function ReviewWorkspace({
 
                     {activeBottomTab === 'review' && (
                       <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 overflow-x-auto hide-scrollbar">
-                        <button onClick={() => setActiveReviewSub('decision')} className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeReviewSub === 'decision' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.reviewDecision')}</button>
-                        <button onClick={() => setActiveReviewSub('notes')} className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeReviewSub === 'notes' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.reviewNotes')}</button>
-                        <button onClick={() => setActiveReviewSub('diff')} className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeReviewSub === 'diff' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.diffSummary')}</button>
+                        <button data-testid="review-subtab-decision" onClick={() => setActiveReviewSub('decision')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'decision' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewDecision')}</button>
+                        <button data-testid="review-subtab-notes" onClick={() => setActiveReviewSub('notes')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'notes' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewNotes')}</button>
+                        <button data-testid="review-subtab-diff" onClick={() => setActiveReviewSub('diff')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'diff' ? 'drawer-subtab-button--active' : ''}`}>{t('app.diffSummary')}</button>
                       </div>
                     )}
 
                     {activeBottomTab === 'checks' && (
                       <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar">
-                        <button onClick={() => setActiveChecksSub('posture')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'posture' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.checksPosture')}</button>
-                        <button onClick={() => setActiveChecksSub('schema')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'schema' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.schemaValidation')}</button>
-                        <button onClick={() => setActiveChecksSub('consistency')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'consistency' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.consistencyChecks')}</button>
-                        <button onClick={() => setActiveChecksSub('tests')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'tests' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.reviewerTests')}</button>
-                        <button onClick={() => setActiveChecksSub('evidence')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeChecksSub === 'evidence' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.validationEvidence')}</button>
+                        <button data-testid="checks-subtab-posture" onClick={() => setActiveChecksSub('posture')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'posture' ? 'drawer-subtab-button--active' : ''}`}>{t('app.checksPosture')}</button>
+                        <button data-testid="checks-subtab-schema" onClick={() => setActiveChecksSub('schema')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'schema' ? 'drawer-subtab-button--active' : ''}`}>{t('app.schemaValidation')}</button>
+                        <button data-testid="checks-subtab-consistency" onClick={() => setActiveChecksSub('consistency')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'consistency' ? 'drawer-subtab-button--active' : ''}`}>{t('app.consistencyChecks')}</button>
+                        <button data-testid="checks-subtab-tests" onClick={() => setActiveChecksSub('tests')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'tests' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewerTests')}</button>
+                        <button data-testid="checks-subtab-evidence" onClick={() => setActiveChecksSub('evidence')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'evidence' ? 'drawer-subtab-button--active' : ''}`}>{t('app.validationEvidence')}</button>
                       </div>
                     )}
 
                     {activeBottomTab === 'context' && (
                       <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar">
-                        <button onClick={() => setActiveContextSub('summary')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'summary' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.projectSummary')}</button>
-                        <button onClick={() => setActiveContextSub('policy')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'policy' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.commandReferences')}</button>
-                        <button onClick={() => setActiveContextSub('files')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'files' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.supportingFiles')}</button>
-                        <button onClick={() => setActiveContextSub('analysis')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'analysis' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.analysisResult')}</button>
-                        <button onClick={() => setActiveContextSub('source')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'source' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.contextBucketSourceProvenance')}</button>
-                        <button onClick={() => setActiveContextSub('links')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${activeContextSub === 'links' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{t('app.sourceLinks')}</button>
+                        <button data-testid="context-subtab-summary" onClick={() => setActiveContextSub('summary')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'summary' ? 'drawer-subtab-button--active' : ''}`}>{t('app.projectSummary')}</button>
+                        <button data-testid="context-subtab-policy" onClick={() => setActiveContextSub('policy')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'policy' ? 'drawer-subtab-button--active' : ''}`}>{t('app.commandReferences')}</button>
+                        <button data-testid="context-subtab-files" onClick={() => setActiveContextSub('files')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'files' ? 'drawer-subtab-button--active' : ''}`}>{t('app.supportingFiles')}</button>
+                        <button data-testid="context-subtab-analysis" onClick={() => setActiveContextSub('analysis')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'analysis' ? 'drawer-subtab-button--active' : ''}`}>{t('app.analysisResult')}</button>
+                        <button data-testid="context-subtab-source" onClick={() => setActiveContextSub('source')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'source' ? 'drawer-subtab-button--active' : ''}`}>{t('app.contextBucketSourceProvenance')}</button>
+                        <button data-testid="context-subtab-links" onClick={() => setActiveContextSub('links')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'links' ? 'drawer-subtab-button--active' : ''}`}>{t('app.sourceLinks')}</button>
                       </div>
                     )}
                   </div>
@@ -2178,6 +2216,15 @@ export function ReviewWorkspace({
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar">
                   <div className="max-w-7xl mx-auto">
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.div
+                        key={drawerSubviewKey}
+                        data-testid={`drawer-view-${drawerSubviewKey}`}
+                        initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+                        transition={surfaceTransition}
+                      >
                     {activeBottomTab === 'review' && (
               <>
                 {activeReviewSub === 'decision' && (
@@ -3011,6 +3058,8 @@ export function ReviewWorkspace({
                 )}
               </>
             )}
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 </div>
               </motion.div>
@@ -3027,10 +3076,11 @@ export function ReviewWorkspace({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveBottomTab(isActive ? null : tab.id)}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-full transition-all ${
+                    data-testid={`insight-tab-${tab.id}`}
+                    className={`review-bottom-tab-button flex items-center gap-3 px-4 py-2.5 rounded-full ${
                       isActive
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-muted/60 hover:bg-muted text-foreground'
+                        ? 'review-bottom-tab-button--active bg-primary text-primary-foreground'
+                        : 'bg-muted/60 text-foreground'
                     }`}
                   >
                     <div className="text-sm font-semibold">{tab.label}</div>

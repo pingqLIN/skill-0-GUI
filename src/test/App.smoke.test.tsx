@@ -139,7 +139,7 @@ describe('App smoke test', () => {
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect((await screen.findAllByText('app.bridgeModeCanonical')).length).toBeGreaterThan(0);
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
-    expect(await screen.findByText('/home/miles/dev2/skill-0')).toBeInTheDocument();
+    expect(await screen.findByTitle(/\/home\/miles\/dev2\/skill-0/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('app.landingScenariosTab'));
 
@@ -159,7 +159,7 @@ describe('App smoke test', () => {
     });
 
     expect(await screen.findByText('app.bridgeModeStandalone')).toBeInTheDocument();
-    expect(await screen.findByText('app.bridgeModeBundled')).toBeInTheDocument();
+    expect(await screen.findByTitle(/app\.bridgeModeBundled/)).toBeInTheDocument();
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
   });
 
@@ -171,7 +171,7 @@ describe('App smoke test', () => {
     });
 
     expect(await screen.findByText('app.bridgeModeUnavailable')).toBeInTheDocument();
-    expect(await screen.findByText('Bridge down')).toBeInTheDocument();
+    expect(await screen.findByTitle(/Bridge down/)).toBeInTheDocument();
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
   });
 
@@ -189,7 +189,7 @@ describe('App smoke test', () => {
     });
 
     expect(await screen.findByText('app.llmFallbackAvailable')).toBeInTheDocument();
-    expect(await screen.findByText('openai/gpt-4o-mini')).toBeInTheDocument();
+    expect(await screen.findByTitle(/openai\/gpt-4o-mini/)).toBeInTheDocument();
   });
 
   it('opens the llm admin dialog and saves runtime settings', async () => {

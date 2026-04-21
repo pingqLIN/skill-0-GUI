@@ -5,6 +5,7 @@ coverage/
 .playwright-cli/
 .vscode/
 output/
+.clean/
 .DS_Store
 *.log
 .codex

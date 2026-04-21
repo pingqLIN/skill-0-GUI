@@ -1,6 +1,6 @@
 # Skill-0 Review Studio Documentation Index
 
-Updated: `2026-04-08`
+Updated: `2026-04-09`
 
 This documentation set is the primary review package for `Skill-0 Review Studio`. It is organized as a main index plus chaptered companion documents so each functional area can be reviewed independently while still mapping back to one master table of contents.
 
@@ -56,6 +56,12 @@ This dossier documents both layers explicitly and distinguishes between:
 | 19 | [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md) | Current MVP completion boundary, consistency-check closure, and next execution order | Ch. 18 |
 | 20 | [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md) | First-pass plan for a standalone public demo, landing-page narrative, and deployment scope | Ch. 6, Ch. 8, Ch. 19 |
 | 21 | [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md) | Repo-local execution and verification brief for the single-screen workspace and sub-tab drawer model | Ch. 5, Ch. 19, Ch. 20 |
+| 22 | [22-structural-depth-and-toolbar-execution-brief-2026-04-08.md](./22-structural-depth-and-toolbar-execution-brief-2026-04-08.md) | Execution brief for the bounded top toolbar, structural depth cues, and viewport-stable workspace shell | Ch. 21, Ch. 23, Ch. 24 |
+| 23 | [23-browser-density-review-loop-2026-04-08.md](./23-browser-density-review-loop-2026-04-08.md) | Browser-review loop plan for density, bounded scrolling, and toolbar/drawer interaction checks | Ch. 22, Ch. 24 |
+| 24 | [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md) | Three-round browser validation report for workspace density, scroll bounds, and interaction polish | Ch. 22, Ch. 23, Ch. 25 |
+| 25 | [25-editor-verification-loop-2026-04-08.md](./25-editor-verification-loop-2026-04-08.md) | Focused verification loop for editor entry points, save paths, and validation affordances | Ch. 21, Ch. 24, Ch. 26 |
+| 26 | [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md) | Three-round editor verification report covering save, invalid-state, and diff workflows | Ch. 25, Ch. 27 |
+| 27 | [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md) | Repo-grounded polish brief for restrained motion, surface depth, and non-regressive workspace refinement | Ch. 22, Ch. 24, Ch. 26 |
 
 ## Fast Reading Paths
 
@@ -81,6 +87,9 @@ Before trusting exported review artifacts, read [shared/02-mode-and-equivalence-
 14. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 15. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
 16. [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md)
+17. [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md)
+18. [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md)
+19. [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md)
 
 ### For engineers
 
@@ -102,6 +111,10 @@ Read in this order:
 14. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 15. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
 16. [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md)
+17. [22-structural-depth-and-toolbar-execution-brief-2026-04-08.md](./22-structural-depth-and-toolbar-execution-brief-2026-04-08.md)
+18. [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md)
+19. [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md)
+20. [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md)
 
 ### For operators and deployers
 
@@ -117,6 +130,9 @@ Read in this order:
 8. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
 9. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
 10. [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md)
+11. [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md)
+12. [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md)
+13. [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md)
 
 Supplemental note:
 
@@ -197,5 +213,11 @@ The UI recovery set for the tracked workbench model is:
 7. [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
 8. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
 9. [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md)
+10. [22-structural-depth-and-toolbar-execution-brief-2026-04-08.md](./22-structural-depth-and-toolbar-execution-brief-2026-04-08.md)
+11. [23-browser-density-review-loop-2026-04-08.md](./23-browser-density-review-loop-2026-04-08.md)
+12. [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md)
+13. [25-editor-verification-loop-2026-04-08.md](./25-editor-verification-loop-2026-04-08.md)
+14. [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md)
+15. [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md)
 
 These chapters distinguish historical design-model planning from the current runtime status. Use Chapter 16 for the broad execution baseline, Chapter 17 for the reconciled late-stage roadmap, and Chapter 19 for the current MVP handoff state; treat Chapters 14 and 15 as archived planning context.

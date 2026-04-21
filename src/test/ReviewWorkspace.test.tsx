@@ -125,7 +125,7 @@ function createProps() {
 }
 
 async function openInsightTab(name: 'review' | 'checks' | 'context') {
-  fireEvent.click(await screen.findByText(name));
+  fireEvent.click(await screen.findByTestId(`insight-tab-${name}`));
 }
 
 async function openReviewSubTab(name: 'decision' | 'notes' | 'diff') {
@@ -139,6 +139,7 @@ async function openReviewSubTab(name: 'decision' | 'notes' | 'diff') {
     await openInsightTab('review');
   }
   fireEvent.click(await screen.findByRole('button', { name: labels[name] }));
+  await screen.findByTestId(`drawer-view-review-${name}`);
 }
 
 async function openChecksSubTab(name: 'posture' | 'schema' | 'consistency' | 'tests' | 'evidence') {
@@ -154,6 +155,7 @@ async function openChecksSubTab(name: 'posture' | 'schema' | 'consistency' | 'te
     await openInsightTab('checks');
   }
   fireEvent.click(await screen.findByRole('button', { name: labels[name] }));
+  await screen.findByTestId(`drawer-view-checks-${name}`);
 }
 
 async function expandTopToolbarIfCollapsed() {

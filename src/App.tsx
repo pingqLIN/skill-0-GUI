@@ -1020,7 +1020,7 @@ npm run release:preview
     <div className="app-shell min-h-screen transition-colors duration-300">
       {!data && (
         <header className="frost-banner">
-          <div className="mx-auto flex max-w-[1980px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-[1980px] flex-wrap items-start justify-between gap-4 px-4 py-4 sm:px-6 lg:flex-nowrap lg:items-center lg:px-8">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-[calc(var(--radius)*1.05)] bg-primary text-sm font-bold text-primary-foreground">
                 S0
@@ -1034,8 +1034,8 @@ npm run release:preview
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className={`hidden items-center gap-2 rounded-[calc(var(--radius)*1.05)] px-3 py-2 text-left sm:flex ${
+            <div className="ml-auto flex flex-wrap items-stretch justify-end gap-2">
+              <div className={`landing-toolbar-control hidden gap-2 rounded-[calc(var(--radius)*1.05)] px-3 py-2 text-left sm:inline-flex ${
                 bridgeStatus?.mode === 'skill-0'
                   ? 'bg-emerald-500/14 text-emerald-950'
                   : bridgeStatus?.mode === 'standalone'
@@ -1047,33 +1047,33 @@ npm run release:preview
                     : bridgeStatus?.mode === 'standalone' ? 'status-led--standalone'
                     : 'status-led--unavailable'
                 }`} />
-                <div>
-                  <div className="text-xs font-semibold">{bridgeModeLabel}</div>
-                  <div className="text-[10px] opacity-70">{llmFallbackLabel}</div>
+                <div className="min-w-0 whitespace-nowrap leading-tight">
+                  <div className="text-xs font-semibold leading-tight">{bridgeModeLabel}</div>
+                  <div className="mt-0.5 text-[10px] leading-tight opacity-70">{llmFallbackLabel}</div>
                 </div>
               </div>
               <a
                 href={GUI_REPO_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                className="landing-toolbar-control editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
                 title={t('app.guiRepo')}
               >
                 <Github size={16} />
-                <span className="hidden sm:inline">GitHub</span>
+                <span className="hidden md:inline">GitHub</span>
               </a>
               <button
                 type="button"
                 onClick={() => setIsLlmSettingsOpen(true)}
-                className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                className="landing-toolbar-control editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
                 title={t('app.llmAdminTitle')}
               >
                 <SlidersHorizontal size={16} />
-                <span className="hidden sm:inline">{t('app.aiSettings')}</span>
+                <span className="hidden md:inline">{t('app.aiSettings')}</span>
               </button>
               <button
                 onClick={toggleLanguage}
-                className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
+                className="landing-toolbar-control editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
                 title="Toggle Language"
               >
                 <Languages size={16} />
@@ -1120,10 +1120,10 @@ npm run release:preview
 
                   {landingPaneTab === 'outputs' ? (
                     <div className="max-w-4xl space-y-4">
-                      <p className="editorial-kicker">{t('app.reviewOutputsKicker')}</p>
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
                         {t('app.reviewOutputsTitle')}
                       </h2>
+                      <p className="editorial-kicker">{t('app.reviewOutputsKicker')}</p>
                       <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {t('app.reviewOutputsLead')}
                       </p>
@@ -1158,10 +1158,10 @@ npm run release:preview
                     </div>
                   ) : landingPaneTab === 'docs' ? (
                     <div className="max-w-4xl space-y-4">
-                      <p className="editorial-kicker">{t('app.resourcesKicker')}</p>
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
                         {t('app.resourcesTitle')}
                       </h2>
+                      <p className="editorial-kicker">{t('app.resourcesKicker')}</p>
                       <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {t('app.resourcesLead')}
                       </p>
@@ -1182,10 +1182,10 @@ npm run release:preview
                     </div>
                   ) : landingPaneTab === 'scenarios' ? (
                     <div className="max-w-4xl space-y-4">
-                      <p className="editorial-kicker">{t('app.sampleScenariosKicker')}</p>
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
                         {t('app.sampleScenariosTitle')}
                       </h2>
+                      <p className="editorial-kicker">{t('app.sampleScenariosKicker')}</p>
                       <p className="max-w-3xl text-sm leading-7 text-foreground/72 sm:text-[1.02rem]">
                         {t('app.sampleScenariosLead')}
                       </p>
