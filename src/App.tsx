@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity,
   AlertCircle,
@@ -13,8 +13,6 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { LlmSettingsDialog } from './components/LlmSettingsDialog';
-import { ReviewWorkspace } from './components/ReviewWorkspace';
 import { applyEditorSave } from './services/editorSaveService';
 import { analyzeSkillText, resolveSkillUrl } from './services/parserBridgeService';
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
@@ -34,6 +32,8 @@ const MODE_CONTRACT_URL = `${GUI_REPO_URL}/blob/main/docs/shared/02-mode-and-equ
 const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
 const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
 const WORKSPACE_DRAFT_STORAGE_KEY = 'skill-0-review-studio.workspace-draft.v1';
+const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((module) => ({ default: module.ReviewWorkspace })));
+const LlmSettingsDialog = lazy(() => import('./components/LlmSettingsDialog').then((module) => ({ default: module.LlmSettingsDialog })));
 
 type WorkspaceDraftSnapshot = {
   data: any | null;
@@ -1550,37 +1550,43 @@ npm run release:preview
             </section>
           </div>
         ) : (
-          <React.Fragment key={analysisSessionId}>
-            <ReviewWorkspace
-              data={data}
-              originalData={originalData}
-              demoPreset={activeDemoPreset}
-              darkMode={darkMode}
-              modifiedPaths={modifiedPaths}
-              supportFiles={supportFiles}
-              selectedContextPath={selectedContextPath}
-              bridgeStatus={bridgeStatus}
-              bridgeStatusError={bridgeStatusError}
-              guiRepoUrl={GUI_REPO_URL}
-              engineRepoUrl={ENGINE_REPO_URL}
-              workspaceDraftSavedAt={workspaceDraftSavedAt}
-              workspaceDraftRestored={workspaceDraftRestored}
-              currentLanguage={i18n.language}
-              onOpenLlmSettings={() => setIsLlmSettingsOpen(true)}
-              onSelectContextPath={setSelectedContextPath}
-              onSaveEdit={handleSaveEdit}
-              onToggleLanguage={toggleLanguage}
-              onUndo={handleUndo}
-              onResetWorkspace={handleResetWorkspace}
-            />
-          </React.Fragment>
+          <Suspense fallback={<div className="px-6 py-10 text-sm text-muted-foreground">{t('app.loading')}</div>}>
+            <React.Fragment key={analysisSessionId}>
+              <ReviewWorkspace
+                data={data}
+                originalData={originalData}
+                demoPreset={activeDemoPreset}
+                darkMode={darkMode}
+                modifiedPaths={modifiedPaths}
+                supportFiles={supportFiles}
+                selectedContextPath={selectedContextPath}
+                bridgeStatus={bridgeStatus}
+                bridgeStatusError={bridgeStatusError}
+                guiRepoUrl={GUI_REPO_URL}
+                engineRepoUrl={ENGINE_REPO_URL}
+                workspaceDraftSavedAt={workspaceDraftSavedAt}
+                workspaceDraftRestored={workspaceDraftRestored}
+                currentLanguage={i18n.language}
+                onOpenLlmSettings={() => setIsLlmSettingsOpen(true)}
+                onSelectContextPath={setSelectedContextPath}
+                onSaveEdit={handleSaveEdit}
+                onToggleLanguage={toggleLanguage}
+                onUndo={handleUndo}
+                onResetWorkspace={handleResetWorkspace}
+              />
+            </React.Fragment>
+          </Suspense>
         )}
       </main>
-      <LlmSettingsDialog
-        open={isLlmSettingsOpen}
-        onClose={() => setIsLlmSettingsOpen(false)}
-        onBridgeStatusChange={handleBridgeStatusChange}
-      />
+      {isLlmSettingsOpen && (
+        <Suspense fallback={null}>
+          <LlmSettingsDialog
+            open={isLlmSettingsOpen}
+            onClose={() => setIsLlmSettingsOpen(false)}
+            onBridgeStatusChange={handleBridgeStatusChange}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

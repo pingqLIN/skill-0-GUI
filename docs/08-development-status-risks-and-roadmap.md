@@ -29,7 +29,7 @@ What is true now:
 - `VectorSpace` now defaults to a lightweight review-map surface and loads the 3D workspace only on explicit demand
 - documentation for external review now exists
 - development and production runtimes share the same bridge logic
-- the current CI workflow checks entrypoints, TypeScript, mirrored docs, tests, and the production build
+- the current CI workflow checks entrypoints, TypeScript, mirrored docs, tests, standard build size, and the public-build boundary
 - the standard build now enforces an entry-size guard through `npm run verify:build-size`
 - `npm run build` and `npm test` are currently green in the working tree
 

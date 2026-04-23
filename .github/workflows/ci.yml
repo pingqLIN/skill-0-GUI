@@ -37,5 +37,8 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build
-        run: npm run build
+      - name: Verify standard build size
+        run: npm run verify:build-size
+
+      - name: Verify public build boundary
+        run: npm run verify:public-build

@@ -146,8 +146,8 @@ GitHub Pages is not appropriate for the full runtime because this project depend
 Recommended GitHub-facing production pattern:
 
 - GitHub repository as source of truth
-- GitHub Actions for `lint` and `build`
-- GitHub Actions workflow also runs `node --check`, `npm run docs:check`, and `npm test`
+- GitHub Actions for runtime checks, tests, and build verification
+- GitHub Actions workflow also runs `node --check`, `npm run docs:check`, `npm test`, `npm run verify:build-size`, and `npm run verify:public-build`
 - external Node-capable host for `npm start`
 - `SKILL0_MODE=standalone` for public deployments
 - `VITE_ENABLE_3D=false` for public builds unless the 3D view is a deliberate product requirement
