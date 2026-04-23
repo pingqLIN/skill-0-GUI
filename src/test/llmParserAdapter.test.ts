@@ -62,13 +62,14 @@ describe('createLLMParserAdapter', () => {
   });
 
   it('preserves structured provider HTTP failures without rewrapping them', async () => {
-    const fetchImpl = vi.fn(async () => ({
-      json: async () => ({
-        error: {
-          message: 'Rate limit exceeded.',
-        },
-      }),
-      ok: false,
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      error: {
+        message: 'Rate limit exceeded.',
+      },
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       status: 429,
     }));
     const adapter = createLLMParserAdapter({
@@ -94,13 +95,14 @@ describe('createLLMParserAdapter', () => {
   });
 
   it('returns actionable guidance when OpenAI reports a missing bearer token', async () => {
-    const fetchImpl = vi.fn(async () => ({
-      json: async () => ({
-        error: {
-          message: 'Missing bearer authentication in header',
-        },
-      }),
-      ok: false,
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      error: {
+        message: 'Missing bearer authentication in header',
+      },
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       status: 401,
     }));
     const adapter = createLLMParserAdapter({

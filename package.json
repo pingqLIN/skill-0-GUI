@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "docs:sync": "node scripts/sync-shared-docs.mjs",
-    "docs:check": "node scripts/sync-shared-docs.mjs --check"
+    "docs:check": "node scripts/sync-shared-docs.mjs --check",
+    "project-loop:state": "node scripts/project-development-loop-state.mjs"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.4.0",

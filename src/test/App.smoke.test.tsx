@@ -312,6 +312,77 @@ describe('App smoke test', () => {
     expect(analyzeSkillText).not.toHaveBeenCalled();
   });
 
+  it('autosaves landing draft input without entering a render loop', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await act(async () => {
+        render(<App />);
+      });
+
+      fireEvent.change(screen.getByPlaceholderText('app.placeholder'), {
+        target: { value: '# conversation memo\n\n- keep the draft stable' },
+      });
+
+      await waitFor(() => {
+        const stored = window.localStorage.getItem(WORKSPACE_DRAFT_STORAGE_KEY);
+        expect(stored).toContain('# conversation memo');
+      });
+
+      expect(screen.getByText('app.analyzeBtn')).toBeInTheDocument();
+      expect(
+        consoleError.mock.calls.some((call) => call.join(' ').includes('Maximum update depth exceeded')),
+      ).toBe(false);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('keeps the landing workspace responsive after selecting a folder bundle', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const withRelativePath = (file: File, relativePath: string) => {
+      Object.defineProperty(file, 'webkitRelativePath', {
+        configurable: true,
+        value: relativePath,
+      });
+      return file;
+    };
+
+    try {
+      const { container } = render(<App />);
+      const folderInput = container.querySelectorAll('input[type="file"]')[1] as HTMLInputElement | undefined;
+
+      expect(folderInput).toBeDefined();
+
+      const files = [
+        withRelativePath(new File(['# Conversation Memo\n\n## Overview\n- Preserve discussions.\n'], 'SKILL.md', { type: 'text/markdown' }), 'conversation-memo/SKILL.md'),
+        withRelativePath(new File(['# Memo Lifecycle\n'], 'memo-lifecycle.md', { type: 'text/markdown' }), 'conversation-memo/references/memo-lifecycle.md'),
+        withRelativePath(new File(['# Handoff Schema\n'], 'conversation-memo-handoff-schema.md', { type: 'text/markdown' }), 'conversation-memo/references/conversation-memo-handoff-schema.md'),
+        withRelativePath(new File(['# Formalization Patterns\n'], 'formalization-patterns.md', { type: 'text/markdown' }), 'conversation-memo/references/formalization-patterns.md'),
+        withRelativePath(new File(['# Obsidian Boundary\n'], 'obsidian-boundary.md', { type: 'text/markdown' }), 'conversation-memo/references/obsidian-boundary.md'),
+      ];
+
+      fireEvent.change(folderInput!, {
+        target: { files },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('SKILL.md')).toBeInTheDocument();
+        expect(screen.getByText('memo-lifecycle.md')).toBeInTheDocument();
+        expect(screen.getByText('conversation-memo-handoff-schema.md')).toBeInTheDocument();
+        expect(screen.getByText('formalization-patterns.md')).toBeInTheDocument();
+        expect(screen.getByText('obsidian-boundary.md')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('app.reviewAndAnalyze')).toBeInTheDocument();
+      expect(
+        consoleError.mock.calls.some((call) => call.join(' ').includes('Maximum update depth exceeded')),
+      ).toBe(false);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it('launches the curated bundle review scenario with supporting files', async () => {
     vi.mocked(analyzeSkillText).mockResolvedValue({
       projectId: 'bundle-intake-review',

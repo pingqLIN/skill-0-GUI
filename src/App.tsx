@@ -327,7 +327,7 @@ export default function App() {
     setAvailableWorkspaceDraft(savedSnapshot);
     setWorkspaceDraftSavedAt(updatedAt);
     setWorkspaceDraftRestored(false);
-  }, [availableWorkspaceDraft, data, originalData, modifiedPaths, inputText, skillUrlInput, pendingUploadFiles, pendingPrimaryPath, supportFiles, selectedContextPath]);
+  }, [data, originalData, modifiedPaths, inputText, skillUrlInput, pendingUploadFiles, pendingPrimaryPath, supportFiles, selectedContextPath]);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';

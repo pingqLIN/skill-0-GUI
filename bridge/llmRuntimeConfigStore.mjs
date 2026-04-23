@@ -5,6 +5,11 @@ const SUPPORTED_PROVIDERS = ['openai', 'gemini', 'anthropic'];
 const IMPLEMENTED_RUNTIME_PROVIDERS = ['openai'];
 const SUPPORTED_MODES = ['disabled', 'fallback', 'force'];
 
+/**
+ * @typedef {object} LLMRuntimeConfigStoreOptions
+ * @property {boolean | string | null | undefined} [mutable]
+ */
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -81,6 +86,9 @@ function normalizeMutableFlag(value) {
   return process.env.NODE_ENV !== 'production';
 }
 
+/**
+ * @param {LLMRuntimeConfigStoreOptions} [options]
+ */
 export function createLLMRuntimeConfigStore({
   mutable = process.env.SKILL0_RUNTIME_CONFIG_MUTABLE,
 } = {}) {

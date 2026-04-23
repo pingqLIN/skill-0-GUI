@@ -1,5 +1,21 @@
 const DEFAULT_REQUEST_TIMEOUT_BUFFER_MS = 10000;
 
+/**
+ * @typedef {object} ParserRuntimeConfig
+ * @property {string | null | undefined} [apiKey]
+ * @property {string | null | undefined} [mode]
+ * @property {string | null | undefined} [model]
+ * @property {string | null | undefined} [provider]
+ * @property {number | string | null | undefined} [timeoutMs]
+ */
+
+/**
+ * @typedef {object} ParserRequestTimeoutOptions
+ * @property {number | string | null | undefined} [baseTimeoutMs]
+ * @property {number | string | null | undefined} [bufferMs]
+ * @property {ParserRuntimeConfig | null | undefined} [runtimeConfig]
+ */
+
 function trimString(value, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
@@ -13,6 +29,9 @@ function normalizePositiveInteger(value, fallback, max = 300000) {
   return Math.min(max, parsed);
 }
 
+/**
+ * @param {ParserRequestTimeoutOptions} [options]
+ */
 export function resolveParserRequestTimeoutMs({
   baseTimeoutMs,
   bufferMs = DEFAULT_REQUEST_TIMEOUT_BUFFER_MS,
