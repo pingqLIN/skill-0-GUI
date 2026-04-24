@@ -18,6 +18,7 @@ import { analyzeSkillText, resolveSkillUrl } from './services/parserBridgeServic
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
 import { getSampleScenarioContent } from './content/sampleScenarios';
+import { useWorkspaceDraftState, type WorkspaceDraftSnapshot } from './hooks/useWorkspaceDraftState';
 import type { PreparedUploadFile, UploadedContextFile } from './types/intake';
 import type { ReviewChecklist, SkillDocument } from './types/skillDocument';
 import type { EditorConfig } from './types/workspace';
@@ -31,22 +32,8 @@ const DEPLOYMENT_GUIDE_URL = `${GUI_REPO_URL}/blob/main/docs/06-deployment-opera
 const MODE_CONTRACT_URL = `${GUI_REPO_URL}/blob/main/docs/shared/02-mode-and-equivalence-contract.md`;
 const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
 const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
-const WORKSPACE_DRAFT_STORAGE_KEY = 'skill-0-review-studio.workspace-draft.v1';
 const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((module) => ({ default: module.ReviewWorkspace })));
 const LlmSettingsDialog = lazy(() => import('./components/LlmSettingsDialog').then((module) => ({ default: module.LlmSettingsDialog })));
-
-type WorkspaceDraftSnapshot = {
-  data: any | null;
-  originalData: any | null;
-  modifiedPaths: string[];
-  inputText: string;
-  skillUrlInput: string;
-  pendingUploadFiles: PreparedUploadFile[];
-  pendingPrimaryPath: string | null;
-  supportFiles: UploadedContextFile[];
-  selectedContextPath: string | null;
-  updatedAt: string | null;
-};
 
 type DemoScenarioDefinition = {
   artifacts: string;
@@ -80,81 +67,6 @@ export type DemoReviewPreset = {
 
 type LandingPaneTabId = 'overview' | 'outputs' | 'docs' | 'scenarios';
 
-function readWorkspaceDraft(): WorkspaceDraftSnapshot | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(WORKSPACE_DRAFT_STORAGE_KEY);
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') {
-      return null;
-    }
-
-    return {
-      data: 'data' in parsed ? parsed.data : null,
-      originalData: 'originalData' in parsed ? parsed.originalData : null,
-      modifiedPaths: Array.isArray(parsed.modifiedPaths) ? parsed.modifiedPaths.filter((item): item is string => typeof item === 'string') : [],
-      inputText: typeof parsed.inputText === 'string' ? parsed.inputText : '',
-      skillUrlInput: typeof parsed.skillUrlInput === 'string' ? parsed.skillUrlInput : '',
-      pendingUploadFiles: Array.isArray(parsed.pendingUploadFiles) ? parsed.pendingUploadFiles : [],
-      pendingPrimaryPath: typeof parsed.pendingPrimaryPath === 'string' ? parsed.pendingPrimaryPath : null,
-      supportFiles: Array.isArray(parsed.supportFiles) ? parsed.supportFiles : [],
-      selectedContextPath: typeof parsed.selectedContextPath === 'string' ? parsed.selectedContextPath : null,
-      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeWorkspaceDraft(snapshot: WorkspaceDraftSnapshot) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.setItem(WORKSPACE_DRAFT_STORAGE_KEY, JSON.stringify(snapshot));
-}
-
-function hasSameWorkspaceDraftContent(left: WorkspaceDraftSnapshot, right: WorkspaceDraftSnapshot) {
-  return JSON.stringify({
-    data: left.data,
-    originalData: left.originalData,
-    modifiedPaths: left.modifiedPaths,
-    inputText: left.inputText,
-    skillUrlInput: left.skillUrlInput,
-    pendingUploadFiles: left.pendingUploadFiles,
-    pendingPrimaryPath: left.pendingPrimaryPath,
-    supportFiles: left.supportFiles,
-    selectedContextPath: left.selectedContextPath,
-    updatedAt: null,
-  }) === JSON.stringify({
-    data: right.data,
-    originalData: right.originalData,
-    modifiedPaths: right.modifiedPaths,
-    inputText: right.inputText,
-    skillUrlInput: right.skillUrlInput,
-    pendingUploadFiles: right.pendingUploadFiles,
-    pendingPrimaryPath: right.pendingPrimaryPath,
-    supportFiles: right.supportFiles,
-    selectedContextPath: right.selectedContextPath,
-    updatedAt: null,
-  });
-}
-
-function clearWorkspaceDraft() {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.removeItem(WORKSPACE_DRAFT_STORAGE_KEY);
-}
-
 export default function App() {
   const { t, i18n } = useTranslation();
   const darkMode = false;
@@ -175,16 +87,9 @@ export default function App() {
   const [selectedContextPath, setSelectedContextPath] = useState<string | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
   const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
-  const [availableWorkspaceDraft, setAvailableWorkspaceDraft] = useState<WorkspaceDraftSnapshot | null>(null);
-  const [workspaceDraftSavedAt, setWorkspaceDraftSavedAt] = useState<string | null>(null);
-  const [workspaceDraftRestored, setWorkspaceDraftRestored] = useState(false);
   const [activeDemoPreset, setActiveDemoPreset] = useState<DemoReviewPreset | null>(null);
   const [isLlmSettingsOpen, setIsLlmSettingsOpen] = useState(false);
-  const hasHydratedWorkspaceDraftRef = useRef(false);
-  const skipNextWorkspaceDraftPersistRef = useRef(false);
-
-  const applyWorkspaceDraftSnapshot = useCallback((snapshot: WorkspaceDraftSnapshot, options: { restored?: boolean } = {}) => {
-    const { restored = true } = options;
+  const handleApplyWorkspaceDraftSnapshot = useCallback((snapshot: WorkspaceDraftSnapshot) => {
     setData(snapshot.data);
     setOriginalData(snapshot.originalData);
     setModifiedPaths(new Set(snapshot.modifiedPaths));
@@ -194,19 +99,28 @@ export default function App() {
     setPendingPrimaryPath(snapshot.pendingPrimaryPath);
     setSupportFiles(snapshot.supportFiles);
     setSelectedContextPath(snapshot.selectedContextPath);
-    setWorkspaceDraftSavedAt(snapshot.updatedAt);
-    setWorkspaceDraftRestored(restored);
     setActiveDemoPreset(null);
-    setAvailableWorkspaceDraft(snapshot);
-    skipNextWorkspaceDraftPersistRef.current = true;
   }, []);
 
-  const discardWorkspaceDraft = useCallback(() => {
-    clearWorkspaceDraft();
-    setAvailableWorkspaceDraft(null);
-    setWorkspaceDraftSavedAt(null);
-    setWorkspaceDraftRestored(false);
-  }, []);
+  const {
+    availableWorkspaceDraft,
+    workspaceDraftSavedAt,
+    workspaceDraftRestored,
+    restoreAvailableWorkspaceDraft,
+    discardWorkspaceDraft,
+    clearWorkspaceDraftState,
+  } = useWorkspaceDraftState({
+    data,
+    originalData,
+    modifiedPaths,
+    inputText,
+    skillUrlInput,
+    pendingUploadFiles,
+    pendingPrimaryPath,
+    supportFiles,
+    selectedContextPath,
+    onApplySnapshot: handleApplyWorkspaceDraftSnapshot,
+  });
 
   useEffect(() => {
     const preventWindowDrop = (event: DragEvent) => {
@@ -255,79 +169,6 @@ export default function App() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    const snapshot = readWorkspaceDraft();
-    if (snapshot) {
-      setAvailableWorkspaceDraft(snapshot);
-      setWorkspaceDraftSavedAt(snapshot.updatedAt);
-      setWorkspaceDraftRestored(false);
-      skipNextWorkspaceDraftPersistRef.current = true;
-    }
-
-    hasHydratedWorkspaceDraftRef.current = true;
-  }, []);
-
-  useEffect(() => {
-    if (!hasHydratedWorkspaceDraftRef.current) {
-      return;
-    }
-
-    if (skipNextWorkspaceDraftPersistRef.current) {
-      skipNextWorkspaceDraftPersistRef.current = false;
-      return;
-    }
-
-    const hasDraftState = Boolean(
-      data
-      || originalData
-      || inputText.trim()
-      || skillUrlInput.trim()
-      || pendingUploadFiles.length > 0
-      || supportFiles.length > 0,
-    );
-
-    if (!hasDraftState) {
-      if (availableWorkspaceDraft) {
-        return;
-      }
-
-      clearWorkspaceDraft();
-      setAvailableWorkspaceDraft(null);
-      setWorkspaceDraftSavedAt(null);
-      setWorkspaceDraftRestored(false);
-      return;
-    }
-
-    const nextSnapshot: WorkspaceDraftSnapshot = {
-      data,
-      originalData,
-      modifiedPaths: Array.from(modifiedPaths),
-      inputText,
-      skillUrlInput,
-      pendingUploadFiles,
-      pendingPrimaryPath,
-      supportFiles,
-      selectedContextPath,
-      updatedAt: workspaceDraftSavedAt,
-    };
-    const existingSnapshot = readWorkspaceDraft();
-    if (existingSnapshot && hasSameWorkspaceDraftContent(existingSnapshot, nextSnapshot)) {
-      if (workspaceDraftRestored) {
-        return;
-      }
-    }
-
-    const updatedAt = new Date().toISOString();
-    const savedSnapshot = {
-      ...nextSnapshot,
-      updatedAt,
-    };
-    writeWorkspaceDraft(savedSnapshot);
-    setAvailableWorkspaceDraft(savedSnapshot);
-    setWorkspaceDraftSavedAt(updatedAt);
-    setWorkspaceDraftRestored(false);
-  }, [data, originalData, modifiedPaths, inputText, skillUrlInput, pendingUploadFiles, pendingPrimaryPath, supportFiles, selectedContextPath]);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
@@ -734,8 +575,7 @@ export default function App() {
   };
 
   const handleResetWorkspace = () => {
-    clearWorkspaceDraft();
-    setAvailableWorkspaceDraft(null);
+    clearWorkspaceDraftState();
     setData(null);
     setOriginalData(null);
     setModifiedPaths(new Set());
@@ -747,8 +587,6 @@ export default function App() {
     setSelectedContextPath(null);
     setActiveDemoPreset(null);
     setError(null);
-    setWorkspaceDraftSavedAt(null);
-    setWorkspaceDraftRestored(false);
   };
 
   const loadExampleSkill = async () => {
@@ -1127,7 +965,7 @@ npm run release:preview
                 <>
                   <button
                     type="button"
-                    onClick={() => applyWorkspaceDraftSnapshot(availableWorkspaceDraft)}
+                    onClick={restoreAvailableWorkspaceDraft}
                     className="editorial-button-secondary px-3 py-2 text-sm font-medium"
                   >
                     {t('app.restoreDraft')}
