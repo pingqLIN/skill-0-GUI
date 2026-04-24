@@ -17,6 +17,7 @@ import { applyEditorSave } from './services/editorSaveService';
 import { analyzeSkillText, resolveSkillUrl } from './services/parserBridgeService';
 import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from './services/skillDocumentAdapter';
+import { prepareUploads } from './services/uploadPreparationService';
 import { getSampleScenarioContent } from './content/sampleScenarios';
 import { useWorkspaceDraftState, type WorkspaceDraftSnapshot } from './hooks/useWorkspaceDraftState';
 import type { PreparedUploadFile, UploadedContextFile } from './types/intake';
@@ -30,8 +31,6 @@ const DOCS_INDEX_URL = `${GUI_REPO_URL}/blob/main/docs/README.md`;
 const DEMO_PLAN_URL = `${GUI_REPO_URL}/blob/main/docs/20-online-demo-plan-2026-04-03.md`;
 const DEPLOYMENT_GUIDE_URL = `${GUI_REPO_URL}/blob/main/docs/06-deployment-operations-and-configuration.md`;
 const MODE_CONTRACT_URL = `${GUI_REPO_URL}/blob/main/docs/shared/02-mode-and-equivalence-contract.md`;
-const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
-const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
 const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((module) => ({ default: module.ReviewWorkspace })));
 const LlmSettingsDialog = lazy(() => import('./components/LlmSettingsDialog').then((module) => ({ default: module.LlmSettingsDialog })));
 
@@ -175,128 +174,6 @@ export default function App() {
     i18n.changeLanguage(newLang);
   };
 
-  const getExtension = (fileName: string) => {
-    const dotIndex = fileName.lastIndexOf('.');
-    return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
-  };
-
-  const getUploadPath = (file: File) => file.webkitRelativePath || file.name;
-
-  const isPrimarySkillFile = (file: File) => {
-    const target = getUploadPath(file).toLowerCase();
-    const extension = getExtension(target);
-    return PRIMARY_SKILL_EXTENSIONS.includes(extension) || target.endsWith('skill.md');
-  };
-
-  const isPrimarySkillPath = (path: string) => {
-    const lower = path.toLowerCase();
-    const extension = getExtension(lower);
-    return PRIMARY_SKILL_EXTENSIONS.includes(extension) || lower.endsWith('skill.md');
-  };
-
-  const canPreviewAsText = (file: File) => {
-    const extension = getExtension(file.name);
-    return isPrimarySkillFile(file) || CONTEXT_PREVIEW_EXTENSIONS.includes(extension) || file.type.startsWith('text/');
-  };
-
-  const readFileAsText = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ''));
-      reader.onerror = () => reject(reader.error || new Error(`Failed to read ${file.name}`));
-      reader.readAsText(file);
-    });
-
-  const prepareUploadFile = async (file: File): Promise<PreparedUploadFile> => {
-    const path = getUploadPath(file);
-    const prepared: PreparedUploadFile = {
-      name: file.name,
-      path,
-      type: file.type || getExtension(file.name) || 'unknown',
-      size: file.size,
-      role: 'context',
-      source: 'upload',
-      isPrimaryCandidate: false,
-    };
-
-    if (canPreviewAsText(file)) {
-      try {
-        prepared.text = await readFileAsText(file);
-        prepared.preview = prepared.text.slice(0, 280);
-        const isSkillDocumentImport = Boolean(parseSkillDocumentJson(prepared.text));
-        prepared.isPrimaryCandidate = isPrimarySkillFile(file) || isSkillDocumentImport;
-        prepared.role = prepared.isPrimaryCandidate ? 'primary' : 'context';
-      } catch {
-        prepared.text = undefined;
-      }
-    } else {
-      prepared.isPrimaryCandidate = isPrimarySkillFile(file);
-      prepared.role = prepared.isPrimaryCandidate ? 'primary' : 'context';
-    }
-
-    return prepared;
-  };
-
-  const expandZipUpload = async (file: File): Promise<PreparedUploadFile[]> => {
-    const { default: JSZip } = await import('jszip');
-    const zip = await JSZip.loadAsync(file);
-    const prepared: PreparedUploadFile[] = [];
-
-    for (const entry of Object.values(zip.files)) {
-      if (entry.dir) continue;
-
-      const path = entry.name;
-      const basename = path.split('/').pop() || path;
-      const extension = getExtension(basename);
-      const isPrimaryPathCandidate = isPrimarySkillPath(path);
-      const isTextLike = isPrimaryPathCandidate || CONTEXT_PREVIEW_EXTENSIONS.includes(extension) || extension === '.md' || extension === '.txt';
-
-      const item: PreparedUploadFile = {
-        name: basename,
-        path,
-        type: extension || 'zip-entry',
-        size: 0,
-        role: 'context',
-        source: 'zip',
-        isPrimaryCandidate: false,
-      };
-
-      if (isTextLike) {
-        try {
-          item.text = await entry.async('string');
-          item.size = item.text.length;
-          item.preview = item.text.slice(0, 280);
-          const isSkillDocumentImport = Boolean(parseSkillDocumentJson(item.text));
-          item.isPrimaryCandidate = isPrimaryPathCandidate || isSkillDocumentImport;
-          item.role = item.isPrimaryCandidate ? 'primary' : 'context';
-        } catch {
-          item.text = undefined;
-        }
-      } else {
-        item.isPrimaryCandidate = isPrimaryPathCandidate;
-        item.role = item.isPrimaryCandidate ? 'primary' : 'context';
-      }
-
-      prepared.push(item);
-    }
-
-    return prepared;
-  };
-
-  const expandUploads = async (files: File[]) => {
-    const prepared: PreparedUploadFile[] = [];
-
-    for (const file of files) {
-      if (getExtension(file.name) === '.zip') {
-        prepared.push(...await expandZipUpload(file));
-      } else {
-        prepared.push(await prepareUploadFile(file));
-      }
-    }
-
-    return prepared;
-  };
-
   const loadSkillDocument = (
     document: SkillDocument,
     options: {
@@ -355,7 +232,7 @@ export default function App() {
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
 
-    const preparedFiles = await expandUploads(files);
+    const preparedFiles = await prepareUploads(files);
     const primaryFile = preparedFiles.find((file) => file.isPrimaryCandidate && file.text) ?? null;
     const standaloneJsonImport = preparedFiles.length === 1 && preparedFiles[0].text
       ? parseSkillDocumentJson(preparedFiles[0].text)
