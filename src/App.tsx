@@ -365,6 +365,45 @@ npm run release:preview
     { id: 'docs', label: t('app.landingDocsTab') },
     { id: 'scenarios', label: t('app.landingScenariosTab') },
   ];
+  const handleLandingPaneTabKeyDown = (
+    tabIndex: number,
+    event: React.KeyboardEvent<HTMLButtonElement>,
+  ) => {
+    const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    if (!tabs?.length) {
+      return;
+    }
+
+    const focusTabAt = (index: number) => {
+      const nextIndex = (index + landingPaneTabs.length) % landingPaneTabs.length;
+      const nextTab = landingPaneTabs[nextIndex];
+      setLandingPaneTab(nextTab.id);
+      tabs[nextIndex]?.focus();
+    };
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusTabAt(tabIndex + 1);
+      return;
+    }
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusTabAt(tabIndex - 1);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      focusTabAt(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      focusTabAt(landingPaneTabs.length - 1);
+    }
+  };
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
       {!data && (
@@ -473,13 +512,19 @@ npm run release:preview
             <section className="grid gap-6 2xl:grid-cols-[minmax(0,1.12fr)_minmax(30rem,0.88fr)]">
               <div className="glass-panel-strong hero-pattern px-5 py-6 sm:px-7 sm:py-7">
                 <div className="space-y-6">
-                  <div className="flex flex-wrap gap-2">
-                    {landingPaneTabs.map((tab) => (
+                  <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('app.workspace')}>
+                    {landingPaneTabs.map((tab, tabIndex) => (
                       <button
                         key={tab.id}
                         type="button"
+                        id={`landing-tab-${tab.id}`}
+                        role="tab"
+                        aria-selected={landingPaneTab === tab.id}
+                        aria-controls={`landing-panel-${tab.id}`}
+                        tabIndex={landingPaneTab === tab.id ? 0 : -1}
                         data-state={landingPaneTab === tab.id ? 'active' : 'inactive'}
                         onClick={() => setLandingPaneTab(tab.id)}
+                        onKeyDown={(event) => handleLandingPaneTabKeyDown(tabIndex, event)}
                         className="editorial-tab-button px-3 py-1.5"
                       >
                         {tab.label}
@@ -487,7 +532,13 @@ npm run release:preview
                     ))}
                   </div>
 
-                  {landingPaneTab === 'outputs' ? (
+                  <div
+                    id={`landing-panel-${landingPaneTab}`}
+                    role="tabpanel"
+                    aria-labelledby={`landing-tab-${landingPaneTab}`}
+                    tabIndex={0}
+                  >
+                    {landingPaneTab === 'outputs' ? (
                     <div className="max-w-4xl space-y-4">
                       <h2 className="display-serif text-4xl leading-[0.95] text-foreground sm:text-[3.2rem]">
                         {t('app.reviewOutputsTitle')}
@@ -630,6 +681,7 @@ npm run release:preview
                       </div>
                     </div>
                   )}
+                  </div>
                 </div>
               </div>
 

@@ -140,12 +140,35 @@ describe('App smoke test', () => {
     expect((await screen.findAllByText('app.bridgeModeCanonical')).length).toBeGreaterThan(0);
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
     expect(await screen.findByTitle(/\/home\/miles\/dev2\/skill-0/)).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'app.workspace' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'app.landingOverviewTab' })).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.click(screen.getByText('app.landingScenariosTab'));
 
     expect(await screen.findByText('Mode overview')).toBeInTheDocument();
     expect(await screen.findByText('Bundle intake review')).toBeInTheDocument();
     expect(await screen.findByText('Publish approval gate')).toBeInTheDocument();
+  });
+
+  it('supports keyboard navigation across landing tabs', async () => {
+    await act(async () => {
+      render(<App />);
+    });
+
+    const overviewTab = screen.getByRole('tab', { name: 'app.landingOverviewTab' });
+    overviewTab.focus();
+
+    fireEvent.keyDown(overviewTab, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'app.landingOutputsTab' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'app.landingOutputsTab' })).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'app.landingOutputsTab' }), { key: 'End' });
+    expect(screen.getByRole('tab', { name: 'app.landingScenariosTab' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'app.landingScenariosTab' })).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'app.landingScenariosTab' }), { key: 'Home' });
+    expect(screen.getByRole('tab', { name: 'app.landingOverviewTab' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'app.landingOverviewTab' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('surfaces standalone parser review guidance before analysis starts', async () => {
