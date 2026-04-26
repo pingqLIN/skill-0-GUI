@@ -228,6 +228,35 @@ describe('App smoke test', () => {
     expect(await screen.findByText('app.llmAdminSaved')).toBeInTheDocument();
   });
 
+  it('treats the llm admin surface as an accessible dialog with keyboard close and focus restore', async () => {
+    await act(async () => {
+      render(<App />);
+    });
+
+    const openButton = screen.getByRole('button', { name: /app\.aiSettings/ });
+    openButton.focus();
+    fireEvent.click(openButton);
+
+    const dialog = await screen.findByRole('dialog', { name: 'app.llmAdminTitle' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+    const closeButton = screen.getByLabelText('app.close');
+    await waitFor(() => {
+      expect(closeButton).toHaveFocus();
+    });
+
+    const clearApiKey = await screen.findByLabelText('app.llmAdminClearApiKey');
+    clearApiKey.focus();
+    fireEvent.keyDown(window, { key: 'Tab' });
+    expect(closeButton).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'app.llmAdminTitle' })).not.toBeInTheDocument();
+    });
+    expect(openButton).toHaveFocus();
+  });
+
   it('loads the review workspace after analysis completes', async () => {
     vi.mocked(analyzeSkillText).mockResolvedValue({
       projectId: 'demo-skill',

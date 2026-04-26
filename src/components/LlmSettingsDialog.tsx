@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AlertCircle, KeyRound, RefreshCw, Save, SlidersHorizontal, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useHighlightEffect } from '../hooks/useHighlightEffect';
@@ -51,6 +51,10 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [highlightRecentSave, triggerHighlightRecentSave] = useHighlightEffect(6000);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
 
   useEffect(() => {
     if (!open) {
@@ -100,6 +104,57 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
       ? [responseState.bridgeStatus.llmProvider, responseState.bridgeStatus.llmModel].filter(Boolean).join('/') || t('app.llmFallbackReady')
       : responseState.bridgeStatus.llmReason || t('app.llmFallbackDisabledHint');
   }, [responseState, t]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialogRef.current) {
+        return;
+      }
+
+      const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+
+      if (focusableElements.length === 0) {
+        return;
+      }
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey && activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', handleKeyDown);
+      previouslyFocusedRef.current?.focus();
+    };
+  }, [onClose, open]);
 
   if (!open) {
     return null;
@@ -157,17 +212,25 @@ export function LlmSettingsDialog({ onBridgeStatusChange, onClose, open }: LlmSe
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-4 py-6 backdrop-blur-sm">
-      <div className="glass-panel-strong max-h-[90vh] w-full max-w-4xl overflow-y-auto px-5 py-5 sm:px-6 sm:py-6" data-testid="llm-settings-dialog">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="glass-panel-strong max-h-[90vh] w-full max-w-4xl overflow-y-auto px-5 py-5 sm:px-6 sm:py-6"
+        data-testid="llm-settings-dialog"
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="editorial-kicker">{t('app.llmAdminKicker')}</p>
-            <h2 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
+            <h2 id={titleId} className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
               <SlidersHorizontal size={20} />
               {t('app.llmAdminTitle')}
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/72">{t('app.llmAdminLead')}</p>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             className="editorial-button-secondary px-3 py-2 text-sm font-medium text-muted-foreground"
