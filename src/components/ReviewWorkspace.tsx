@@ -50,7 +50,7 @@ import type {
   ValidationRun,
 } from '../types/skillDocument';
 import type { EditorConfig, WorkspaceTabId } from '../types/workspace';
-import type { DemoReviewPreset } from '../App';
+import type { DemoReviewPreset } from '../types/demo';
 
 type PipelineSubviewId = 'summary' | 'analysis' | 'decomposition' | 'pipeline' | 'derived';
 

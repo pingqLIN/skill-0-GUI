@@ -1,6 +1,6 @@
 <!--
 This file is mirrored into skill-0-GUI.
-Source: ../skill-0/docs/shared/04-cross-repo-session-rules.md
+Source: ../../skill-0/docs/shared/04-cross-repo-session-rules.md
 Do not edit this copy directly; update the source document and rerun npm run docs:sync.
 -->
 # Cross-Repo Session Coordination Rules
