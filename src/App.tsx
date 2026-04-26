@@ -33,6 +33,8 @@ type LandingPaneTabId = 'overview' | 'outputs' | 'docs' | 'scenarios';
 export default function App() {
   const { t, i18n } = useTranslation();
   const darkMode = false;
+  const workspaceTitleId = 'landing-workspace-title';
+  const intakeTitleId = 'landing-intake-title';
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
@@ -416,7 +418,7 @@ npm run release:preview
               <div className="min-w-0">
                 <p className="editorial-kicker">{t('app.workspace')}</p>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
+                  <h1 id={workspaceTitleId} className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{t('app.title')}</h1>
                   <span className="hidden text-xs text-foreground/60 sm:inline">{t('app.subtitle')}</span>
                 </div>
               </div>
@@ -510,7 +512,7 @@ npm run release:preview
         {!data ? (
           <div className="space-y-6">
             <section className="grid gap-6 2xl:grid-cols-[minmax(0,1.12fr)_minmax(30rem,0.88fr)]">
-              <div className="glass-panel-strong hero-pattern px-5 py-6 sm:px-7 sm:py-7">
+              <section aria-labelledby={workspaceTitleId} className="glass-panel-strong hero-pattern px-5 py-6 sm:px-7 sm:py-7">
                 <div className="space-y-6">
                   <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('app.workspace')}>
                     {landingPaneTabs.map((tab, tabIndex) => (
@@ -683,13 +685,13 @@ npm run release:preview
                   )}
                   </div>
                 </div>
-              </div>
+              </section>
 
-              <div className="intake-section px-5 py-5 sm:px-6 sm:py-6 2xl:sticky 2xl:top-28 2xl:self-start">
+              <aside aria-labelledby={intakeTitleId} className="intake-section px-5 py-5 sm:px-6 sm:py-6 2xl:sticky 2xl:top-28 2xl:self-start">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="editorial-kicker">{t('app.inputStudio')}</p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.analyzeNew')}</h3>
+                    <h2 id={intakeTitleId} className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t('app.analyzeNew')}</h2>
                   </div>
                   <div className="editorial-icon-well p-3 text-muted-foreground">
                     <UploadCloud size={22} />
@@ -922,7 +924,7 @@ npm run release:preview
                   )}
                 </div>
 
-              </div>
+              </aside>
             </section>
           </div>
         ) : (

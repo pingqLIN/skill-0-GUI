@@ -140,6 +140,8 @@ describe('App smoke test', () => {
     expect((await screen.findAllByText('app.bridgeModeCanonical')).length).toBeGreaterThan(0);
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
     expect(await screen.findByTitle(/\/home\/miles\/dev2\/skill-0/)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'app.title' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'app.analyzeNew' })).toBeInTheDocument();
     expect(screen.getByRole('tablist', { name: 'app.workspace' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'app.landingOverviewTab' })).toHaveAttribute('aria-selected', 'true');
 
