@@ -12,6 +12,8 @@ const checkOnly = process.argv.includes('--check');
 const candidateRoots = [
   process.env.SKILL0_PARSER_ROOT,
   process.env.SKILL0_ROOT,
+  path.resolve(repoRoot, '..', 'skill-0'),
+  '/home/miles/dev2/projects/skill-0',
   '/home/miles/dev2/skill-0',
   '/home/miles/dev/projects/skill-0',
 ].filter(Boolean);

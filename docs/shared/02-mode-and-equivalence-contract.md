@@ -1,6 +1,6 @@
 <!--
 This file is mirrored into skill-0-GUI.
-Source: ../../skill-0/docs/shared/02-mode-and-equivalence-contract.md
+Source: ../skill-0/docs/shared/02-mode-and-equivalence-contract.md
 Do not edit this copy directly; update the source document and rerun npm run docs:sync.
 -->
 # Shared Mode And Fidelity Contract

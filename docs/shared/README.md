@@ -1,6 +1,6 @@
 <!--
 This file is mirrored into skill-0-GUI.
-Source: ../../skill-0/docs/shared/README.md
+Source: ../skill-0/docs/shared/README.md
 Do not edit this copy directly; update the source document and rerun npm run docs:sync.
 -->
 # Shared Documentation Source
@@ -14,6 +14,7 @@ The rule is simple:
 
 - keep repository-specific product, deployment, roadmap, and status notes in each repository
 - keep stable cross-repository contracts here
+- keep repository-governance decisions in `skill-0` and mirror only stable cross-repo rules
 
 Suitable shared documents include:
 
@@ -47,3 +48,5 @@ npm run docs:sync
 ```
 
 The mirrored copies should be treated as vendored contract documents, not independently authored files.
+
+Repository-level ownership is documented in `docs/gui-governance.md`. The current model is governed companion repositories, not a monorepo merge.
