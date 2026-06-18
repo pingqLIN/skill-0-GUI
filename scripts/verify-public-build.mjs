@@ -7,7 +7,6 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = path.join(projectRoot, 'dist');
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const forbiddenPatterns = [
   /vector-space-3d/i,
   /react-force-graph-3d/i,
@@ -16,7 +15,7 @@ const forbiddenPatterns = [
 
 async function main() {
   await rm(distDir, { force: true, recursive: true });
-  await execFileAsync(npmCommand, ['run', 'build:public'], {
+  await execFileAsync(process.execPath, [path.join(projectRoot, 'scripts', 'build-public.mjs')], {
     cwd: projectRoot,
     env: {
       ...process.env,

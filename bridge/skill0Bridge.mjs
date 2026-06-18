@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -1277,8 +1278,27 @@ function transformParserResult(parserResult, bridge) {
   };
 }
 
-function pythonExecArgs() {
+function isWindowsLocalPath(value) {
+  return /^[a-zA-Z]:[\\/]/.test(value) || value.startsWith('\\\\');
+}
+
+function pythonExecArgs(skill0Root) {
   if (process.platform === 'win32') {
+    if (isWindowsLocalPath(skill0Root)) {
+      const venvPython = path.join(skill0Root, '.venv', 'Scripts', 'python.exe');
+      if (existsSync(venvPython)) {
+        return {
+          args: ['-c', PYTHON_BRIDGE],
+          command: venvPython,
+        };
+      }
+
+      return {
+        args: ['-3.12', '-c', PYTHON_BRIDGE],
+        command: 'py',
+      };
+    }
+
     return {
       args: ['python3', '-c', PYTHON_BRIDGE],
       command: 'wsl.exe',
@@ -1293,7 +1313,7 @@ function pythonExecArgs() {
 
 function runSkill0Parser(text, skillName, skill0Root) {
   return new Promise((resolve, reject) => {
-    const { args, command } = pythonExecArgs();
+    const { args, command } = pythonExecArgs(skill0Root);
     const child = spawn(command, args, {
       env: {
         ...process.env,
@@ -1336,7 +1356,7 @@ function runSkill0Parser(text, skillName, skill0Root) {
 
 function runSkill0ManifestParser({ entryPath, rootDir, skill0Root }) {
   return new Promise((resolve, reject) => {
-    const { args, command } = pythonExecArgs();
+    const { args, command } = pythonExecArgs(skill0Root);
     const child = spawn(command, args, {
       env: {
         ...process.env,
