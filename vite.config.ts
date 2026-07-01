@@ -74,6 +74,7 @@ function resolvePort(rawPort: string | undefined, fallback = DEFAULT_VITE_PORT) 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const enable3D = env.VITE_ENABLE_3D !== 'false';
+  const viteHost = env.VITE_HOST || env.HOST || '127.0.0.1';
   const vitePort = resolvePort(env.VITE_PORT);
   const llmAdmin = createLLMRuntimeConfigStore({
     mutable: env.SKILL0_RUNTIME_CONFIG_MUTABLE,
@@ -269,12 +270,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      host: '0.0.0.0',
+      host: viteHost,
       port: vitePort,
       hmr: process.env.DISABLE_HMR !== 'true',
     },
     preview: {
-      host: '0.0.0.0',
+      host: viteHost,
       port: vitePort,
     },
     test: {

@@ -38,16 +38,21 @@ async function resolveSkill0Root() {
 }
 
 function renderMirroredDocument(sourceRepoPath, body) {
+  const normalizedSourceRepoPath = sourceRepoPath.split(path.sep).join(path.posix.sep);
   const banner = [
     '<!--',
     'This file is mirrored into skill-0-GUI.',
-    `Source: ${sourceRepoPath}`,
+    `Source: ${normalizedSourceRepoPath}`,
     'Do not edit this copy directly; update the source document and rerun npm run docs:sync.',
     '-->',
     '',
   ].join('\n');
 
   return `${banner}${body}`;
+}
+
+function normalizeNewlines(value) {
+  return value.replace(/\r\n/g, '\n');
 }
 
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
@@ -108,7 +113,7 @@ for (const entry of manifest) {
     : null;
 
   if (checkOnly) {
-    if (existing !== rendered) {
+    if (normalizeNewlines(existing) !== normalizeNewlines(rendered)) {
       throw new Error(
         `Outdated mirrored doc: docs/shared/${entry.target}. Run npm run docs:sync.`,
       );

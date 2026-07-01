@@ -188,9 +188,10 @@ export function createServerApp({
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const port = Number(process.env.PORT || 4173);
+  const host = process.env.SKILL0_HOST || process.env.HOST || '127.0.0.1';
   const { app } = createServerApp();
 
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`skill-0-review-studio server listening on http://0.0.0.0:${port}`);
+  app.listen(port, host, () => {
+    console.log(`skill-0-review-studio server listening on http://${host}:${port}`);
   });
 }

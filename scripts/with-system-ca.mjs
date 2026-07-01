@@ -26,12 +26,15 @@ const env = {
   ...process.env,
   ...(extraCaCerts ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
 };
-const executable = process.platform === 'win32' && !command.includes('.')
-  ? `${command}.cmd`
+const isWindows = process.platform === 'win32';
+const executable = isWindows && ['node', 'node.exe'].includes(command.toLowerCase())
+  ? process.execPath
   : command;
+const useShell = isWindows && executable === command && !command.includes('\\') && !command.includes('/');
 
 const child = spawn(executable, args, {
   env,
+  shell: useShell,
   stdio: 'inherit',
 });
 
