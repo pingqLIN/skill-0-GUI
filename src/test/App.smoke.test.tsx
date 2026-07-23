@@ -117,7 +117,9 @@ describe('App smoke test', () => {
     vi.mocked(JSZip.loadAsync).mockReset();
     vi.mocked(fetchLlmSettings).mockClear();
     vi.mocked(updateLlmSettings).mockClear();
+    vi.stubGlobal('scrollTo', vi.fn());
     window.localStorage.clear();
+    window.history.replaceState({}, '', '/');
     vi.mocked(fetchBridgeStatus).mockResolvedValue({
       mode: 'skill-0',
       skill0Root: '/home/miles/dev2/skill-0',
@@ -150,6 +152,23 @@ describe('App smoke test', () => {
     expect(await screen.findByText('Mode overview')).toBeInTheDocument();
     expect(await screen.findByText('Bundle intake review')).toBeInTheDocument();
     expect(await screen.findByText('Publish approval gate')).toBeInTheDocument();
+  });
+
+  it('renders the public demo entry at /demo and returns to the workspace without a reload', async () => {
+    window.history.replaceState({}, '', '/demo');
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(await screen.findByText('app.demoEntryTitle')).toBeInTheDocument();
+    expect(await screen.findByText('app.demoEntryTrustBody')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'app.demoEntryLoadExample' })).toHaveLength(2);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'app.demoEntryOpenWorkspace' })[1]);
+
+    expect(window.location.pathname).toBe('/');
+    expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
   });
 
   it('supports keyboard navigation across landing tabs', async () => {

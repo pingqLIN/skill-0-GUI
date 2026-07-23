@@ -17,6 +17,7 @@ import { fetchBridgeStatus, type BridgeStatus } from './services/bridgeStatusSer
 import { getSampleScenarioContent } from './content/sampleScenarios';
 import { useReviewStudioSession } from './hooks/useReviewStudioSession';
 import type { DemoScenarioDefinition } from './types/demo';
+import { ExternalDemoLanding } from './components/ExternalDemoLanding';
 
 const GUI_REPO_URL = 'https://github.com/pingqLIN/skill-0-review-studio';
 const ENGINE_REPO_URL = 'https://github.com/pingqLIN/skill-0';
@@ -40,6 +41,7 @@ export default function App() {
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
   const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
   const [isLlmSettingsOpen, setIsLlmSettingsOpen] = useState(false);
+  const [isPublicDemoEntry, setIsPublicDemoEntry] = useState(() => window.location.pathname === '/demo');
 
   useEffect(() => {
     const preventWindowDrop = (event: DragEvent) => {
@@ -55,6 +57,12 @@ export default function App() {
       window.removeEventListener('dragover', preventWindowDrop);
       window.removeEventListener('drop', preventWindowDrop);
     };
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => setIsPublicDemoEntry(window.location.pathname === '/demo');
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
@@ -113,6 +121,11 @@ export default function App() {
   const handleBridgeStatusChange = useCallback((status: BridgeStatus) => {
     setBridgeStatus(status);
     setBridgeStatusError(null);
+  }, []);
+  const openWorkspace = useCallback(() => {
+    window.history.pushState({}, '', '/');
+    setIsPublicDemoEntry(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
   const landingDocs = [
     {
@@ -406,6 +419,26 @@ npm run release:preview
       focusTabAt(landingPaneTabs.length - 1);
     }
   };
+  if (isPublicDemoEntry) {
+    return (
+      <ExternalDemoLanding
+        docsIndexUrl={DOCS_INDEX_URL}
+        guiRepoUrl={GUI_REPO_URL}
+        modeContractUrl={MODE_CONTRACT_URL}
+        deploymentGuideUrl={DEPLOYMENT_GUIDE_URL}
+        language={i18n.language}
+        onOpenWorkspace={openWorkspace}
+        onToggleLanguage={toggleLanguage}
+        onLoadScenario={(scenarioId) => {
+          const scenario = curatedScenarios.find((candidate) => candidate.id === scenarioId);
+          if (scenario) {
+            loadCuratedScenario(scenario);
+          }
+          openWorkspace();
+        }}
+      />
+    );
+  }
   return (
     <div className="app-shell min-h-screen transition-colors duration-300">
       {!data && (
