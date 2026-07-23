@@ -394,6 +394,24 @@ describe('ReviewWorkspace', () => {
     expect(screen.getByRole('button', { name: 'app.exportReviewPacket' })).toBeInTheDocument();
   });
 
+  it('opens the global editor from the expanded toolbar without submitting a parent form', async () => {
+    const handleSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => event.preventDefault());
+    const initialHref = window.location.href;
+
+    render(
+      <form onSubmit={handleSubmit}>
+        <ReviewWorkspace data={sampleData} {...createProps()} />
+      </form>,
+    );
+
+    await expandTopToolbarIfCollapsed();
+    fireEvent.click(screen.getByTestId('top-toolbar-open-global-editor-shortcut'));
+
+    expect(handleSubmit).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(initialHref);
+    expect(await screen.findByTestId('side-editor-config')).toHaveTextContent('global:none');
+  });
+
   it('records a reviewer-facing validation run from the test panel', async () => {
     render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 

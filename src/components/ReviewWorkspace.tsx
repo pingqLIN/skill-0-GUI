@@ -968,6 +968,13 @@ export function ReviewWorkspace({
     setIsTopToolbarExpanded((current) => !current);
   };
 
+  const handleOpenGlobalEditorFromToolbar = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShowActions(false);
+    setEditorConfig({ type: 'global', payload: data });
+  };
+
   useEffect(() => {
     if (activeBottomTab) {
       setShowActions(false);
@@ -1703,7 +1710,7 @@ export function ReviewWorkspace({
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => setEditorConfig({ type: 'global', payload: data })}
+                              onClick={handleOpenGlobalEditorFromToolbar}
                               data-testid="top-toolbar-open-global-editor-shortcut"
                               className="editorial-button-secondary px-3 py-2 text-xs font-medium"
                             >
@@ -1737,6 +1744,7 @@ export function ReviewWorkspace({
                           <div className="flex flex-wrap items-center gap-2">
                           <div className="relative">
                             <button
+                              type="button"
                               onClick={() => setShowActions((current) => !current)}
                               data-testid="top-toolbar-actions-trigger"
                               className={`flex items-center gap-2 px-3 py-2 text-sm rounded-[calc(var(--radius)*1.02)] transition-colors ${showActions ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-card'}`}
@@ -1757,6 +1765,7 @@ export function ReviewWorkspace({
                                 >
                                   <div className="grid gap-2 px-4 pb-4">
                                     <button
+                                      type="button"
                                       onClick={() => {
                                         setShowActions(false);
                                         exportSkill();
@@ -1769,6 +1778,7 @@ export function ReviewWorkspace({
                                     </button>
                                     {skillDocument && (
                                       <button
+                                        type="button"
                                         onClick={() => {
                                           setShowActions(false);
                                           exportSkillJson();
@@ -1782,6 +1792,7 @@ export function ReviewWorkspace({
                                     )}
                                     {skillDocument && (
                                       <button
+                                        type="button"
                                         onClick={() => {
                                           setShowActions(false);
                                           exportReviewReport();
@@ -1794,6 +1805,7 @@ export function ReviewWorkspace({
                                       </button>
                                     )}
                                     <button
+                                      type="button"
                                       onClick={() => {
                                         setShowActions(false);
                                         exportReviewPacket();
@@ -1806,6 +1818,7 @@ export function ReviewWorkspace({
                                       <Download size={14} className="text-muted-foreground" />
                                     </button>
                                     <button
+                                      type="button"
                                       onClick={() => {
                                         setShowActions(false);
                                         handleResetWorkspace();
@@ -1817,6 +1830,7 @@ export function ReviewWorkspace({
                                     </button>
                                     {modifiedPaths.size > 0 && (
                                       <button
+                                        type="button"
                                         onClick={() => {
                                           setShowActions(false);
                                           onUndo();
