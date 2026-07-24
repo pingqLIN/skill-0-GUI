@@ -105,6 +105,28 @@ test.describe('review studio browser contract', () => {
     expect(blockingViolations).toEqual([]);
   });
 
+  test('makes imported bundle sources editable before analysis', async ({ page }) => {
+    await page.getByTestId('intake-task-compare').click();
+    await page.locator('input[type="file"]').first().setInputFiles([
+      { name: 'SKILL.md', mimeType: 'text/markdown', buffer: Buffer.from('# Original skill\n') },
+      { name: 'policy.md', mimeType: 'text/markdown', buffer: Buffer.from('# Original policy\n') },
+    ]);
+
+    const editorNav = page.getByRole('button', { name: 'Editor' });
+    await expect(editorNav).toBeEnabled();
+    await editorNav.click();
+    await expect(page.getByTestId('intake-source-editor')).toBeVisible();
+    await page.getByRole('textbox', { name: 'SKILL.md source content' }).fill('# Edited skill\n');
+    await page.getByRole('button', { name: /policy\.md policy\.md/ }).click();
+    await page.getByRole('textbox', { name: 'policy.md source content' }).fill('# Edited policy\n');
+    await expect(page.getByRole('textbox', { name: 'policy.md source content' })).toHaveValue('# Edited policy\n');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(results.violations.filter(({ impact }) => impact === 'serious' || impact === 'critical')).toEqual([]);
+  });
+
   test('has no serious or critical axe violations in the review editor flow', async ({ page }) => {
     await page.getByTestId('intake-task-review').click();
     await page

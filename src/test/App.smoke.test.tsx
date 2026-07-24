@@ -385,7 +385,7 @@ describe('App smoke test', () => {
     expect(analyzeSkillText).toHaveBeenCalledWith('# demo skill', 'uploaded-skill', {});
   });
 
-  it('imports and analyzes a supported remote skill URL', async () => {
+  it('stages a supported remote skill URL for source editing before analysis', async () => {
     vi.mocked(resolveSkillUrl).mockResolvedValue({
       contentType: 'text/plain',
       fileName: 'SKILL.md',
@@ -419,9 +419,15 @@ describe('App smoke test', () => {
     await waitFor(() => {
       expect(resolveSkillUrl).toHaveBeenCalledWith('https://github.com/owner/repo/blob/main/SKILL.md');
     });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Editor' })).toBeEnabled());
+    expect(analyzeSkillText).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'SKILL.md source content' }), { target: { value: '# edited remote skill' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze latest source' }));
     await waitFor(() => {
-      expect(analyzeSkillText).toHaveBeenCalledWith('# remote skill', 'SKILL.md', {
+      expect(analyzeSkillText).toHaveBeenCalledWith('# edited remote skill', 'SKILL.md', {
         primaryPath: 'owner/repo/main/SKILL.md',
+        contextFiles: [],
       });
     });
   });
@@ -519,6 +525,35 @@ describe('App smoke test', () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it('analyzes source-editor changes for both the primary skill and bundle context', async () => {
+    vi.mocked(analyzeSkillText).mockResolvedValue({
+      projectId: 'edited-bundle', projectName: 'Edited bundle', phases: [],
+      riskAssessment: { level: 'SAFE', details: '' },
+      threeClassification: { category: 'demo', granularity: 'task', operability: 90 },
+      parserResult: { decomposition: { actions: [], rules: [], directives: [] } },
+      globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
+    });
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByTestId('intake-task-compare'));
+    const fileInput = container.querySelector('input[accept*=".zip"]') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [
+      new File(['# Original skill'], 'SKILL.md', { type: 'text/markdown' }),
+      new File(['# Original policy'], 'policy.md', { type: 'text/markdown' }),
+    ] } });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Editor' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'SKILL.md source content' }), { target: { value: '# Edited skill' } });
+    fireEvent.click(screen.getByRole('button', { name: 'policy.md policy.md' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'policy.md source content' }), { target: { value: '# Edited policy' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze latest source' }));
+
+    await waitFor(() => expect(analyzeSkillText).toHaveBeenCalledWith('# Edited skill', 'SKILL.md', {
+      primaryPath: 'SKILL.md',
+      contextFiles: [expect.objectContaining({ path: 'policy.md', text: '# Edited policy', role: 'context' })],
+    }));
   });
 
   it('analyzes pasted text after leaving a pending upload bundle', async () => {

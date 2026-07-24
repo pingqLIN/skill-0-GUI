@@ -142,24 +142,12 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
 
     const preparedFiles = await prepareUploads(files);
     const primaryFile = preparedFiles.find((file) => file.isPrimaryCandidate && file.text) ?? null;
-    const standaloneJsonImport = preparedFiles.length === 1 && preparedFiles[0].text
-      ? parseSkillDocumentJson(preparedFiles[0].text)
-      : null;
-
     setPendingUploadFiles(preparedFiles);
     setPendingPrimaryPath(primaryFile?.path ?? null);
     setSupportFiles([]);
     setSelectedContextPath(null);
     setActiveDemoPreset(null);
     setSkillUrlInput('');
-
-    if (!primaryFile && standaloneJsonImport) {
-      loadSkillDocument(standaloneJsonImport, {
-        fileName: preparedFiles[0].name,
-        sourceLabel: preparedFiles[0].path,
-      });
-      return;
-    }
 
     if (primaryFile) {
       setInputText(primaryFile.text || '');
@@ -239,29 +227,26 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
 
     try {
       const payload = await resolveSkillUrl(trimmed);
-      const importedSkillDocument = parseSkillDocumentJson(payload.text);
-      if (importedSkillDocument) {
-        setInputText(payload.text);
-        setSkillUrlInput('');
-        setSupportFiles([]);
-        setSelectedContextPath(null);
-        setActiveDemoPreset(null);
-        loadSkillDocument(importedSkillDocument, {
-          fileName: payload.fileName,
-          sourceLabel: payload.resolvedUrl,
-        });
-        return;
-      }
-
-      const result = await analyzeSkillText(payload.text, payload.fileName, {
-        primaryPath: payload.primaryPath,
-      });
-      applyAnalysisResult(result);
+      const pendingFile: PreparedUploadFile = {
+        name: payload.fileName,
+        path: payload.primaryPath,
+        type: payload.contentType || 'text/plain',
+        size: new TextEncoder().encode(payload.text).byteLength,
+        role: 'primary',
+        source: 'url',
+        preview: payload.text.slice(0, 280),
+        text: payload.text,
+        isPrimaryCandidate: true,
+      };
+      setPendingUploadFiles([pendingFile]);
+      setPendingPrimaryPath(pendingFile.path);
       setInputText(payload.text);
       setSkillUrlInput('');
       setSupportFiles([]);
       setSelectedContextPath(null);
       setActiveDemoPreset(null);
+      setError(null);
+      dispatch({ type: 'intake-ready' });
     } catch (err) {
       const isHandledUrlImportError = typeof err === 'object' && err && 'code' in err && typeof err.code === 'string';
       if (!isHandledUrlImportError) {
@@ -344,6 +329,23 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     setActiveDemoPreset(null);
     setError(null);
   };
+
+  const selectPendingPrimaryPath = useCallback((path: string) => {
+    const selectedFile = pendingUploadFiles.find((file) => file.path === path);
+    if (!selectedFile?.isPrimaryCandidate) return;
+    setPendingPrimaryPath(path);
+    if (selectedFile.text !== undefined) setInputText(selectedFile.text);
+    setError(null);
+  }, [pendingUploadFiles, setError, setInputText, setPendingPrimaryPath]);
+
+  const updatePendingUploadFile = useCallback((path: string, text: string) => {
+    const updatedFiles = pendingUploadFiles.map((file) => file.path === path
+      ? { ...file, text, preview: text.slice(0, 280), size: new TextEncoder().encode(text).byteLength }
+      : file);
+    setPendingUploadFiles(updatedFiles);
+    if (path === pendingPrimaryPath) setInputText(text);
+    setError(null);
+  }, [pendingPrimaryPath, pendingUploadFiles, setError, setInputText, setPendingUploadFiles]);
 
   const prepareDemoSkill = useCallback((text: string) => {
     clearWorkspaceDraftState();
@@ -442,10 +444,12 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     setInputText,
     setIsDragActive,
     setPendingPrimaryPath,
+    selectPendingPrimaryPath,
     setSelectedContextPath,
     setSkillUrlInput,
     skillUrlInput,
     supportFiles,
+    updatePendingUploadFile,
     workspaceDraftPersistenceError,
     workspaceDraftRestored,
     workspaceDraftSavedAt,

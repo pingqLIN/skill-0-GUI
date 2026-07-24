@@ -24,6 +24,7 @@ import type { PreparedUploadFile, UploadedContextFile } from '../types/intake';
 import type { WorkspaceDraftEntry } from '../hooks/useWorkspaceDraftState';
 import { BundleIntakePanel } from './BundleIntakePanel';
 import { DraftLibrary } from './DraftLibrary';
+import { IntakeSourceEditor } from './IntakeSourceEditor';
 import {
   IntakeReviewRail,
   type IntakeReviewRailCopy,
@@ -35,7 +36,7 @@ import {
   type TaskFirstTask,
 } from './TaskFirstIntake';
 
-type UtilityTab = 'overview' | 'outputs' | 'docs' | 'scenarios';
+type UtilityTab = 'overview' | 'source-editor' | 'outputs' | 'docs' | 'scenarios';
 
 type ResourceCard = {
   title: string;
@@ -87,6 +88,7 @@ export type GuidedIntakeLandingProps = {
   onDragLeave: DragEventHandler<HTMLDivElement>;
   onDrop: DragEventHandler<HTMLDivElement>;
   onSetPrimaryPath: (path: string) => void;
+  onUpdatePendingFile: (path: string, text: string) => void;
   onSelectContextPath: (path: string) => void;
   onRestoreDraft: (draftId: string) => void;
   onDeleteDraft: (draftId: string) => void;
@@ -170,6 +172,7 @@ export function GuidedIntakeLanding({
   onDragLeave,
   onDrop,
   onSetPrimaryPath,
+  onUpdatePendingFile,
   onSelectContextPath,
   onRestoreDraft,
   onDeleteDraft,
@@ -380,19 +383,26 @@ export function GuidedIntakeLanding({
       <nav className="guided-intake-nav" aria-label={isZh ? '工作區導覽' : 'Workspace navigation'}>
         <div className="guided-intake-mark" aria-hidden="true">&gt;_</div>
         <div className="guided-intake-nav-items">
-          {navItems.map(({ label, icon: Icon, active }) => (
+          {navItems.map(({ label, icon: Icon, active }) => {
+            const isEditor = label === 'Editor';
+            const isAvailable = active || (isEditor && pendingUploadFiles.length > 0);
+            const isActive = active ? activeUtilityTab === 'overview' : (isEditor && activeUtilityTab === 'source-editor');
+            return (
             <button
               key={label}
               type="button"
-              className={active ? 'is-active' : ''}
-              aria-current={active ? 'page' : undefined}
-              aria-disabled={!active}
-              title={!active ? (isZh ? '分析完成後開放' : 'Available after analysis') : label}
+              className={isActive ? 'is-active' : ''}
+              aria-current={isActive ? 'page' : undefined}
+              aria-disabled={!isAvailable}
+              disabled={!isAvailable}
+              onClick={() => isAvailable && onUtilityTabChange(isEditor ? 'source-editor' : 'overview')}
+              title={!isAvailable ? (isZh ? '匯入內容後開放' : 'Available after import') : label}
             >
               <Icon size={20} aria-hidden="true" />
               <span>{label}</span>
             </button>
-          ))}
+            );
+          })}
         </div>
         <div className="guided-intake-nav-export">
           <Download size={20} aria-hidden="true" />
@@ -451,7 +461,17 @@ export function GuidedIntakeLanding({
           </div>
         )}
 
-        {activeUtilityTab === 'overview' ? (
+        {activeUtilityTab === 'source-editor' ? (
+          <IntakeSourceEditor
+            files={pendingUploadFiles}
+            primaryPath={pendingPrimaryPath}
+            isBusy={isBusy}
+            language={language}
+            onSelectPrimary={onSetPrimaryPath}
+            onUpdateFile={onUpdatePendingFile}
+            onAnalyze={onAnalyzeUpload}
+          />
+        ) : activeUtilityTab === 'overview' ? (
           <>
             <TaskFirstIntake
               inputText={inputText}
@@ -590,7 +610,7 @@ export function GuidedIntakeLanding({
         className="guided-intake-rail"
       />
 
-      <footer className="guided-intake-dock">
+      <footer className="guided-intake-dock" tabIndex={0} aria-label={isZh ? '工作區工具列' : 'Workspace tools'}>
         <div className="guided-intake-dock-tabs" role="tablist" aria-label={t('app.workspace')}>
           {utilityTabs.map((tab, index) => (
             <button

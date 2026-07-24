@@ -18,7 +18,7 @@ const MODE_CONTRACT_URL = `${GUI_REPO_URL}/blob/main/docs/shared/02-mode-and-equ
 const ReviewWorkspace = lazy(() => import('./components/ReviewWorkspace').then((module) => ({ default: module.ReviewWorkspace })));
 const LlmSettingsDialog = lazy(() => import('./components/LlmSettingsDialog').then((module) => ({ default: module.LlmSettingsDialog })));
 
-type LandingPaneTabId = 'overview' | 'outputs' | 'docs' | 'scenarios';
+type LandingPaneTabId = 'overview' | 'source-editor' | 'outputs' | 'docs' | 'scenarios';
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -337,11 +337,12 @@ npm run release:preview
     selectedContextPath,
     setInputText,
     setIsDragActive,
-    setPendingPrimaryPath,
+    selectPendingPrimaryPath,
     setSelectedContextPath,
     setSkillUrlInput,
     skillUrlInput,
     supportFiles,
+    updatePendingUploadFile,
     workspaceDraftPersistenceError,
     workspaceDraftRestored,
     workspaceDraftSavedAt,
@@ -435,7 +436,8 @@ npm run release:preview
           }}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onSetPrimaryPath={setPendingPrimaryPath}
+          onSetPrimaryPath={selectPendingPrimaryPath}
+          onUpdatePendingFile={updatePendingUploadFile}
           onSelectContextPath={setSelectedContextPath}
           onRestoreDraft={restoreWorkspaceDraft}
           onDeleteDraft={deleteWorkspaceDraft}

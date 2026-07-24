@@ -34,6 +34,7 @@ export type AnalysisSessionAction =
   | { type: 'analysis-start' }
   | { type: 'analysis-succeeded'; data: any }
   | { type: 'analysis-failed'; error: string }
+  | { type: 'intake-ready' }
   | { type: 'apply-draft'; snapshot: Omit<AnalysisSessionState, 'analysisSessionId' | 'error' | 'isExtracting'> }
   | { type: 'reset' }
   | { type: 'set-data'; data: any | null }
@@ -69,6 +70,8 @@ export function analysisSessionReducer(state: AnalysisSessionState, action: Anal
       };
     case 'analysis-failed':
       return { ...state, error: action.error, isExtracting: false };
+    case 'intake-ready':
+      return { ...state, error: null, isExtracting: false };
     case 'apply-draft':
       return {
         ...state,

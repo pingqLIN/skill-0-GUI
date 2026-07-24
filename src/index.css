@@ -1913,6 +1913,51 @@
     opacity: 0.38;
   }
 
+  .intake-source-editor {
+    border: 1px solid hsl(var(--foreground) / 0.18);
+    background: hsl(var(--background));
+  }
+
+  .intake-source-editor__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: var(--panel-padding);
+    border-bottom: 1px solid hsl(var(--foreground) / 0.14);
+  }
+
+  .intake-source-editor__header h1 { margin: 0.15rem 0 0.35rem; font-size: clamp(2rem, 3vw, 3.25rem); }
+  .intake-source-editor__header p { max-width: 52rem; margin: 0; color: hsl(var(--muted-foreground)); }
+  .intake-source-editor__actions { display: grid; justify-items: end; gap: 0.55rem; flex: none; }
+  .intake-source-editor__status { display: inline-flex; align-items: center; gap: 0.45rem; color: hsl(var(--primary)); font-size: 0.8rem; font-weight: 700; }
+  .intake-source-editor__analyze { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.7rem; background: hsl(var(--foreground)); color: hsl(var(--background)); font-size: 0.8rem; font-weight: 700; }
+  .intake-source-editor__analyze:disabled { cursor: not-allowed; opacity: 0.5; }
+  .intake-source-editor__workspace { display: grid; grid-template-columns: minmax(15rem, 0.32fr) minmax(0, 1fr); min-height: 32rem; }
+  .intake-source-editor__workspace > aside { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid hsl(var(--foreground) / 0.14); background: hsl(var(--muted) / 0.36); }
+  .intake-source-editor__search { display: flex; align-items: center; gap: 0.5rem; margin: 0.85rem; padding: 0 0.6rem; border: 1px solid hsl(var(--foreground) / 0.18); background: hsl(var(--background)); }
+  .intake-source-editor__search input { width: 100%; min-width: 0; border: 0; background: transparent; padding: 0.55rem 0; outline: none; font-size: 0.85rem; }
+  .intake-source-editor__file-list { overflow: auto; padding-bottom: 0.75rem; }
+  .intake-source-editor__file-list button { display: flex; width: 100%; align-items: flex-start; gap: 0.5rem; padding: 0.7rem 0.85rem; border-left: 3px solid transparent; text-align: left; }
+  .intake-source-editor__file-list button:hover { background: hsl(var(--primary) / 0.08); }
+  .intake-source-editor__file-list button.is-selected { border-left-color: hsl(var(--primary)); background: hsl(var(--background)); }
+  .intake-source-editor__file-list button > span { display: grid; min-width: 0; gap: 0.1rem; }
+  .intake-source-editor__file-list strong, .intake-source-editor__file-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .intake-source-editor__file-list small { color: hsl(var(--muted-foreground)); font-size: 0.68rem; }
+  .intake-source-editor__file-list em { margin-left: auto; color: hsl(var(--primary)); font-size: 0.68rem; font-style: normal; font-weight: 700; }
+  .intake-source-editor__content { display: flex; min-width: 0; flex-direction: column; }
+  .intake-source-editor__toolbar { display: flex; justify-content: space-between; gap: 1rem; align-items: center; min-height: 3.75rem; padding: 0.65rem 0.85rem; border-bottom: 1px solid hsl(var(--foreground) / 0.14); }
+  .intake-source-editor__toolbar > div { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
+  .intake-source-editor__toolbar strong { max-width: 26rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 0.78rem var(--font-mono); }
+  .intake-source-editor__toolbar span { color: hsl(var(--muted-foreground)); font-size: 0.72rem; }
+  .intake-source-editor__toolbar button { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid hsl(var(--foreground) / 0.25); padding: 0.4rem 0.55rem; font-size: 0.75rem; }
+  .intake-source-editor__toolbar button.is-primary { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+  .intake-source-editor__toolbar button:disabled { cursor: not-allowed; opacity: 0.45; }
+  .intake-source-editor__content textarea { width: 100%; min-height: 28rem; flex: 1; resize: vertical; border: 0; padding: 1rem; background: hsl(210 18% 98%); font: 0.82rem/1.65 var(--font-mono); tab-size: 2; outline: none; }
+  .intake-source-editor__content textarea:focus { box-shadow: inset 0 0 0 2px hsl(var(--ring) / 0.45); }
+  .intake-source-editor__readonly { display: grid; flex: 1; place-content: center; gap: 0.75rem; padding: 2rem; color: hsl(var(--muted-foreground)); text-align: center; }
+  .intake-source-editor__readonly p { max-width: 30rem; margin: 0; }
+
   .draft-library__header {
     display: flex;
     align-items: flex-start;
