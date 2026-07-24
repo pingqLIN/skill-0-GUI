@@ -2260,6 +2260,22 @@ export function ReviewWorkspace({
                               onEditPhase={(phaseData) => setEditorConfig({ type: 'phase', payload: phaseData, phaseId: phaseData.id })}
                               onEditDecision={(node) => setEditorConfig({ type: 'decision', payload: node, phaseId: activePhaseData.id })}
                               modifiedPaths={modifiedPaths}
+                              evidence={{
+                                bridgeMode: activeBridgeMode,
+                                parserFindingCount: parserAnalysisFindings.length,
+                                supportingFileCount: supportFiles.length,
+                                latestValidationRun,
+                                latestConsistencyRun,
+                                latestPathTestRun,
+                              }}
+                              onOpenChecks={() => {
+                                setActiveBottomTab('checks');
+                                setActiveChecksSub('tests');
+                              }}
+                              onOpenSupportingFiles={() => {
+                                setActiveBottomTab('context');
+                                setActiveContextSub('files');
+                              }}
                             />
                           </Suspense>
                         ) : (
