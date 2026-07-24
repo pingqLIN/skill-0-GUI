@@ -942,6 +942,7 @@ export function ReviewWorkspace({
       : reviewEquivalenceStatus === 'draft_only_ai_assisted'
         ? t('app.equivalenceAiAssistedDraft')
       : t('app.equivalencePending');
+  const canonicalRerunRequired = reviewMode !== 'canonical' || reviewEquivalenceStatus !== 'implementation_identity';
   const reviewDecisionGuidance = data?.reviewerSummary?.finalDecisionGuidance
     || (activeBridgeMode === 'skill-0'
       ? 'Result was produced by the canonical skill-0 bridge. Final equivalence review is acceptable if supporting files and findings are inspected.'
@@ -1211,6 +1212,7 @@ export function ReviewWorkspace({
       `- review_status: ${reviewStatus}`,
       `- handoff_state: ${effectiveHandoffState}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
+      `- canonical_rerun_required: ${canonicalRerunRequired ? 'true' : 'false'}`,
       `- draft_only: ${activeBridgeDraftOnly ? 'true' : 'false'}`,
       `- llm_provider: ${activeBridgeProvider || 'n/a'}`,
       `- llm_model: ${activeBridgeModel || 'n/a'}`,
@@ -1327,6 +1329,7 @@ export function ReviewWorkspace({
       `- review_status: ${reviewStatus}`,
       `- handoff_state: ${effectiveHandoffState}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
+      `- canonical_rerun_required: ${canonicalRerunRequired ? 'true' : 'false'}`,
       `- draft_only: ${activeBridgeDraftOnly ? 'true' : 'false'}`,
       `- llm_provider: ${activeBridgeProvider || 'n/a'}`,
       `- llm_model: ${activeBridgeModel || 'n/a'}`,
@@ -1474,6 +1477,7 @@ export function ReviewWorkspace({
     const reviewPacket = buildReviewPacketFromReviewData(data, {
       bridgeMode: activeBridgeMode as ReviewPacket['parserMode'],
       bridgeModeSource: bridgeModeDetail,
+      canonicalRerunRequired,
       contextSummary,
       equivalenceStatus: reviewEquivalenceStatus,
       handoffState: effectiveHandoffState,

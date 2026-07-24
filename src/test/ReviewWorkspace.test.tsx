@@ -801,6 +801,7 @@ describe('ReviewWorkspace', () => {
     const packet = JSON.parse(await readBlobAsText(packetBlob!)) as any;
     expect(packet.projectId).toBe('demo-skill');
     expect(packet.parserMode).toBe('skill-0');
+    expect(packet.canonicalRerunRequired).toBe(false);
     expect(packet.handoffState).toBe('approved_for_export');
     expect(packet.reviewProfile).toBe('mode_verification');
     expect(packet.reviewState.reviewerName).toBe('Miles');
@@ -859,6 +860,7 @@ describe('ReviewWorkspace', () => {
     expect(packetBlob).toBeDefined();
     const packet = JSON.parse(await readBlobAsText(packetBlob!)) as any;
     expect(packet.parserMode).toBe('llm-assisted');
+    expect(packet.canonicalRerunRequired).toBe(true);
     expect(packet.draftOnly).toBe(true);
     expect(packet.fallbackReason).toBe('Unknown document structure required AI-assisted recovery.');
     expect(packet.llmProvider).toBe('openai');
@@ -977,6 +979,7 @@ describe('ReviewWorkspace', () => {
     expect(reportText).toContain('- review_profile: mode_verification');
     expect(reportText).toContain('- review_status: approved');
     expect(reportText).toContain('- handoff_state: approved_for_export');
+    expect(reportText).toContain('- canonical_rerun_required: false');
     expect(reportText).toContain('- reviewer_signoff: reviewer-01');
     expect(reportText).toContain('- signoff_gates_completed: 4/4');
     expect(reportText).toContain('## Reviewer Summary');

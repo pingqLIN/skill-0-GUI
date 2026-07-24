@@ -194,6 +194,7 @@ export type ReviewPacket = {
   parserModeSource: string;
   reviewMode: string;
   equivalenceStatus: string;
+  canonicalRerunRequired: boolean;
   reviewDecisionGuidance: string;
   operatorReminders: Array<Record<string, unknown>>;
   draftOnly?: boolean;

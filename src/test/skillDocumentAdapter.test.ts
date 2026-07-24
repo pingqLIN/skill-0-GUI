@@ -154,6 +154,7 @@ describe('skillDocumentAdapter', () => {
     const reviewPacket = buildReviewPacketFromReviewData(imported, {
       bridgeMode: 'unknown',
       bridgeModeSource: 'json/test',
+      canonicalRerunRequired: true,
       contextSummary: [{
         count: 1,
         detail: 'Source provenance is visible.',
@@ -191,6 +192,7 @@ describe('skillDocumentAdapter', () => {
 
     expect(reviewPacket).not.toBeNull();
     expect(reviewPacket?.projectId).toBe('claude__imported-skill');
+    expect(reviewPacket?.canonicalRerunRequired).toBe(true);
     expect(reviewPacket?.skillDocument?.meta.skill_id).toBe('claude__imported-skill');
     expect(reviewPacket?.handoffState).toBe('needs_changes');
     expect(reviewPacket?.reviewProfile).toBe('bundle_evidence_review');
