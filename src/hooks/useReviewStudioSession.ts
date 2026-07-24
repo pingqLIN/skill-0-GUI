@@ -1,4 +1,4 @@
-import { useCallback, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useCallback, useReducer, useState, type ChangeEvent, type DragEvent } from 'react';
 import { applyEditorSave } from '../services/editorSaveService';
 import { analyzeSkillText, resolveSkillUrl } from '../services/parserBridgeService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from '../services/skillDocumentAdapter';
@@ -8,6 +8,7 @@ import type { PreparedUploadFile, UploadedContextFile } from '../types/intake';
 import type { SkillDocument } from '../types/skillDocument';
 import type { EditorConfig } from '../types/workspace';
 import { useWorkspaceDraftState, type WorkspaceDraftSnapshot } from './useWorkspaceDraftState';
+import { analysisSessionReducer, initialAnalysisSessionState } from '../state/analysisSession';
 
 type UseReviewStudioSessionArgs = {
   exampleDemoPreset: DemoReviewPreset | null;
@@ -15,36 +16,43 @@ type UseReviewStudioSessionArgs = {
 };
 
 export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudioSessionArgs) {
-  const [isExtracting, setIsExtracting] = useState(false);
+  const [analysisSession, dispatch] = useReducer(analysisSessionReducer, initialAnalysisSessionState);
   const [isDragActive, setIsDragActive] = useState(false);
-  const [data, setData] = useState<any | null>(null);
-  const [analysisSessionId, setAnalysisSessionId] = useState(0);
-  const [originalData, setOriginalData] = useState<any | null>(null);
-  const [modifiedPaths, setModifiedPaths] = useState<Set<string>>(new Set());
-  const [inputText, setInputText] = useState('');
-  const [skillUrlInput, setSkillUrlInput] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [pendingUploadFiles, setPendingUploadFiles] = useState<PreparedUploadFile[]>([]);
-  const [pendingPrimaryPath, setPendingPrimaryPath] = useState<string | null>(null);
-  const [supportFiles, setSupportFiles] = useState<UploadedContextFile[]>([]);
-  const [selectedContextPath, setSelectedContextPath] = useState<string | null>(null);
   const [activeDemoPreset, setActiveDemoPreset] = useState<DemoReviewPreset | null>(null);
 
+  const {
+    analysisSessionId, data, error, inputText, isExtracting, modifiedPaths, originalData,
+    pendingPrimaryPath, pendingUploadFiles, selectedContextPath, skillUrlInput, supportFiles,
+  } = analysisSession;
+  const setData = useCallback((nextData: any | null) => dispatch({ type: 'set-data', data: nextData }), []);
+  const setError = useCallback((nextError: string | null) => dispatch({ type: 'set-error', error: nextError }), []);
+  const setInputText = useCallback((nextInputText: string) => dispatch({ type: 'set-input-text', inputText: nextInputText }), []);
+  const setModifiedPaths = useCallback((nextModifiedPaths: Set<string>) => dispatch({ type: 'set-modified-paths', modifiedPaths: nextModifiedPaths }), []);
+  const setOriginalData = useCallback((nextOriginalData: any | null) => dispatch({ type: 'set-original-data', originalData: nextOriginalData }), []);
+  const setPendingPrimaryPath = useCallback((nextPendingPrimaryPath: string | null) => dispatch({ type: 'set-pending-primary-path', pendingPrimaryPath: nextPendingPrimaryPath }), []);
+  const setPendingUploadFiles = useCallback((nextPendingUploadFiles: PreparedUploadFile[]) => dispatch({ type: 'set-pending-upload-files', pendingUploadFiles: nextPendingUploadFiles }), []);
+  const setSelectedContextPath = useCallback((nextSelectedContextPath: string | null) => dispatch({ type: 'set-selected-context-path', selectedContextPath: nextSelectedContextPath }), []);
+  const setSkillUrlInput = useCallback((nextSkillUrlInput: string) => dispatch({ type: 'set-skill-url-input', skillUrlInput: nextSkillUrlInput }), []);
+  const setSupportFiles = useCallback((nextSupportFiles: UploadedContextFile[]) => dispatch({ type: 'set-support-files', supportFiles: nextSupportFiles }), []);
+
   const handleApplyWorkspaceDraftSnapshot = useCallback((snapshot: WorkspaceDraftSnapshot) => {
-    setData(snapshot.data);
-    setOriginalData(snapshot.originalData);
-    setModifiedPaths(new Set(snapshot.modifiedPaths));
-    setInputText(snapshot.inputText);
-    setSkillUrlInput(snapshot.skillUrlInput);
-    setPendingUploadFiles(snapshot.pendingUploadFiles);
-    setPendingPrimaryPath(snapshot.pendingPrimaryPath);
-    setSupportFiles(snapshot.supportFiles);
-    setSelectedContextPath(snapshot.selectedContextPath);
+    dispatch({ type: 'apply-draft', snapshot: {
+      data: snapshot.data,
+      originalData: snapshot.originalData,
+      modifiedPaths: new Set(snapshot.modifiedPaths),
+      inputText: snapshot.inputText,
+      skillUrlInput: snapshot.skillUrlInput,
+      pendingUploadFiles: snapshot.pendingUploadFiles,
+      pendingPrimaryPath: snapshot.pendingPrimaryPath,
+      supportFiles: snapshot.supportFiles,
+      selectedContextPath: snapshot.selectedContextPath,
+    } });
     setActiveDemoPreset(null);
   }, []);
 
   const {
     availableWorkspaceDraft,
+    workspaceDraftPersistenceError,
     workspaceDraftSavedAt,
     workspaceDraftRestored,
     restoreAvailableWorkspaceDraft,
@@ -74,12 +82,7 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     } = {},
   ) => {
     const imported = buildReviewDataFromSkillDocument(document, options);
-    setData(imported);
-    setAnalysisSessionId((current) => current + 1);
-    setOriginalData(JSON.parse(JSON.stringify(imported)));
-    setModifiedPaths(new Set());
-    setPendingUploadFiles([]);
-    setPendingPrimaryPath(null);
+    dispatch({ type: 'analysis-succeeded', data: imported });
     setSupportFiles(options.supportFiles ?? []);
     setSelectedContextPath(options.selectedContextPath ?? null);
     setInputText(JSON.stringify(document, null, 2));
@@ -88,12 +91,7 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
   };
 
   const applyAnalysisResult = (result: any) => {
-    setData(result);
-    setAnalysisSessionId((current) => current + 1);
-    setOriginalData(JSON.parse(JSON.stringify(result)));
-    setModifiedPaths(new Set());
-    setPendingUploadFiles([]);
-    setPendingPrimaryPath(null);
+    dispatch({ type: 'analysis-succeeded', data: result });
   };
 
   const getUrlImportErrorMessage = (err: unknown) => {
@@ -122,20 +120,16 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     text: string,
     skillName = 'uploaded-skill',
     options: { contextFiles?: UploadedContextFile[]; primaryPath?: string | null } = {},
-  ) => {
-    setIsExtracting(true);
-    setError(null);
+  ): Promise<boolean> => {
+    dispatch({ type: 'analysis-start' });
     try {
       const result = await analyzeSkillText(text, skillName, options);
       applyAnalysisResult(result);
+      return true;
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : t('app.errorFailed'));
-      setData(null);
-      setOriginalData(null);
-      setModifiedPaths(new Set());
-    } finally {
-      setIsExtracting(false);
+      dispatch({ type: 'analysis-failed', error: err instanceof Error ? err.message : t('app.errorFailed') });
+      return false;
     }
   };
 
@@ -154,9 +148,6 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     setSelectedContextPath(null);
     setActiveDemoPreset(null);
     setSkillUrlInput('');
-    setData(null);
-    setOriginalData(null);
-    setModifiedPaths(new Set());
 
     if (!primaryFile && standaloneJsonImport) {
       loadSkillDocument(standaloneJsonImport, {
@@ -215,10 +206,6 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     const trimmed = inputText.trim();
 
     if (trimmed) {
-      setPendingUploadFiles([]);
-      setPendingPrimaryPath(null);
-      setActiveDemoPreset(null);
-      setSkillUrlInput('');
       const importedSkillDocument = parseSkillDocumentJson(trimmed);
       if (importedSkillDocument) {
         loadSkillDocument(importedSkillDocument, {
@@ -227,7 +214,10 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
         });
         return;
       }
-      await processSkill(inputText);
+      if (await processSkill(inputText)) {
+        setActiveDemoPreset(null);
+        setSkillUrlInput('');
+      }
     } else {
       setError(t('app.errorEmpty'));
     }
@@ -241,20 +231,17 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
       return;
     }
 
-    setIsExtracting(true);
-    setError(null);
-    setPendingUploadFiles([]);
-    setPendingPrimaryPath(null);
-    setSupportFiles([]);
-    setSelectedContextPath(null);
-    setActiveDemoPreset(null);
+    dispatch({ type: 'analysis-start' });
 
     try {
       const payload = await resolveSkillUrl(trimmed);
-      setInputText(payload.text);
-
       const importedSkillDocument = parseSkillDocumentJson(payload.text);
       if (importedSkillDocument) {
+        setInputText(payload.text);
+        setSkillUrlInput('');
+        setSupportFiles([]);
+        setSelectedContextPath(null);
+        setActiveDemoPreset(null);
         loadSkillDocument(importedSkillDocument, {
           fileName: payload.fileName,
           sourceLabel: payload.resolvedUrl,
@@ -266,17 +253,17 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
         primaryPath: payload.primaryPath,
       });
       applyAnalysisResult(result);
+      setInputText(payload.text);
+      setSkillUrlInput('');
+      setSupportFiles([]);
+      setSelectedContextPath(null);
+      setActiveDemoPreset(null);
     } catch (err) {
       const isHandledUrlImportError = typeof err === 'object' && err && 'code' in err && typeof err.code === 'string';
       if (!isHandledUrlImportError) {
         console.error(err);
       }
-      setError(getUrlImportErrorMessage(err));
-      setData(null);
-      setOriginalData(null);
-      setModifiedPaths(new Set());
-    } finally {
-      setIsExtracting(false);
+      dispatch({ type: 'analysis-failed', error: getUrlImportErrorMessage(err) });
     }
   };
 
@@ -296,13 +283,13 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
         role: 'context' as const,
       }));
 
-    setSupportFiles(contextEntries);
-    setSelectedContextPath(contextEntries[0]?.path ?? null);
-    setActiveDemoPreset(null);
-    setSkillUrlInput('');
-    setInputText(primaryFile.text);
     const importedSkillDocument = parseSkillDocumentJson(primaryFile.text);
     if (importedSkillDocument) {
+      setSupportFiles(contextEntries);
+      setSelectedContextPath(contextEntries[0]?.path ?? null);
+      setActiveDemoPreset(null);
+      setSkillUrlInput('');
+      setInputText(primaryFile.text);
       loadSkillDocument(importedSkillDocument, {
         fileName: primaryFile.name,
         sourceLabel: primaryFile.path,
@@ -314,6 +301,13 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     void processSkill(primaryFile.text, primaryFile.name, {
       contextFiles: contextEntries,
       primaryPath: primaryFile.path,
+    }).then((succeeded) => {
+      if (!succeeded) return;
+      setSupportFiles(contextEntries);
+      setSelectedContextPath(contextEntries[0]?.path ?? null);
+      setActiveDemoPreset(null);
+      setSkillUrlInput('');
+      setInputText(primaryFile.text);
     });
   };
 
@@ -342,22 +336,13 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
 
   const handleResetWorkspace = () => {
     clearWorkspaceDraftState();
-    setData(null);
-    setOriginalData(null);
-    setModifiedPaths(new Set());
-    setInputText('');
-    setSkillUrlInput('');
-    setPendingUploadFiles([]);
-    setPendingPrimaryPath(null);
-    setSupportFiles([]);
-    setSelectedContextPath(null);
+    dispatch({ type: 'reset' });
     setActiveDemoPreset(null);
     setError(null);
   };
 
   const loadExampleSkill = async () => {
-    setIsExtracting(true);
-    setError(null);
+    dispatch({ type: 'analysis-start' });
     try {
       const response = await fetch('/api/example-skill');
       const payload = await response.json().catch(() => null);
@@ -384,9 +369,7 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
       await processSkill(payload.text, payload.name || 'example-skill');
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : t('app.errorFailed'));
-    } finally {
-      setIsExtracting(false);
+      dispatch({ type: 'analysis-failed', error: err instanceof Error ? err.message : t('app.errorFailed') });
     }
   };
 
@@ -446,6 +429,7 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     setSkillUrlInput,
     skillUrlInput,
     supportFiles,
+    workspaceDraftPersistenceError,
     workspaceDraftRestored,
     workspaceDraftSavedAt,
   };

@@ -227,6 +227,25 @@ describe('ReviewWorkspace', () => {
     expect(screen.queryByTestId('decomposition-board')).not.toBeInTheDocument();
   });
 
+  it('keeps the review rail visible and routes blocking issues to the shared editor resolver', async () => {
+    const issueData = {
+      ...exportReadyData,
+      parserResult: {
+        ...exportReadyData.parserResult,
+        execution_paths: [{ id: '', name: 'default-path', steps: ['a_001'] }],
+      },
+    };
+    render(<ReviewWorkspace data={issueData} {...createProps()} />);
+
+    expect(await screen.findByTestId('persistent-review-rail')).toHaveTextContent('app.blockingIssueInbox');
+    expect(screen.getByTestId('blocking-issue-inbox')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('app.openBlockingIssueInEditor'));
+
+    expect(await screen.findByTestId('side-editor-config')).toHaveTextContent('skillDocument:execution_paths[0].id');
+    expect(screen.queryByText('app.openIssueContext')).not.toBeInTheDocument();
+    expect(screen.queryByText('app.openIssuePhase')).not.toBeInTheDocument();
+  });
+
   it('collapses the top toolbar context deck while keeping fixed tools visible', async () => {
     render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 

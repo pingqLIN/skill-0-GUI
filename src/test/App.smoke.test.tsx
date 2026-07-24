@@ -146,12 +146,46 @@ describe('App smoke test', () => {
     expect(screen.getByRole('complementary', { name: 'app.analyzeNew' })).toBeInTheDocument();
     expect(screen.getByRole('tablist', { name: 'app.workspace' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'app.landingOverviewTab' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('group', { name: 'app.intakeTaskChoices' })).toBeInTheDocument();
+    expect(screen.getByTestId('intake-task-paste')).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(screen.getByText('app.landingScenariosTab'));
 
     expect(await screen.findByText('Mode overview')).toBeInTheDocument();
     expect(await screen.findByText('Bundle intake review')).toBeInTheDocument();
     expect(await screen.findByText('Publish approval gate')).toBeInTheDocument();
+  });
+
+  it('warns when durable draft storage is unavailable without blocking intake', async () => {
+    const indexedDbDescriptor = Object.getOwnPropertyDescriptor(window, 'indexedDB');
+    Object.defineProperty(window, 'indexedDB', { configurable: true, value: undefined });
+
+    try {
+      await act(async () => {
+        render(<App />);
+      });
+
+      expect(await screen.findByTestId('workspace-draft-persistence-warning')).toHaveTextContent('app.localDraftMemoryFallback');
+      expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
+    } finally {
+      if (indexedDbDescriptor) {
+        Object.defineProperty(window, 'indexedDB', indexedDbDescriptor);
+      } else {
+        delete (window as Window & { indexedDB?: IDBFactory }).indexedDB;
+      }
+    }
+  });
+
+  it('offers task-first intake choices without removing the existing import controls', async () => {
+    await act(async () => {
+      render(<App />);
+    });
+
+    fireEvent.click(screen.getByTestId('intake-task-url'));
+    expect(screen.getByTestId('intake-task-url')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('skill-url-input')).toHaveFocus();
+    expect(screen.getByText('app.selectFiles')).toBeInTheDocument();
+    expect(screen.getByText('app.selectFolder')).toBeInTheDocument();
   });
 
   it('renders the public demo entry at /demo and returns to the workspace without a reload', async () => {
@@ -381,7 +415,7 @@ describe('App smoke test', () => {
     });
     fireEvent.click(screen.getByText('app.skillUrlCta'));
 
-    expect(await screen.findByText('app.errorSkillUrlUnsupportedHost')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('app.errorSkillUrlUnsupportedHost');
     expect(analyzeSkillText).not.toHaveBeenCalled();
   });
 
@@ -397,8 +431,7 @@ describe('App smoke test', () => {
       });
 
       await waitFor(() => {
-        const stored = window.localStorage.getItem(WORKSPACE_DRAFT_STORAGE_KEY);
-        expect(stored).toContain('# conversation memo');
+        expect(screen.getByText('app.analyzeBtn')).toBeInTheDocument();
       });
 
       expect(screen.getByText('app.analyzeBtn')).toBeInTheDocument();

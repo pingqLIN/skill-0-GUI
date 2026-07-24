@@ -38,10 +38,13 @@ export default function App() {
   const intakeTitleId = 'landing-intake-title';
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const skillUrlInputRef = useRef<HTMLInputElement | null>(null);
+  const skillTextInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
   const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
   const [isLlmSettingsOpen, setIsLlmSettingsOpen] = useState(false);
   const [isPublicDemoEntry, setIsPublicDemoEntry] = useState(() => window.location.pathname === '/demo');
+  const [intakeTask, setIntakeTask] = useState<'paste' | 'url' | 'files' | 'folder'>('paste');
 
   useEffect(() => {
     const preventWindowDrop = (event: DragEvent) => {
@@ -98,7 +101,7 @@ export default function App() {
   }, []);
 
   const toggleLanguage = () => {
-    const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
+    const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh-TW';
     i18n.changeLanguage(newLang);
   };
 
@@ -353,6 +356,7 @@ npm run release:preview
     setSkillUrlInput,
     skillUrlInput,
     supportFiles,
+    workspaceDraftPersistenceError,
     workspaceDraftRestored,
     workspaceDraftSavedAt,
   } = useReviewStudioSession({
@@ -508,6 +512,16 @@ npm run release:preview
       )}
 
       <main className={`mx-auto max-w-[1980px] ${data ? 'px-0 py-0' : 'px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}`}>
+        {workspaceDraftPersistenceError && (
+          <div
+            role="status"
+            data-testid="workspace-draft-persistence-warning"
+            className={`flex items-start gap-2 rounded-[calc(var(--radius)*1.05)] bg-amber-500/10 px-4 py-3 text-sm text-amber-950 ${data ? 'm-4 mb-0' : 'mb-5'}`}
+          >
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <span>{t('app.localDraftMemoryFallback')}</span>
+          </div>
+        )}
         {!data && workspaceDraftSavedAt && (
           <div
             data-testid="workspace-draft-status"
@@ -731,6 +745,45 @@ npm run release:preview
                   </div>
                 </div>
 
+                <div className="mb-4" role="group" aria-label={t('app.intakeTaskChoices')}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{t('app.intakeTaskChoices')}</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {[
+                      { id: 'paste' as const, label: t('app.intakeTaskPaste'), description: t('app.intakeTaskPasteHint') },
+                      { id: 'url' as const, label: t('app.intakeTaskUrl'), description: t('app.intakeTaskUrlHint') },
+                      { id: 'files' as const, label: t('app.intakeTaskFiles'), description: t('app.intakeTaskFilesHint') },
+                      { id: 'folder' as const, label: t('app.intakeTaskFolder'), description: t('app.intakeTaskFolderHint') },
+                    ].map((task) => (
+                      <button
+                        key={task.id}
+                        type="button"
+                        data-testid={`intake-task-${task.id}`}
+                        aria-pressed={intakeTask === task.id}
+                        onClick={() => {
+                          setIntakeTask(task.id);
+                          if (task.id === 'url') {
+                            skillUrlInputRef.current?.focus();
+                          } else if (task.id === 'paste') {
+                            skillTextInputRef.current?.focus();
+                          } else if (task.id === 'files') {
+                            fileInputRef.current?.click();
+                          } else {
+                            folderInputRef.current?.click();
+                          }
+                        }}
+                        className={`rounded-[calc(var(--radius)*1.02)] border px-3 py-3 text-left transition-colors ${
+                          intakeTask === task.id
+                            ? 'border-primary/45 bg-primary/8 text-foreground'
+                            : 'border-border/60 bg-muted/45 text-foreground/78 hover:bg-card'
+                        }`}
+                      >
+                        <span className="block text-sm font-semibold">{task.label}</span>
+                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{task.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div
                   onDragEnter={handleDragEnter}
                   onDragOver={(e) => {
@@ -790,6 +843,7 @@ npm run release:preview
                             <input
                               id="skill-url-input"
                               data-testid="skill-url-input"
+                              ref={skillUrlInputRef}
                               type="url"
                               inputMode="url"
                               value={skillUrlInput}
@@ -827,6 +881,7 @@ npm run release:preview
                         </div>
                       </div>
                       <textarea
+                        ref={skillTextInputRef}
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         placeholder={t('app.placeholder')}
@@ -834,7 +889,7 @@ npm run release:preview
                       />
 
                       {error && (
-                        <div className="flex items-start gap-2 rounded-[calc(var(--radius)*1.05)] bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        <div role="alert" aria-live="assertive" className="flex items-start gap-2 rounded-[calc(var(--radius)*1.05)] bg-destructive/10 px-3 py-2 text-sm text-destructive">
                           <AlertCircle size={16} className="mt-0.5 shrink-0" />
                           <span>{error}</span>
                         </div>

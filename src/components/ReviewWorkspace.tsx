@@ -29,6 +29,7 @@ import {
   createValidationRun,
 } from '../services/skillDocumentTestRunner';
 import {
+  buildReviewIssueNavigationTargets,
   resolveConsistencyIssueFieldPath,
   resolveValidationIssueFieldPath,
 } from '../services/skillDocumentIssueNavigation';
@@ -222,6 +223,14 @@ export function ReviewWorkspace({
   const [handoffState, setHandoffState] = useState<HandoffState>('ready_for_review');
   const [reviewDraftSavedAt, setReviewDraftSavedAt] = useState<string | null>(null);
   const [reviewDraftRestored, setReviewDraftRestored] = useState(false);
+  const issueReturnRef = useRef<{
+    activeTab: WorkspaceTabId;
+    activeBottomTab: 'review' | 'checks' | 'context' | null;
+    activeChecksSub: 'posture' | 'schema' | 'consistency' | 'tests' | 'evidence';
+    activeContextSub: 'summary' | 'policy' | 'files' | 'analysis' | 'source' | 'links';
+    activePipelineSubview: PipelineSubviewId;
+    activePhase: string | null;
+  } | null>(null);
   const hasHydratedReviewDraftRef = useRef(false);
   const hadStoredReviewDraftRef = useRef(false);
   const skipNextReviewDraftPersistRef = useRef(false);
@@ -281,7 +290,7 @@ export function ReviewWorkspace({
   const pipelineSubviews = [
     {
       id: 'summary' as PipelineSubviewId,
-      label: t('app.summary'),
+      label: t('dashboard.summary'),
       meta: `${data?.globalMetrics?.decisionConfidence ?? '--'}% ${t('dashboard.confidence')}`,
     },
     {
@@ -384,6 +393,16 @@ export function ReviewWorkspace({
   const consistencyIssues = consistencyResult?.issues ?? [];
   const consistencyErrors = consistencyIssues.filter((issue) => issue.severity === 'error');
   const consistencyWarnings = consistencyIssues.filter((issue) => issue.severity === 'warning');
+  const blockingIssueInbox = buildReviewIssueNavigationTargets(skillDocument, validationErrors, consistencyErrors)
+    .map((issue) => {
+      const contextFile = supportFiles.find((file) => issue.targetId && (file.path.includes(issue.targetId) || file.name.includes(issue.targetId)));
+      const phase = data?.phases?.find((candidate: any) => issue.targetId && JSON.stringify(candidate).includes(issue.targetId));
+      return {
+        ...issue,
+        contextPath: contextFile?.path ?? null,
+        phaseId: phase?.id ?? null,
+      };
+    });
   const skillDocumentActions = skillDocument?.decomposition.actions ?? [];
   const skillDocumentRules = skillDocument?.decomposition.rules ?? [];
   const skillDocumentDirectives = skillDocument?.decomposition.directives ?? [];
@@ -860,6 +879,47 @@ export function ReviewWorkspace({
       payload: skillDocument,
       focusPath,
     });
+  };
+  const rememberIssueReturnPoint = () => {
+    issueReturnRef.current = {
+      activeTab,
+      activeBottomTab,
+      activeChecksSub,
+      activeContextSub,
+      activePipelineSubview,
+      activePhase,
+    };
+  };
+  const returnToIssueInbox = () => {
+    const returnPoint = issueReturnRef.current;
+    issueReturnRef.current = null;
+    if (returnPoint) {
+      setActiveTab(returnPoint.activeTab);
+      setActiveBottomTab(returnPoint.activeBottomTab);
+      setActiveChecksSub(returnPoint.activeChecksSub);
+      setActiveContextSub(returnPoint.activeContextSub);
+      setActivePipelineSubview(returnPoint.activePipelineSubview);
+      setActivePhase(returnPoint.activePhase);
+    }
+  };
+  const openBlockingIssueInEditor = (focusPath: string | null) => {
+    if (!focusPath) {
+      return;
+    }
+
+    rememberIssueReturnPoint();
+    openSkillDocumentEditor(focusPath);
+  };
+  const openBlockingIssueContext = (contextPath: string) => {
+    onSelectContextPath(contextPath);
+    setActiveBottomTab('context');
+    setActiveContextSub('files');
+  };
+  const openBlockingIssuePhase = (phaseId: string) => {
+    setActiveTab('pipeline');
+    setActiveBottomTab(null);
+    setActivePipelineSubview('derived');
+    setActivePhase(phaseId);
   };
   const reviewMode = data?.reviewerSummary?.mode
     || (activeBridgeMode === 'skill-0'
@@ -1901,6 +1961,80 @@ export function ReviewWorkspace({
         </header>
 
         <section className="review-stage-shell z-0 flex-1 overflow-y-auto px-4 py-2 pb-24 sm:px-6 sm:py-3 custom-scrollbar">
+          <aside
+            aria-label={t('app.blockingIssueInbox')}
+            data-testid="persistent-review-rail"
+            className="sticky top-0 z-10 mb-3 overflow-hidden rounded-[calc(var(--radius)*1.04)] border border-border/65 bg-background/95 shadow-sm backdrop-blur-md"
+          >
+            <div className="flex min-w-max items-stretch divide-x divide-border/55 overflow-x-auto sm:min-w-0">
+              <div className="min-w-40 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.reviewStatus')}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{t(reviewStatusLabelKey(reviewStatus))}</div>
+              </div>
+              <div className="min-w-32 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.reviewChecklist')}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{checklistCompletedCount} {t('app.reviewChecklistDone')} · 4</div>
+              </div>
+              <div className="min-w-40 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.handoffState')}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{handoffSummary}</div>
+              </div>
+              <div className="min-w-40 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.exportReadiness')}</div>
+                <div
+                  aria-label={canExportArtifacts ? t('app.exportReady') : t('app.exportLocked')}
+                  className={`mt-1 text-sm font-semibold ${canExportArtifacts ? 'text-emerald-800' : 'text-amber-800'}`}
+                >
+                  {canExportArtifacts ? '✓' : '—'}
+                </div>
+              </div>
+              <div className="min-w-[19rem] flex-1 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.blockingIssueInbox')}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{t('app.blockingIssueInboxHint')}</div>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${blockingIssueInbox.length > 0 ? 'bg-destructive/12 text-destructive' : 'bg-emerald-500/12 text-emerald-900'}`}>
+                    {blockingIssueInbox.length}
+                  </span>
+                </div>
+                {blockingIssueInbox.length > 0 ? (
+                  <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5" data-testid="blocking-issue-inbox">
+                    {blockingIssueInbox.map((issue) => (
+                      <div key={issue.id} className="min-w-64 rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between gap-2">
+                          <span aria-label={issue.title} className="font-semibold text-foreground">
+                            {issue.source === 'schema' ? t('app.validationIssues') : t('app.consistencyIssues')}
+                          </span>
+                          <span className="rounded-full bg-destructive/12 px-2 py-0.5 text-[10px] font-semibold text-destructive">{issue.source}</span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 leading-5">{issue.message}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {issue.focusPath && (
+                            <button type="button" onClick={() => openBlockingIssueInEditor(issue.focusPath)} className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary hover:underline">
+                              {t('app.openBlockingIssueInEditor')}
+                            </button>
+                          )}
+                          {issue.contextPath && (
+                            <button type="button" onClick={() => openBlockingIssueContext(issue.contextPath)} className="text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground/70 hover:text-foreground hover:underline">
+                              {t('app.openIssueContext')}
+                            </button>
+                          )}
+                          {issue.phaseId && (
+                            <button type="button" onClick={() => openBlockingIssuePhase(issue.phaseId)} className="text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground/70 hover:text-foreground hover:underline">
+                              {t('app.openIssuePhase')}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-emerald-900">{t('app.blockingIssueNone')}</p>
+                )}
+              </div>
+            </div>
+          </aside>
           <AnimatePresence mode="wait">
             {activeTab === 'pipeline' && (
               <motion.div
@@ -3116,13 +3250,17 @@ export function ReviewWorkspace({
       <Suspense fallback={null}>
         <SideEditor
           config={editorConfig}
-          onClose={() => setEditorConfig(null)}
+          onClose={() => {
+            setEditorConfig(null);
+            returnToIssueInbox();
+          }}
           onSave={(updatedData) => {
             if (!editorConfig) {
               return;
             }
             onSaveEdit(editorConfig, updatedData);
             setEditorConfig(null);
+            returnToIssueInbox();
           }}
         />
       </Suspense>

@@ -390,7 +390,10 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
 
   const fieldPathProps = (path: string) => (
     config.type === 'skillDocument'
-      ? { 'data-field-path': path }
+      ? {
+          'aria-label': path,
+          'data-field-path': path,
+        }
       : {}
   );
 
@@ -467,7 +470,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
               </div>
             </div>
 
-            <div className="custom-scrollbar flex-1 overflow-y-auto p-6">
+            <div className="custom-scrollbar flex-1 overflow-y-auto p-6 [&_label]:!text-muted-foreground">
               <div className="space-y-6">
                 {config.type === 'global' && (
                   <>

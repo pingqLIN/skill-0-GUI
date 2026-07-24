@@ -19,6 +19,7 @@
     "localDraft": "Local draft",
     "localDraftAvailable": "A saved local draft is available",
     "localDraftRestored": "Recovered from local draft",
+    "localDraftMemoryFallback": "Local draft storage is unavailable. This session remains usable in memory, but its draft will not survive a reload.",
     "localDraftAutosaved": "Autosaved locally",
     "restoreDraft": "Restore draft",
     "discardDraft": "Discard draft",
@@ -388,7 +389,23 @@
     "currentFocus": "Current Focus",
     "supportPanels": "Support Panels",
     "supportPanelsHint": "Tuck summary metrics and radar views here, then expand only when you need them.",
-    "phaseStep": "Flow Step"
+    "phaseStep": "Flow Step",
+    "intakeTaskChoices": "Choose how to begin",
+    "intakeTaskPaste": "Paste a draft",
+    "intakeTaskPasteHint": "Analyze text or SkillDocument JSON directly.",
+    "intakeTaskUrl": "Import a URL",
+    "intakeTaskUrlHint": "Fetch a supported GitHub or raw skill file.",
+    "intakeTaskFiles": "Upload a bundle",
+    "intakeTaskFilesHint": "Choose files or a ZIP with supporting evidence.",
+    "intakeTaskFolder": "Scan a folder",
+    "intakeTaskFolderHint": "Select a local folder and choose its primary skill.",
+    "blockingIssueInbox": "Blocking issue inbox",
+    "blockingIssueInboxHint": "Prioritized schema and consistency findings for this review snapshot.",
+    "blockingIssueNone": "No blocking issues are open.",
+    "openBlockingIssueInEditor": "Open issue",
+    "openIssueContext": "View context",
+    "openIssuePhase": "View phase",
+    "returnToIssueInbox": "Back to issue inbox"
     ,"selectFiles": "Select Files"
     ,"selectFolder": "Select Folder"
     ,"reviewAndAnalyze": "Review & Analyze"
