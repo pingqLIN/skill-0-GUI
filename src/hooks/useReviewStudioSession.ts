@@ -51,11 +51,15 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
   }, []);
 
   const {
+    activeWorkspaceDraftId,
     availableWorkspaceDraft,
+    workspaceDrafts,
     workspaceDraftPersistenceError,
     workspaceDraftSavedAt,
     workspaceDraftRestored,
+    restoreWorkspaceDraft,
     restoreAvailableWorkspaceDraft,
+    deleteWorkspaceDraft,
     discardWorkspaceDraft,
     clearWorkspaceDraftState,
   } = useWorkspaceDraftState({
@@ -341,6 +345,14 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     setError(null);
   };
 
+  const prepareDemoSkill = useCallback((text: string) => {
+    clearWorkspaceDraftState();
+    dispatch({ type: 'reset' });
+    dispatch({ type: 'set-input-text', inputText: text });
+    setActiveDemoPreset(null);
+    setError(null);
+  }, [clearWorkspaceDraftState]);
+
   const loadExampleSkill = async () => {
     dispatch({ type: 'analysis-start' });
     try {
@@ -397,9 +409,12 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
 
   return {
     activeDemoPreset,
+    activeWorkspaceDraftId,
     analysisSessionId,
     availableWorkspaceDraft,
+    workspaceDrafts,
     data,
+    deleteWorkspaceDraft,
     discardWorkspaceDraft,
     error,
     handleAnalyzePendingUpload,
@@ -420,6 +435,8 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
     originalData,
     pendingPrimaryPath,
     pendingUploadFiles,
+    prepareDemoSkill,
+    restoreWorkspaceDraft,
     restoreAvailableWorkspaceDraft,
     selectedContextPath,
     setInputText,

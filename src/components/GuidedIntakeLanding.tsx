@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import type { DemoScenarioDefinition } from '../types/demo';
 import type { PreparedUploadFile, UploadedContextFile } from '../types/intake';
+import type { WorkspaceDraftEntry } from '../hooks/useWorkspaceDraftState';
+import { BundleIntakePanel } from './BundleIntakePanel';
+import { DraftLibrary } from './DraftLibrary';
 import {
   IntakeReviewRail,
   type IntakeReviewRailCopy,
@@ -60,6 +63,8 @@ export type GuidedIntakeLandingProps = {
   draftSavedAt: string | null;
   draftRestored: boolean;
   draftAvailable: boolean;
+  drafts: WorkspaceDraftEntry[];
+  activeDraftId: string | null;
   draftPersistenceError: string | null;
   activeUtilityTab: UtilityTab;
   docs: ResourceCard[];
@@ -70,6 +75,7 @@ export type GuidedIntakeLandingProps = {
   modeContractUrl: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
   folderInputRef: RefObject<HTMLInputElement | null>;
+  zipInputRef: RefObject<HTMLInputElement | null>;
   onFileInputChange: ChangeEventHandler<HTMLInputElement>;
   onInputTextChange: (value: string) => void;
   onSkillUrlChange: (value: string) => void;
@@ -82,8 +88,9 @@ export type GuidedIntakeLandingProps = {
   onDrop: DragEventHandler<HTMLDivElement>;
   onSetPrimaryPath: (path: string) => void;
   onSelectContextPath: (path: string) => void;
-  onRestoreDraft: () => void;
-  onDiscardDraft: () => void;
+  onRestoreDraft: (draftId: string) => void;
+  onDeleteDraft: (draftId: string) => void;
+  onPrepareDemo: (text: string) => void;
   onLoadScenario: (scenario: DemoScenarioDefinition) => void;
   onUtilityTabChange: (tab: UtilityTab) => void;
   onOpenSettings: () => void;
@@ -97,6 +104,27 @@ const navItems = [
   { label: 'Editor', icon: Code2 },
   { label: 'JSON', icon: Braces },
 ];
+
+const DEMO_SKILL_CONTENT = `---
+name: demo-safe-review
+description: A safe sample skill for learning the Skill-0 review workflow.
+---
+
+# Demo Safe Review
+
+Use this sample to inspect a small, non-destructive review workflow.
+
+## Workflow
+
+- Read the supplied request.
+- Validate the SkillDocument structure.
+- Record findings for a human reviewer.
+
+## Rules
+
+- Never perform external writes.
+- Always keep reviewer approval explicit.
+`;
 
 export function GuidedIntakeLanding({
   t,
@@ -118,6 +146,8 @@ export function GuidedIntakeLanding({
   draftSavedAt,
   draftRestored,
   draftAvailable,
+  drafts,
+  activeDraftId,
   draftPersistenceError,
   activeUtilityTab,
   docs,
@@ -128,6 +158,7 @@ export function GuidedIntakeLanding({
   modeContractUrl,
   fileInputRef,
   folderInputRef,
+  zipInputRef,
   onFileInputChange,
   onInputTextChange,
   onSkillUrlChange,
@@ -141,14 +172,15 @@ export function GuidedIntakeLanding({
   onSetPrimaryPath,
   onSelectContextPath,
   onRestoreDraft,
-  onDiscardDraft,
+  onDeleteDraft,
+  onPrepareDemo,
   onLoadScenario,
   onUtilityTabChange,
   onOpenSettings,
   onToggleLanguage,
 }: GuidedIntakeLandingProps) {
   const isZh = language.startsWith('zh');
-  const [selectedTask, setSelectedTask] = useState<TaskFirstTask>('review');
+  const [selectedTask, setSelectedTask] = useState<TaskFirstTask | null>(null);
   const [activeInputTab, setActiveInputTab] = useState<TaskFirstIntakeTab>('paste');
   useEffect(() => {
     if (pendingUploadFiles.length > 0) {
@@ -171,7 +203,7 @@ export function GuidedIntakeLanding({
     selected: '已選擇',
     select: '選擇',
     inputTitle: '輸入要審查的內容',
-    inputHint: '支援 SkillDocument JSON、Markdown、純文字、檔案 bundle、資料夾與 HTTPS URL。',
+    inputHint: '支援 SkillDocument JSON、Markdown、純文字與 HTTPS URL。',
     selectedFiles: (count) => `已選擇 ${count} 個檔案`,
     pasteTab: '貼上內容',
     uploadTab: '上傳檔案',
@@ -189,7 +221,7 @@ export function GuidedIntakeLanding({
     tasks: {
       review: { title: '審查一個 skill', description: '對單一 SkillDocument 進行內容與結構驗證。' },
       compare: { title: '審查 skill bundle', description: '匯入主要 skill 與支援檔案，檢查引用、policy 與執行內容。' },
-      draft: { title: '繼續已儲存的草稿', description: draftAvailable ? '恢復本機最近一次未完成的審查。' : '目前沒有可恢復的本機草稿。' },
+      draft: { title: '繼續已儲存的草稿', description: draftAvailable ? `從 ${drafts.length} 筆本機草稿中選擇並繼續。` : '目前沒有可恢復的本機草稿。' },
       demo: { title: '開啟示範工作區', description: '載入安全範例，體驗完整審查流程。' },
     },
   } : {
@@ -201,7 +233,7 @@ export function GuidedIntakeLanding({
     selected: 'Selected',
     select: 'Select',
     inputTitle: 'Add content to review',
-    inputHint: 'Supports SkillDocument JSON, Markdown, text, file bundles, folders, and HTTPS URLs.',
+    inputHint: 'Supports SkillDocument JSON, Markdown, text, and HTTPS URLs.',
     selectedFiles: (count) => `${count} file${count === 1 ? '' : 's'} selected`,
     pasteTab: 'Paste content',
     uploadTab: 'Upload files',
@@ -219,10 +251,18 @@ export function GuidedIntakeLanding({
     tasks: {
       review: { title: 'Review one skill', description: 'Validate the content and structure of a single SkillDocument.' },
       compare: { title: 'Review a skill bundle', description: 'Import a primary skill with supporting files to inspect references, policies, and execution content.' },
-      draft: { title: 'Continue a saved draft', description: draftAvailable ? 'Restore the most recent unfinished local review.' : 'No restorable local draft is available.' },
+      draft: { title: 'Continue a saved draft', description: draftAvailable ? `Choose from ${drafts.length} local draft${drafts.length === 1 ? '' : 's'} and continue.` : 'No restorable local draft is available.' },
       demo: { title: 'Open a demo workspace', description: 'Load a safe example and experience the complete review flow.' },
     },
-  }, [draftAvailable, isZh, t]);
+  }, [draftAvailable, drafts.length, isZh, t]);
+  const visibleIntakeCopy = useMemo<TaskFirstIntakeCopy>(() => selectedTask === 'demo'
+    ? {
+        ...copy,
+        inputHint: isZh
+          ? '安全範例已填入；可先閱讀內容，再點選分析 Skill。'
+          : 'The safe example is ready. Review it, then choose Analyze Skill.',
+      }
+    : copy, [copy, isZh, selectedTask]);
 
   const railCopy = useMemo<IntakeReviewRailCopy>(() => isZh ? {
     title: '審查置邊欄 (REVIEW RAIL)',
@@ -281,9 +321,11 @@ export function GuidedIntakeLanding({
       setActiveInputTab('upload');
       onUtilityTabChange('overview');
     } else if (task === 'draft') {
-      if (draftAvailable) onRestoreDraft();
-    } else if (scenarios[0]) {
-      onLoadScenario(scenarios[0]);
+      onUtilityTabChange('overview');
+    } else {
+      setActiveInputTab('paste');
+      onPrepareDemo(DEMO_SKILL_CONTENT);
+      onUtilityTabChange('overview');
     }
   };
 
@@ -299,22 +341,28 @@ export function GuidedIntakeLanding({
     document.getElementById(`guided-utility-${utilityTabs[nextIndex].id}`)?.focus();
   };
 
-  const taskStatus = selectedTask === 'compare'
+  const taskStatus = selectedTask === 'draft' && !draftAvailable
     ? {
-        label: isZh ? 'Bundle 審查模式' : 'Bundle review mode',
-        detail: isZh ? '請選擇主要 skill；其餘檔案會明確作為支援脈絡，不會被宣稱為版本 diff。' : 'Choose the primary skill. Remaining files are explicit supporting context, not a claimed version diff.',
+        label: isZh ? '沒有可恢復的草稿' : 'No saved draft is available',
+        detail: isZh ? '先選擇其他任務並輸入內容，系統會自動建立本機草稿。' : 'Choose another task and enter content; a local draft will be created automatically.',
         tone: 'neutral' as const,
       }
-    : selectedTask === 'draft' && !draftAvailable
-      ? {
-          label: isZh ? '沒有可恢復的草稿' : 'No saved draft is available',
-          detail: isZh ? '先匯入內容，系統會在本機保存後續工作。' : 'Import content first; subsequent work will be saved locally.',
-          tone: 'neutral' as const,
-        }
-      : null;
+    : null;
 
   const inputReady = Boolean(inputText.trim() || skillUrl.trim() || pendingUploadFiles.length);
   const shownCards = activeUtilityTab === 'outputs' ? artifacts : activeUtilityTab === 'docs' ? docs : [];
+  const exportDraft = (draftId: string) => {
+    const draft = drafts.find((candidate) => candidate.id === draftId);
+    if (!draft) return;
+    const safeTitle = draft.title.replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-+|-+$/g, '') || 'skill-draft';
+    const blob = new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${safeTitle}.draft.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="guided-intake-shell">
@@ -327,6 +375,7 @@ export function GuidedIntakeLanding({
         className="hidden"
       />
       <input ref={folderInputRef} type="file" multiple onChange={onFileInputChange} className="hidden" />
+      <input ref={zipInputRef} type="file" accept=".zip,application/zip" onChange={onFileInputChange} className="hidden" />
 
       <nav className="guided-intake-nav" aria-label={isZh ? '工作區導覽' : 'Workspace navigation'}>
         <div className="guided-intake-mark" aria-hidden="true">&gt;_</div>
@@ -394,12 +443,10 @@ export function GuidedIntakeLanding({
           <div data-testid="workspace-draft-status" className="guided-intake-draftbar">
             <div>
               <strong>{t('app.localDraft')}</strong>
-              <span>{draftRestored ? t('app.localDraftRestored') : t('app.localDraftAvailable')}</span>
+              <span>{draftRestored ? t('app.localDraftRestored') : (isZh ? `${drafts.length} / 5 筆草稿已儲存` : `${drafts.length} of 5 drafts saved`)}</span>
             </div>
             <div>
               <time dateTime={draftSavedAt}>{new Date(draftSavedAt).toLocaleString()}</time>
-              {draftAvailable && <button type="button" onClick={onRestoreDraft}>{t('app.restoreDraft')}</button>}
-              {draftAvailable && <button type="button" onClick={onDiscardDraft}>{t('app.discardDraft')}</button>}
             </div>
           </div>
         )}
@@ -423,6 +470,9 @@ export function GuidedIntakeLanding({
               onDrop={onDrop}
               selectedTask={selectedTask}
               activeTab={activeInputTab}
+              availableTabs={selectedTask === 'demo' ? ['paste'] : ['paste', 'url']}
+              showInput={selectedTask === 'review' || selectedTask === 'demo'}
+              highlightPrimaryAction={selectedTask === 'demo'}
               error={error}
               status={taskStatus}
               isBusy={isBusy}
@@ -431,9 +481,35 @@ export function GuidedIntakeLanding({
               primaryActionDisabled={activeInputTab === 'upload' && !pendingPrimaryPath}
               primaryActionLabel={activeInputTab === 'upload' ? t('app.reviewAndAnalyze') : t('app.analyzeBtn')}
               importUrlLabel={t('app.skillUrlCta')}
-              copy={copy}
+              copy={visibleIntakeCopy}
             />
-            {pendingUploadFiles.length > 0 && (
+            {selectedTask === 'compare' && (
+              <BundleIntakePanel
+                language={language}
+                isBusy={isBusy}
+                pendingFileCount={pendingUploadFiles.length}
+                hasPrimaryFile={Boolean(pendingPrimaryPath)}
+                onUploadFiles={() => fileInputRef.current?.click()}
+                onUploadFolder={() => folderInputRef.current?.click()}
+                onUploadZip={() => zipInputRef.current?.click()}
+                onAnalyze={onAnalyzeUpload}
+              />
+            )}
+            {selectedTask === 'draft' && (
+              <DraftLibrary
+                drafts={drafts}
+                activeDraftId={activeDraftId}
+                language={language}
+                onEditDraft={(draftId) => {
+                  onRestoreDraft(draftId);
+                  setSelectedTask('review');
+                  setActiveInputTab('paste');
+                }}
+                onDeleteDraft={onDeleteDraft}
+                onExportDraft={exportDraft}
+              />
+            )}
+            {selectedTask === 'compare' && pendingUploadFiles.length > 0 && (
               <section className="guided-intake-file-list" aria-label={t('app.intakePreview')}>
                 <header><strong>{t('app.intakePreview')}</strong><span>{pendingUploadFiles.length} {t('app.intakeFiles')}</span></header>
                 {pendingUploadFiles.map((file) => (
@@ -450,7 +526,7 @@ export function GuidedIntakeLanding({
                 ))}
               </section>
             )}
-            {supportFiles.length > 0 && (
+            {selectedTask === 'compare' && supportFiles.length > 0 && (
               <section className="guided-intake-file-list" aria-label={t('app.collaborationContext')}>
                 <header><strong>{t('app.collaborationContext')}</strong></header>
                 {supportFiles.map((file) => (
@@ -503,12 +579,12 @@ export function GuidedIntakeLanding({
         mode={bridgeModeLabel}
         readiness={{ inputReady }}
         draft={{ isDirty: inputReady && !draftSavedAt, savedAt: draftSavedAt }}
-        activities={[{
+        activities={selectedTask ? [{
           id: `selected-${selectedTask}`,
           label: copy.tasks[selectedTask].title,
           detail: isZh ? '目前選擇的審查目標' : 'Current review goal',
           status: 'current',
-        }]}
+        }] : []}
         exportState={{ ready: false, reason: isZh ? '完成分析、內容驗證與 reviewer 核可後開放。' : 'Complete analysis, validation, and reviewer approval first.' }}
         copy={railCopy}
         className="guided-intake-rail"

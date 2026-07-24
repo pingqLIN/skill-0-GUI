@@ -132,13 +132,11 @@ describe('App smoke test', () => {
     });
 
     expect((await screen.findAllByText('app.title')).length).toBeGreaterThan(0);
-    expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-input-section')).not.toBeInTheDocument();
     expect(await screen.findByText('app.landingOverviewTab')).toBeInTheDocument();
     expect(await screen.findByText('app.landingOutputsTab')).toBeInTheDocument();
     expect(await screen.findByText('app.landingDocsTab')).toBeInTheDocument();
     expect(await screen.findByText('app.landingScenariosTab')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('intake-tab-url'));
-    expect(await screen.findByText('app.skillUrlLabel')).toBeInTheDocument();
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect((await screen.findAllByText('app.bridgeModeCanonical')).length).toBeGreaterThan(0);
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
@@ -148,7 +146,15 @@ describe('App smoke test', () => {
     expect(screen.getByRole('tablist', { name: 'app.workspace' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'app.landingOverviewTab' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('radiogroup', { name: 'Choose a review task' })).toBeInTheDocument();
-    expect(screen.getByTestId('intake-task-review')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('intake-task-review')).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(screen.getByTestId('intake-task-review'));
+    expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
+    expect(screen.getByTestId('intake-tab-paste')).toBeInTheDocument();
+    expect(screen.getByTestId('intake-tab-url')).toBeInTheDocument();
+    expect(screen.queryByTestId('intake-tab-upload')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('intake-tab-url'));
+    expect(await screen.findByText('app.skillUrlLabel')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('app.landingScenariosTab'));
 
@@ -167,7 +173,7 @@ describe('App smoke test', () => {
       });
 
       expect(await screen.findByTestId('workspace-draft-persistence-warning')).toHaveTextContent('app.localDraftMemoryFallback');
-      expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
+      expect(await screen.findByTestId('intake-task-review')).toBeInTheDocument();
     } finally {
       if (indexedDbDescriptor) {
         Object.defineProperty(window, 'indexedDB', indexedDbDescriptor);
@@ -184,9 +190,24 @@ describe('App smoke test', () => {
 
     fireEvent.click(screen.getByTestId('intake-task-compare'));
     expect(screen.getByTestId('intake-task-compare')).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByTestId('intake-tab-upload')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('app.selectFiles')).toBeInTheDocument();
-    expect(screen.getByText('app.selectFolder')).toBeInTheDocument();
+    expect(screen.getByTestId('bundle-intake-panel')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-input-section')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose files' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose folder' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose ZIP file' })).toBeInTheDocument();
+  });
+
+  it('loads the demo into paste mode and highlights the next analysis action', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByTestId('intake-task-demo'));
+
+    expect(screen.getByTestId('task-input-section')).toBeInTheDocument();
+    await waitFor(() => {
+      expect((screen.getByTestId('skill-text-input') as HTMLTextAreaElement).value).toContain('name: demo-safe-review');
+    });
+    expect(screen.getByRole('tab', { name: 'Paste content' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Import URL' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'app.analyzeBtn' })).toHaveClass('task-primary--attention');
   });
 
   it('renders the public demo entry at /demo and returns to the workspace without a reload', async () => {
@@ -203,7 +224,8 @@ describe('App smoke test', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'app.demoEntryOpenWorkspace' })[1]);
 
     expect(window.location.pathname).toBe('/');
-    expect(await screen.findByText('app.analyzeBtn')).toBeInTheDocument();
+    expect(await screen.findByTestId('intake-task-review')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-input-section')).not.toBeInTheDocument();
   });
 
   it('supports keyboard navigation across landing tabs', async () => {
@@ -351,6 +373,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
+    fireEvent.click(screen.getByTestId('intake-task-review'));
     fireEvent.change(screen.getByPlaceholderText('app.placeholder'), {
       target: { value: '# demo skill' },
     });
@@ -386,6 +409,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
+    fireEvent.click(screen.getByTestId('intake-task-review'));
     fireEvent.click(screen.getByTestId('intake-tab-url'));
     fireEvent.change(screen.getByTestId('skill-url-input'), {
       target: { value: 'https://github.com/owner/repo/blob/main/SKILL.md' },
@@ -412,6 +436,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
+    fireEvent.click(screen.getByTestId('intake-task-review'));
     fireEvent.click(screen.getByTestId('intake-tab-url'));
     fireEvent.change(screen.getByTestId('skill-url-input'), {
       target: { value: 'https://example.com/skill.md' },
@@ -429,6 +454,7 @@ describe('App smoke test', () => {
         render(<App />);
       });
 
+      fireEvent.click(screen.getByTestId('intake-task-review'));
       fireEvent.change(screen.getByPlaceholderText('app.placeholder'), {
         target: { value: '# conversation memo\n\n- keep the draft stable' },
       });
@@ -459,6 +485,7 @@ describe('App smoke test', () => {
 
     try {
       const { container } = render(<App />);
+      fireEvent.click(screen.getByTestId('intake-task-compare'));
       const folderInput = container.querySelectorAll('input[type="file"]')[1] as HTMLInputElement | undefined;
 
       expect(folderInput).toBeDefined();
@@ -483,10 +510,9 @@ describe('App smoke test', () => {
         expect(screen.getByText('obsidian-boundary.md')).toBeInTheDocument();
       });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('intake-tab-upload')).toHaveAttribute('aria-selected', 'true');
-      expect(screen.getByText('app.reviewAndAnalyze')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('bundle-analyze-button')).toBeEnabled();
+      });
       expect(
         consoleError.mock.calls.some((call) => call.join(' ').includes('Maximum update depth exceeded')),
       ).toBe(false);
@@ -507,6 +533,7 @@ describe('App smoke test', () => {
     });
 
     const { container } = render(<App />);
+    fireEvent.click(screen.getByTestId('intake-task-compare'));
     const fileInput = container.querySelector('input[accept*=".zip"]') as HTMLInputElement;
     fireEvent.change(fileInput, {
       target: {
@@ -518,9 +545,9 @@ describe('App smoke test', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('intake-tab-upload')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByTestId('bundle-analyze-button')).toBeEnabled();
     });
-    fireEvent.click(screen.getByTestId('intake-tab-paste'));
+    fireEvent.click(screen.getByTestId('intake-task-review'));
     fireEvent.change(screen.getByTestId('skill-text-input'), {
       target: { value: '# Explicit pasted review' },
     });
@@ -592,6 +619,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
+    fireEvent.click(screen.getByTestId('intake-task-review'));
     fireEvent.change(screen.getByPlaceholderText('app.placeholder'), {
       target: { value: JSON.stringify(importedSkillDocument, null, 2) },
     });
@@ -630,7 +658,8 @@ describe('App smoke test', () => {
     } as any);
 
     const { container } = render(<App />);
-    const fileInput = container.querySelector('input[accept*=".zip"]') as HTMLInputElement | null;
+    fireEvent.click(screen.getByTestId('intake-task-compare'));
+    const fileInput = container.querySelector('input[accept=".zip,application/zip"]') as HTMLInputElement | null;
     expect(fileInput).not.toBeNull();
 
     const zipFile = new File(['zip-binary'], 'bundle.zip', { type: 'application/zip' });
@@ -643,7 +672,7 @@ describe('App smoke test', () => {
 
     expect(await screen.findByText('bundle/SKILL.md')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('app.reviewAndAnalyze'));
+    fireEvent.click(screen.getByTestId('bundle-analyze-button'));
 
     await waitFor(() => {
       expect(analyzeSkillText).toHaveBeenCalledWith('# zipped skill', 'SKILL.md', {
@@ -695,12 +724,13 @@ describe('App smoke test', () => {
 
     expect(screen.queryByTestId('review-workspace')).not.toBeInTheDocument();
     expect(analyzeSkillText).not.toHaveBeenCalled();
-    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('app.localDraft');
-    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('app.localDraftAvailable');
-    expect(screen.getByText('app.restoreDraft')).toBeInTheDocument();
-    expect(screen.getByText('app.discardDraft')).toBeInTheDocument();
+    expect(await screen.findByTestId('workspace-draft-status')).toHaveTextContent('app.localDraft');
+    expect(screen.getByTestId('workspace-draft-status')).toHaveTextContent('1 of 5 drafts saved');
 
-    fireEvent.click(screen.getByText('app.restoreDraft'));
+    fireEvent.click(screen.getByTestId('intake-task-draft'));
+    expect(await screen.findByTestId('draft-library')).toBeInTheDocument();
+    expect(screen.getByText('Restored Skill')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue editing' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('review-workspace')).toBeInTheDocument();

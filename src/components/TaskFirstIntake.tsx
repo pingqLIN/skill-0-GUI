@@ -94,8 +94,11 @@ export type TaskFirstIntakeProps = {
   onDragOver?: DragEventHandler<HTMLDivElement>;
   onDragLeave?: DragEventHandler<HTMLDivElement>;
   onDrop?: DragEventHandler<HTMLDivElement>;
-  selectedTask?: TaskFirstTask;
+  selectedTask?: TaskFirstTask | null;
   activeTab?: TaskFirstIntakeTab;
+  availableTabs?: TaskFirstIntakeTab[];
+  showInput?: boolean;
+  highlightPrimaryAction?: boolean;
   error?: string | null;
   status?: IntakeStatus | null;
   isBusy?: boolean;
@@ -152,21 +155,23 @@ export function TaskFirstIntake({
   onUploadFolder, onSelectTask, onActiveTabChange, onDragEnter, onDragOver, onDragLeave, onDrop,
   selectedTask, activeTab, error, status, isBusy = false, isDragActive = false, pendingUploadCount = 0,
   primaryActionDisabled = false, primaryActionLabel = '開始解析並進入審查', importUrlLabel = '匯入 URL',
-  copy: copyOverrides, className = '',
+  availableTabs, showInput = true, highlightPrimaryAction = false, copy: copyOverrides, className = '',
 }: TaskFirstIntakeProps) {
   const [uncontrolledTask, setUncontrolledTask] = useState<TaskFirstTask>('review');
   const [uncontrolledTab, setUncontrolledTab] = useState<TaskFirstIntakeTab>('paste');
-  const task = selectedTask ?? uncontrolledTask;
+  const task = selectedTask === undefined ? uncontrolledTask : selectedTask;
   const tab = activeTab ?? uncontrolledTab;
   const instanceId = useId();
   const errorId = `${instanceId}-error`;
   const tabsId = `${instanceId}-tabs`;
   const copy = { ...defaultCopy, ...copyOverrides };
   const tasks = taskDefinitions.map((definition) => ({ ...definition, ...copy.tasks[definition.id] }));
-  const tabs = tabDefinitions.map((definition) => ({
-    ...definition,
-    label: definition.id === 'paste' ? copy.pasteTab : definition.id === 'upload' ? copy.uploadTab : copy.urlTab,
-  }));
+  const tabs = tabDefinitions
+    .filter((definition) => !availableTabs || availableTabs.includes(definition.id))
+    .map((definition) => ({
+      ...definition,
+      label: definition.id === 'paste' ? copy.pasteTab : definition.id === 'upload' ? copy.uploadTab : copy.urlTab,
+    }));
 
   const selectTask = (nextTask: TaskFirstTask) => {
     if (selectedTask === undefined) setUncontrolledTask(nextTask);
@@ -219,7 +224,7 @@ export function TaskFirstIntake({
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="radiogroup" aria-label={copy.chooseTaskLabel}>
             {tasks.map(({ id, title, description, icon: Icon }, index) => {
               const isSelected = task === id;
-              return <button key={id} data-testid={`intake-task-${id}`} type="button" role="radio" aria-checked={isSelected} tabIndex={isSelected ? 0 : -1} onClick={() => selectTask(id)} onKeyDown={(event) => handleTaskKeyDown(index, event)} className={`group relative flex min-h-52 flex-col items-center border p-5 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isSelected ? 'border-primary bg-primary/[0.045] shadow-sm' : 'border-border bg-card hover:border-primary/40 hover:bg-muted/40'}`}>
+              return <button key={id} data-testid={`intake-task-${id}`} type="button" role="radio" aria-checked={isSelected} tabIndex={isSelected || (!task && index === 0) ? 0 : -1} onClick={() => selectTask(id)} onKeyDown={(event) => handleTaskKeyDown(index, event)} className={`group relative flex min-h-52 flex-col items-center border p-5 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isSelected ? 'border-primary bg-primary/[0.045] shadow-sm' : 'border-border bg-card hover:border-primary/40 hover:bg-muted/40'}`}>
                 <span className={`absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-sm border ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-transparent'}`} aria-hidden="true"><CheckCircle2 size={14} strokeWidth={2.5} /></span>
                 <span className={`mt-3 flex h-14 w-14 items-center justify-center text-foreground transition-colors ${isSelected ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} aria-hidden="true"><Icon size={45} strokeWidth={1.5} /></span>
                 <span className="mt-5 text-lg font-semibold tracking-tight text-foreground">{title}</span><span className="mt-2 text-sm leading-6 text-muted-foreground">{description}</span><span className={`mt-auto pt-5 text-sm font-semibold ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>{isSelected ? copy.selected : copy.select}</span>
@@ -227,7 +232,7 @@ export function TaskFirstIntake({
             })}
           </div>
         </fieldset>
-        <div>
+        {showInput && <div data-testid="task-input-section">
           <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-sm font-semibold text-foreground">{copy.inputTitle}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{copy.inputHint}</p></div>{pendingUploadCount > 0 && <span className="editorial-chip px-3 py-1.5 text-xs font-medium" aria-live="polite">{copy.selectedFiles(pendingUploadCount)}</span>}</div>
           <div className={`mt-4 border border-border bg-card ${isDragActive ? 'border-primary bg-primary/[0.035]' : ''}`} onDragEnter={onDragEnter} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
             <div className="flex flex-wrap border-b border-border" role="tablist" aria-label={copy.inputTitle}>
@@ -239,10 +244,10 @@ export function TaskFirstIntake({
               {tab === 'url' && <form className="flex min-h-64 flex-col justify-center" onSubmit={(event) => { event.preventDefault(); if (!currentPrimaryDisabled) onImportUrl(); }}><label htmlFor={`${instanceId}-skill-url`} className="text-sm font-semibold text-foreground">{copy.urlLabel}</label><p className="mt-2 text-sm leading-6 text-muted-foreground">{copy.urlHint}</p><div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"><input id={`${instanceId}-skill-url`} data-testid="skill-url-input" type="url" inputMode="url" value={skillUrl} onChange={(event) => onSkillUrlChange(event.target.value)} placeholder="https://github.com/org/repo/blob/main/SKILL.md" aria-describedby={error ? errorId : undefined} className="editorial-input-surface min-w-0 px-4 py-3 text-sm outline-none" /><button type="submit" disabled={currentPrimaryDisabled} className="editorial-button-primary px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"><Link2 size={16} aria-hidden="true" />{importUrlLabel}</button></div></form>}
               {error && <div id={errorId} role="alert" className="mt-4 flex items-start gap-2 border border-destructive/20 bg-destructive/10 px-3 py-3 text-sm leading-6 text-destructive"><CircleAlert size={17} className="mt-0.5 shrink-0" aria-hidden="true" /><span>{error}</span></div>}
               {status && <div role="status" aria-live="polite" className={`mt-4 flex items-start gap-2 border px-3 py-3 text-sm leading-6 ${statusStyles[status.tone ?? 'neutral']}`}>{isBusy ? <LoaderCircle size={17} className="mt-0.5 shrink-0 animate-spin" aria-hidden="true" /> : <CheckCircle2 size={17} className="mt-0.5 shrink-0" aria-hidden="true" />}<span><span className="font-semibold">{status.label}</span>{status.detail ? ` · ${status.detail}` : ''}</span></div>}
-              {tab !== 'url' && <div className="mt-5 flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-muted-foreground">{tab === 'upload' ? copy.uploadFormatHint : copy.pasteFormatHint}</p><button type="button" onClick={runPrimaryAction} disabled={currentPrimaryDisabled} className="editorial-button-primary shrink-0 px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">{isBusy && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}{currentPrimaryLabel}{!isBusy && <ArrowRight size={16} aria-hidden="true" />}</button></div>}
+              {tab !== 'url' && <div className="mt-5 flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-muted-foreground">{tab === 'upload' ? copy.uploadFormatHint : copy.pasteFormatHint}</p><button type="button" onClick={runPrimaryAction} disabled={currentPrimaryDisabled} className={`editorial-button-primary shrink-0 px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${highlightPrimaryAction ? 'task-primary--attention' : ''}`}>{isBusy && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}{currentPrimaryLabel}{!isBusy && <ArrowRight size={16} aria-hidden="true" />}</button></div>}
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </section>
   );

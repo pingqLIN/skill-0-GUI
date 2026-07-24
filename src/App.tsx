@@ -25,6 +25,7 @@ export default function App() {
   const darkMode = false;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const zipInputRef = useRef<HTMLInputElement | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
   const [bridgeStatusError, setBridgeStatusError] = useState<string | null>(null);
   const [isLlmSettingsOpen, setIsLlmSettingsOpen] = useState(false);
@@ -308,10 +309,10 @@ npm run release:preview
   ];
   const {
     activeDemoPreset,
+    activeWorkspaceDraftId,
     analysisSessionId,
-    availableWorkspaceDraft,
     data,
-    discardWorkspaceDraft,
+    deleteWorkspaceDraft,
     error,
     handleAnalyzePendingUpload,
     handleAnalyzeSkillUrl,
@@ -331,7 +332,8 @@ npm run release:preview
     originalData,
     pendingPrimaryPath,
     pendingUploadFiles,
-    restoreAvailableWorkspaceDraft,
+    prepareDemoSkill,
+    restoreWorkspaceDraft,
     selectedContextPath,
     setInputText,
     setIsDragActive,
@@ -343,6 +345,7 @@ npm run release:preview
     workspaceDraftPersistenceError,
     workspaceDraftRestored,
     workspaceDraftSavedAt,
+    workspaceDrafts,
   } = useReviewStudioSession({
     exampleDemoPreset: curatedScenarios[0]?.reviewPreset ?? null,
     t,
@@ -404,7 +407,9 @@ npm run release:preview
           selectedContextPath={selectedContextPath}
           draftSavedAt={workspaceDraftSavedAt}
           draftRestored={workspaceDraftRestored}
-          draftAvailable={Boolean(availableWorkspaceDraft)}
+          draftAvailable={workspaceDrafts.length > 0}
+          drafts={workspaceDrafts}
+          activeDraftId={activeWorkspaceDraftId}
           draftPersistenceError={workspaceDraftPersistenceError}
           activeUtilityTab={landingPaneTab}
           docs={landingDocs}
@@ -415,6 +420,7 @@ npm run release:preview
           modeContractUrl={MODE_CONTRACT_URL}
           fileInputRef={fileInputRef}
           folderInputRef={folderInputRef}
+          zipInputRef={zipInputRef}
           onFileInputChange={handleFileInputChange}
           onInputTextChange={setInputText}
           onSkillUrlChange={setSkillUrlInput}
@@ -431,8 +437,9 @@ npm run release:preview
           onDrop={handleDrop}
           onSetPrimaryPath={setPendingPrimaryPath}
           onSelectContextPath={setSelectedContextPath}
-          onRestoreDraft={restoreAvailableWorkspaceDraft}
-          onDiscardDraft={discardWorkspaceDraft}
+          onRestoreDraft={restoreWorkspaceDraft}
+          onDeleteDraft={deleteWorkspaceDraft}
+          onPrepareDemo={prepareDemoSkill}
           onLoadScenario={loadCuratedScenario}
           onUtilityTabChange={setLandingPaneTab}
           onOpenSettings={() => setIsLlmSettingsOpen(true)}

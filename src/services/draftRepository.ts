@@ -1,4 +1,4 @@
-export const DRAFT_SCHEMA_VERSION = 1;
+export const DRAFT_SCHEMA_VERSION = 2;
 
 export type VersionedDraftEnvelope<T> = {
   payload: T;
