@@ -12,22 +12,39 @@ test.describe('review studio browser contract', () => {
   });
 
   test('offers a task-first intake with keyboard-operable choices', async ({ page }) => {
-    await expect(page.locator('#landing-workspace-title')).toHaveText('Skill-0 Review Studio');
+    await expect(page.getByRole('heading', { name: /Guided intake|導引式 intake/ })).toBeVisible();
 
-    const pasteTask = page.getByTestId('intake-task-paste');
-    const urlTask = page.getByTestId('intake-task-url');
-    const filesTask = page.getByTestId('intake-task-files');
-    const folderTask = page.getByTestId('intake-task-folder');
+    const reviewTask = page.getByTestId('intake-task-review');
+    const compareTask = page.getByTestId('intake-task-compare');
+    const draftTask = page.getByTestId('intake-task-draft');
+    const demoTask = page.getByTestId('intake-task-demo');
 
-    await expect(pasteTask).toHaveAttribute('aria-pressed', 'true');
-    await expect(urlTask).toBeVisible();
-    await expect(filesTask).toBeVisible();
-    await expect(folderTask).toBeVisible();
+    await expect(reviewTask).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByText(/Review a skill bundle|審查 skill bundle/).first()).toBeVisible();
+    await expect(compareTask).toBeVisible();
+    await expect(draftTask).toBeVisible();
+    await expect(demoTask).toBeVisible();
 
-    await urlTask.focus();
-    await page.keyboard.press('Enter');
-    await expect(urlTask).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByTestId('skill-url-input')).toBeFocused();
+    await reviewTask.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(compareTask).toHaveAttribute('aria-checked', 'true');
+    await expect(compareTask).toBeFocused();
+    await expect(compareTask).toHaveAttribute('tabindex', '0');
+    await expect(reviewTask).toHaveAttribute('tabindex', '-1');
+    await expect(page.getByTestId('intake-tab-upload')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('complementary').getByText(/Review a skill bundle|審查 skill bundle/)).toBeVisible();
+    const modeLabel = await page.getByTestId('bridge-mode-label').innerText();
+    const modeClass = await page.locator('.guided-intake-mode .status-led').getAttribute('class');
+    if (modeClass?.includes('status-led--canonical')) {
+      expect(modeLabel).toMatch(/canonical/i);
+    } else if (modeClass?.includes('status-led--standalone')) {
+      expect(modeLabel).toMatch(/standalone|fallback/i);
+    } else {
+      expect(modeLabel).toMatch(/unavailable|pending|不可用|待確認/i);
+    }
+
+    await page.getByTestId('intake-tab-url').click();
+    await expect(page.getByTestId('skill-url-input')).toBeVisible();
   });
 
   test('persists and restores an intake draft through IndexedDB', async ({ page }) => {
@@ -86,7 +103,7 @@ test.describe('review studio browser contract', () => {
   });
 
   test('keeps intake and review workspace bounded at the active viewport', async ({ page }, testInfo) => {
-    await expect(page.getByTestId('intake-task-paste')).toBeVisible();
+    await expect(page.getByTestId('intake-task-review')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath('intake.png'), fullPage: true });
 

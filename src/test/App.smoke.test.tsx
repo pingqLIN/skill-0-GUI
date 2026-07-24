@@ -137,17 +137,18 @@ describe('App smoke test', () => {
     expect(await screen.findByText('app.landingOutputsTab')).toBeInTheDocument();
     expect(await screen.findByText('app.landingDocsTab')).toBeInTheDocument();
     expect(await screen.findByText('app.landingScenariosTab')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('intake-tab-url'));
     expect(await screen.findByText('app.skillUrlLabel')).toBeInTheDocument();
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect((await screen.findAllByText('app.bridgeModeCanonical')).length).toBeGreaterThan(0);
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
     expect(await screen.findByTitle(/\/home\/miles\/dev2\/skill-0/)).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'app.title' })).toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'app.analyzeNew' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Review rail' })).toBeInTheDocument();
     expect(screen.getByRole('tablist', { name: 'app.workspace' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'app.landingOverviewTab' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('group', { name: 'app.intakeTaskChoices' })).toBeInTheDocument();
-    expect(screen.getByTestId('intake-task-paste')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radiogroup', { name: 'Choose a review task' })).toBeInTheDocument();
+    expect(screen.getByTestId('intake-task-review')).toHaveAttribute('aria-checked', 'true');
 
     fireEvent.click(screen.getByText('app.landingScenariosTab'));
 
@@ -176,14 +177,14 @@ describe('App smoke test', () => {
     }
   });
 
-  it('offers task-first intake choices without removing the existing import controls', async () => {
+  it('offers goal-first tasks and routes comparison to the upload workflow', async () => {
     await act(async () => {
       render(<App />);
     });
 
-    fireEvent.click(screen.getByTestId('intake-task-url'));
-    expect(screen.getByTestId('intake-task-url')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTestId('skill-url-input')).toHaveFocus();
+    fireEvent.click(screen.getByTestId('intake-task-compare'));
+    expect(screen.getByTestId('intake-task-compare')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('intake-tab-upload')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('app.selectFiles')).toBeInTheDocument();
     expect(screen.getByText('app.selectFolder')).toBeInTheDocument();
   });
@@ -236,7 +237,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
-    expect(await screen.findByText('app.bridgeModeStandalone')).toBeInTheDocument();
+    expect((await screen.findAllByText('app.bridgeModeStandalone')).length).toBeGreaterThan(0);
     expect(await screen.findByTitle(/app\.bridgeModeBundled/)).toBeInTheDocument();
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
   });
@@ -248,7 +249,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
-    expect(await screen.findByText('app.bridgeModeUnavailable')).toBeInTheDocument();
+    expect((await screen.findAllByText('app.bridgeModeUnavailable')).length).toBeGreaterThan(0);
     expect(await screen.findByTitle(/Bridge down/)).toBeInTheDocument();
     expect(await screen.findByText('app.llmFallbackUnavailable')).toBeInTheDocument();
   });
@@ -266,7 +267,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
-    expect(await screen.findByText('app.llmFallbackAvailable')).toBeInTheDocument();
+    expect((await screen.findAllByText('app.llmFallbackAvailable')).length).toBeGreaterThan(0);
     expect(await screen.findByTitle(/openai\/gpt-4o-mini/)).toBeInTheDocument();
   });
 
@@ -385,6 +386,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
+    fireEvent.click(screen.getByTestId('intake-tab-url'));
     fireEvent.change(screen.getByTestId('skill-url-input'), {
       target: { value: 'https://github.com/owner/repo/blob/main/SKILL.md' },
     });
@@ -410,6 +412,7 @@ describe('App smoke test', () => {
       render(<App />);
     });
 
+    fireEvent.click(screen.getByTestId('intake-tab-url'));
     fireEvent.change(screen.getByTestId('skill-url-input'), {
       target: { value: 'https://example.com/skill.md' },
     });
@@ -480,13 +483,52 @@ describe('App smoke test', () => {
         expect(screen.getByText('obsidian-boundary.md')).toBeInTheDocument();
       });
 
+    await waitFor(() => {
+      expect(screen.getByTestId('intake-tab-upload')).toHaveAttribute('aria-selected', 'true');
       expect(screen.getByText('app.reviewAndAnalyze')).toBeInTheDocument();
+    });
       expect(
         consoleError.mock.calls.some((call) => call.join(' ').includes('Maximum update depth exceeded')),
       ).toBe(false);
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it('analyzes pasted text after leaving a pending upload bundle', async () => {
+    vi.mocked(analyzeSkillText).mockResolvedValue({
+      projectId: 'pasted-after-bundle',
+      projectName: 'Pasted after bundle',
+      phases: [],
+      riskAssessment: { level: 'SAFE', details: '' },
+      threeClassification: { category: 'demo', granularity: 'task', operability: 90 },
+      parserResult: { decomposition: { actions: [], rules: [], directives: [] } },
+      globalMetrics: { decisionConfidence: 90, reworkRate: 10 },
+    });
+
+    const { container } = render(<App />);
+    const fileInput = container.querySelector('input[accept*=".zip"]') as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: {
+        files: [
+          new File(['# Bundle primary'], 'SKILL.md', { type: 'text/markdown' }),
+          new File(['# Supporting policy'], 'policy.md', { type: 'text/markdown' }),
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('intake-tab-upload')).toHaveAttribute('aria-selected', 'true');
+    });
+    fireEvent.click(screen.getByTestId('intake-tab-paste'));
+    fireEvent.change(screen.getByTestId('skill-text-input'), {
+      target: { value: '# Explicit pasted review' },
+    });
+    fireEvent.click(screen.getByText('app.analyzeBtn'));
+
+    await waitFor(() => {
+      expect(analyzeSkillText).toHaveBeenCalledWith('# Explicit pasted review', 'uploaded-skill', {});
+    });
   });
 
   it('launches the curated bundle review scenario with supporting files', async () => {
