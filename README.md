@@ -156,6 +156,9 @@ Verification:
 npm run lint
 npm test
 npm run docs:check
+npm run verify:build-size
+npm run verify:public-build
+npm run test:e2e
 ```
 
 Builds:
@@ -301,6 +304,9 @@ Before pushing changes, run:
 npm run lint
 npm test
 npm run docs:check
+npm run verify:build-size
+npm run verify:public-build
+npm run test:e2e
 ```
 
 If you update shared contract-facing documentation, also run:

@@ -45,14 +45,19 @@ The first isolated-port Playwright run completed its browser artifacts but the W
 2. installs Chromium with Playwright system dependencies, and
 3. runs the same `npm run test:e2e` contract.
 
-The workflow configuration is present locally, but a GitHub-hosted execution remains `UNKNOWN` because this stage did not push or publish any commit.
+The integration was subsequently published through pull request `#9`. GitHub Actions run `30470757290` completed successfully at merge commit `a25be55`:
+
+- `validate`: `VERIFIED`
+- `browser-qa`: `VERIFIED`
+
+The workflow's `actions/checkout` and `actions/setup-node` steps are maintained on their current Node 24-compatible major versions. Repository rules require both jobs to pass before changes can merge into `main`.
 
 ## Remaining Risk
 
-- `npm ci` reports one low-severity dependency advisory. No automated dependency rewrite was applied.
+- GitHub Dependabot currently reports zero open alerts; this does not replace a fresh package-manager audit.
 - The standard build still emits the known large lazy 3D vendor chunk, while the enforced entry-size and public-build boundaries pass.
-- No remote push, public deployment, tunnel change, or production mutation was performed.
+- The repository is public, but this integration did not perform a product deployment, tunnel change, or production runtime mutation.
 
 ## Stage Decision
 
-The local task-first Review Studio hardening integration criteria are satisfied. The next release-facing action is a separately authorized push followed by observation of the new GitHub `browser-qa` job.
+The task-first Review Studio hardening integration criteria are satisfied locally and on GitHub-hosted CI. Future changes should continue through pull requests with `validate` and `browser-qa` as required checks.
