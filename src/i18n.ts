@@ -4,6 +4,16 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import enTranslation from './locales/en.json';
 import zhTranslation from './locales/zh.json';
+import zhTwTranslation from './locales/zh-TW.json';
+
+const zhTwResolvedTranslation = {
+  ...zhTranslation,
+  ...zhTwTranslation,
+  app: {
+    ...zhTranslation.app,
+    ...zhTwTranslation.app,
+  },
+};
 
 i18n
   .use(LanguageDetector)
@@ -11,11 +21,16 @@ i18n
   .init({
     resources: {
       en: { translation: enTranslation },
-      zh: { translation: zhTranslation },
-      'zh-TW': { translation: zhTranslation },
-      'zh-CN': { translation: zhTranslation }
+      zh: { translation: zhTwResolvedTranslation },
+      'zh-TW': { translation: zhTwResolvedTranslation },
     },
-    fallbackLng: 'en',
+    fallbackLng: {
+      zh: ['zh-TW', 'en'],
+      'zh-TW': ['en'],
+      default: ['en'],
+    },
+    supportedLngs: ['en', 'zh', 'zh-TW'],
+    nonExplicitSupportedLngs: false,
     interpolation: {
       escapeValue: false, // react already safes from xss
     },

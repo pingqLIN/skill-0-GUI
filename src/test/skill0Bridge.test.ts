@@ -7,7 +7,9 @@ import { describe, expect, it } from 'vitest';
 import { createSkill0Bridge } from '../../bridge/skill0Bridge.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const canonicalRoot = '/home/miles/dev2/skill-0';
+const canonicalRoot = process.env.SKILL0_ROOT
+  || path.resolve(projectRoot, '..', 'skill-0');
+const normalizePath = (value: string) => value.replaceAll(path.sep, '/');
 
 function normalizeParityShape(parsed: any) {
   return {
@@ -56,7 +58,7 @@ describe('createSkill0Bridge', () => {
 
     const example = await bridge.getExampleSkill();
     expect(example.mode).toBe('standalone');
-    expect(example.source).toContain('standalone/example-skill.md');
+    expect(normalizePath(example.source)).toContain('standalone/example-skill.md');
     expect(example.text).toContain('Standalone Skill Demo');
 
     const parsed = await bridge.parseSkill('# Demo Skill\n\n- Always validate inputs.', 'demo-skill');

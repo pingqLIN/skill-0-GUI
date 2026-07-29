@@ -4,7 +4,7 @@ export type UploadedContextFile = {
   type: string;
   size: number;
   role: 'primary' | 'context';
-  source: 'upload' | 'zip';
+  source: 'upload' | 'zip' | 'url';
   preview?: string;
   text?: string;
 };

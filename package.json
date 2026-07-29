@@ -6,15 +6,17 @@
   "scripts": {
     "dev": "node scripts/with-system-ca.mjs vite",
     "build": "vite build",
-    "build:public": "VITE_ENABLE_3D=false vite build",
+    "build:public": "node scripts/build-public.mjs",
     "verify:build-size": "npm run build && node scripts/verify-build-size.mjs",
     "verify:public-build": "node scripts/verify-public-build.mjs",
     "preview": "vite preview",
     "start": "node scripts/with-system-ca.mjs node server.mjs",
-    "clean": "rm -rf dist",
+    "clean": "node scripts/clean.mjs",
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "docs:sync": "node scripts/sync-shared-docs.mjs",
     "docs:check": "node scripts/sync-shared-docs.mjs --check",
     "project-loop:state": "node scripts/project-development-loop-state.mjs"
@@ -23,7 +25,7 @@
     "@emotion/is-prop-valid": "^1.4.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
-    "express": "^4.21.2",
+    "express": "^4.22.2",
     "framer-motion": "^12.34.3",
     "i18next": "^25.8.14",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -37,20 +39,25 @@
     "three": "^0.183.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "jsdom": "^26.1.0",
     "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.1",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0",
-    "vitest": "^3.2.4"
+    "vite": "^6.4.3",
+    "vitest": "^3.2.7"
   },
   "overrides": {
+    "@babel/core": "7.29.7",
     "lodash-es": "4.18.1",
     "path-to-regexp": "0.1.13",
-    "picomatch": "4.0.4"
+    "picomatch": "4.0.4",
+    "postcss": "8.5.22",
+    "ws": "8.21.1"
   }
 }

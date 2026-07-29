@@ -1,5 +1,15 @@
 import type { ConsistencyIssue, SkillDocument, ValidationIssue } from '../types/skillDocument';
 
+export type ReviewIssueNavigationTarget = {
+  id: string;
+  source: 'schema' | 'consistency';
+  severity: 'error' | 'warning';
+  title: string;
+  message: string;
+  targetId?: string;
+  focusPath: string | null;
+};
+
 function isSupportedValidationPath(path: string) {
   return path.startsWith('meta.')
     || path.startsWith('decomposition.actions[')
@@ -59,4 +69,32 @@ export function resolveConsistencyIssueFieldPath(skillDocument: SkillDocument, i
     return `${nodePath}.entry_condition`;
   }
   return `${nodePath}.id`;
+}
+
+export function buildReviewIssueNavigationTargets(
+  skillDocument: SkillDocument | null,
+  validationIssues: ValidationIssue[],
+  consistencyIssues: ConsistencyIssue[],
+): ReviewIssueNavigationTarget[] {
+  const schemaTargets = validationIssues.map((issue) => ({
+    id: `schema:${issue.code}:${issue.path}`,
+    source: 'schema' as const,
+    severity: issue.severity,
+    title: issue.code,
+    message: issue.message,
+    targetId: issue.path,
+    focusPath: resolveValidationIssueFieldPath(issue),
+  }));
+  const consistencyTargets = consistencyIssues.map((issue, index) => ({
+    id: `consistency:${issue.type}:${issue.targetId ?? index}`,
+    source: 'consistency' as const,
+    severity: issue.severity,
+    title: issue.type,
+    message: issue.message,
+    targetId: issue.targetId,
+    focusPath: skillDocument ? resolveConsistencyIssueFieldPath(skillDocument, issue) : null,
+  }));
+
+  return [...schemaTargets, ...consistencyTargets]
+    .sort((left, right) => Number(right.severity === 'error') - Number(left.severity === 'error'));
 }

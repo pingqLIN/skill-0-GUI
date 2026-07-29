@@ -29,6 +29,7 @@ import {
   createValidationRun,
 } from '../services/skillDocumentTestRunner';
 import {
+  buildReviewIssueNavigationTargets,
   resolveConsistencyIssueFieldPath,
   resolveValidationIssueFieldPath,
 } from '../services/skillDocumentIssueNavigation';
@@ -222,6 +223,14 @@ export function ReviewWorkspace({
   const [handoffState, setHandoffState] = useState<HandoffState>('ready_for_review');
   const [reviewDraftSavedAt, setReviewDraftSavedAt] = useState<string | null>(null);
   const [reviewDraftRestored, setReviewDraftRestored] = useState(false);
+  const issueReturnRef = useRef<{
+    activeTab: WorkspaceTabId;
+    activeBottomTab: 'review' | 'checks' | 'context' | null;
+    activeChecksSub: 'posture' | 'schema' | 'consistency' | 'tests' | 'evidence';
+    activeContextSub: 'summary' | 'policy' | 'files' | 'analysis' | 'source' | 'links';
+    activePipelineSubview: PipelineSubviewId;
+    activePhase: string | null;
+  } | null>(null);
   const hasHydratedReviewDraftRef = useRef(false);
   const hadStoredReviewDraftRef = useRef(false);
   const skipNextReviewDraftPersistRef = useRef(false);
@@ -281,7 +290,7 @@ export function ReviewWorkspace({
   const pipelineSubviews = [
     {
       id: 'summary' as PipelineSubviewId,
-      label: t('app.summary'),
+      label: t('dashboard.summary'),
       meta: `${data?.globalMetrics?.decisionConfidence ?? '--'}% ${t('dashboard.confidence')}`,
     },
     {
@@ -384,6 +393,16 @@ export function ReviewWorkspace({
   const consistencyIssues = consistencyResult?.issues ?? [];
   const consistencyErrors = consistencyIssues.filter((issue) => issue.severity === 'error');
   const consistencyWarnings = consistencyIssues.filter((issue) => issue.severity === 'warning');
+  const blockingIssueInbox = buildReviewIssueNavigationTargets(skillDocument, validationErrors, consistencyErrors)
+    .map((issue) => {
+      const contextFile = supportFiles.find((file) => issue.targetId && (file.path.includes(issue.targetId) || file.name.includes(issue.targetId)));
+      const phase = data?.phases?.find((candidate: any) => issue.targetId && JSON.stringify(candidate).includes(issue.targetId));
+      return {
+        ...issue,
+        contextPath: contextFile?.path ?? null,
+        phaseId: phase?.id ?? null,
+      };
+    });
   const skillDocumentActions = skillDocument?.decomposition.actions ?? [];
   const skillDocumentRules = skillDocument?.decomposition.rules ?? [];
   const skillDocumentDirectives = skillDocument?.decomposition.directives ?? [];
@@ -861,6 +880,47 @@ export function ReviewWorkspace({
       focusPath,
     });
   };
+  const rememberIssueReturnPoint = () => {
+    issueReturnRef.current = {
+      activeTab,
+      activeBottomTab,
+      activeChecksSub,
+      activeContextSub,
+      activePipelineSubview,
+      activePhase,
+    };
+  };
+  const returnToIssueInbox = () => {
+    const returnPoint = issueReturnRef.current;
+    issueReturnRef.current = null;
+    if (returnPoint) {
+      setActiveTab(returnPoint.activeTab);
+      setActiveBottomTab(returnPoint.activeBottomTab);
+      setActiveChecksSub(returnPoint.activeChecksSub);
+      setActiveContextSub(returnPoint.activeContextSub);
+      setActivePipelineSubview(returnPoint.activePipelineSubview);
+      setActivePhase(returnPoint.activePhase);
+    }
+  };
+  const openBlockingIssueInEditor = (focusPath: string | null) => {
+    if (!focusPath) {
+      return;
+    }
+
+    rememberIssueReturnPoint();
+    openSkillDocumentEditor(focusPath);
+  };
+  const openBlockingIssueContext = (contextPath: string) => {
+    onSelectContextPath(contextPath);
+    setActiveBottomTab('context');
+    setActiveContextSub('files');
+  };
+  const openBlockingIssuePhase = (phaseId: string) => {
+    setActiveTab('pipeline');
+    setActiveBottomTab(null);
+    setActivePipelineSubview('derived');
+    setActivePhase(phaseId);
+  };
   const reviewMode = data?.reviewerSummary?.mode
     || (activeBridgeMode === 'skill-0'
       ? 'canonical'
@@ -882,6 +942,7 @@ export function ReviewWorkspace({
       : reviewEquivalenceStatus === 'draft_only_ai_assisted'
         ? t('app.equivalenceAiAssistedDraft')
       : t('app.equivalencePending');
+  const canonicalRerunRequired = reviewMode !== 'canonical' || reviewEquivalenceStatus !== 'implementation_identity';
   const reviewDecisionGuidance = data?.reviewerSummary?.finalDecisionGuidance
     || (activeBridgeMode === 'skill-0'
       ? 'Result was produced by the canonical skill-0 bridge. Final equivalence review is acceptable if supporting files and findings are inspected.'
@@ -966,6 +1027,13 @@ export function ReviewWorkspace({
   const handleTopToolbarToggle = () => {
     setShowActions(false);
     setIsTopToolbarExpanded((current) => !current);
+  };
+
+  const handleOpenGlobalEditorFromToolbar = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShowActions(false);
+    setEditorConfig({ type: 'global', payload: data });
   };
 
   useEffect(() => {
@@ -1144,6 +1212,7 @@ export function ReviewWorkspace({
       `- review_status: ${reviewStatus}`,
       `- handoff_state: ${effectiveHandoffState}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
+      `- canonical_rerun_required: ${canonicalRerunRequired ? 'true' : 'false'}`,
       `- draft_only: ${activeBridgeDraftOnly ? 'true' : 'false'}`,
       `- llm_provider: ${activeBridgeProvider || 'n/a'}`,
       `- llm_model: ${activeBridgeModel || 'n/a'}`,
@@ -1260,6 +1329,7 @@ export function ReviewWorkspace({
       `- review_status: ${reviewStatus}`,
       `- handoff_state: ${effectiveHandoffState}`,
       `- equivalence_status: ${reviewEquivalenceStatus}`,
+      `- canonical_rerun_required: ${canonicalRerunRequired ? 'true' : 'false'}`,
       `- draft_only: ${activeBridgeDraftOnly ? 'true' : 'false'}`,
       `- llm_provider: ${activeBridgeProvider || 'n/a'}`,
       `- llm_model: ${activeBridgeModel || 'n/a'}`,
@@ -1407,6 +1477,7 @@ export function ReviewWorkspace({
     const reviewPacket = buildReviewPacketFromReviewData(data, {
       bridgeMode: activeBridgeMode as ReviewPacket['parserMode'],
       bridgeModeSource: bridgeModeDetail,
+      canonicalRerunRequired,
       contextSummary,
       equivalenceStatus: reviewEquivalenceStatus,
       handoffState: effectiveHandoffState,
@@ -1703,7 +1774,7 @@ export function ReviewWorkspace({
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => setEditorConfig({ type: 'global', payload: data })}
+                              onClick={handleOpenGlobalEditorFromToolbar}
                               data-testid="top-toolbar-open-global-editor-shortcut"
                               className="editorial-button-secondary px-3 py-2 text-xs font-medium"
                             >
@@ -1737,6 +1808,7 @@ export function ReviewWorkspace({
                           <div className="flex flex-wrap items-center gap-2">
                           <div className="relative">
                             <button
+                              type="button"
                               onClick={() => setShowActions((current) => !current)}
                               data-testid="top-toolbar-actions-trigger"
                               className={`flex items-center gap-2 px-3 py-2 text-sm rounded-[calc(var(--radius)*1.02)] transition-colors ${showActions ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-card'}`}
@@ -1757,6 +1829,7 @@ export function ReviewWorkspace({
                                 >
                                   <div className="grid gap-2 px-4 pb-4">
                                     <button
+                                      type="button"
                                       onClick={() => {
                                         setShowActions(false);
                                         exportSkill();
@@ -1769,6 +1842,7 @@ export function ReviewWorkspace({
                                     </button>
                                     {skillDocument && (
                                       <button
+                                        type="button"
                                         onClick={() => {
                                           setShowActions(false);
                                           exportSkillJson();
@@ -1782,6 +1856,7 @@ export function ReviewWorkspace({
                                     )}
                                     {skillDocument && (
                                       <button
+                                        type="button"
                                         onClick={() => {
                                           setShowActions(false);
                                           exportReviewReport();
@@ -1794,6 +1869,7 @@ export function ReviewWorkspace({
                                       </button>
                                     )}
                                     <button
+                                      type="button"
                                       onClick={() => {
                                         setShowActions(false);
                                         exportReviewPacket();
@@ -1806,6 +1882,7 @@ export function ReviewWorkspace({
                                       <Download size={14} className="text-muted-foreground" />
                                     </button>
                                     <button
+                                      type="button"
                                       onClick={() => {
                                         setShowActions(false);
                                         handleResetWorkspace();
@@ -1817,6 +1894,7 @@ export function ReviewWorkspace({
                                     </button>
                                     {modifiedPaths.size > 0 && (
                                       <button
+                                        type="button"
                                         onClick={() => {
                                           setShowActions(false);
                                           onUndo();
@@ -1887,6 +1965,80 @@ export function ReviewWorkspace({
         </header>
 
         <section className="review-stage-shell z-0 flex-1 overflow-y-auto px-4 py-2 pb-24 sm:px-6 sm:py-3 custom-scrollbar">
+          <aside
+            aria-label={t('app.blockingIssueInbox')}
+            data-testid="persistent-review-rail"
+            className="sticky top-0 z-10 mb-3 overflow-hidden rounded-[calc(var(--radius)*1.04)] border border-border/65 bg-background/95 shadow-sm backdrop-blur-md"
+          >
+            <div className="flex min-w-max items-stretch divide-x divide-border/55 overflow-x-auto sm:min-w-0">
+              <div className="min-w-40 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.reviewStatus')}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{t(reviewStatusLabelKey(reviewStatus))}</div>
+              </div>
+              <div className="min-w-32 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.reviewChecklist')}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{checklistCompletedCount} {t('app.reviewChecklistDone')} · 4</div>
+              </div>
+              <div className="min-w-40 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.handoffState')}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{handoffSummary}</div>
+              </div>
+              <div className="min-w-40 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.exportReadiness')}</div>
+                <div
+                  aria-label={canExportArtifacts ? t('app.exportReady') : t('app.exportLocked')}
+                  className={`mt-1 text-sm font-semibold ${canExportArtifacts ? 'text-emerald-800' : 'text-amber-800'}`}
+                >
+                  {canExportArtifacts ? '✓' : '—'}
+                </div>
+              </div>
+              <div className="min-w-[19rem] flex-1 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t('app.blockingIssueInbox')}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{t('app.blockingIssueInboxHint')}</div>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${blockingIssueInbox.length > 0 ? 'bg-destructive/12 text-destructive' : 'bg-emerald-500/12 text-emerald-900'}`}>
+                    {blockingIssueInbox.length}
+                  </span>
+                </div>
+                {blockingIssueInbox.length > 0 ? (
+                  <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5" data-testid="blocking-issue-inbox">
+                    {blockingIssueInbox.map((issue) => (
+                      <div key={issue.id} className="min-w-64 rounded-[calc(var(--radius)*1.02)] bg-muted px-3 py-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between gap-2">
+                          <span aria-label={issue.title} className="font-semibold text-foreground">
+                            {issue.source === 'schema' ? t('app.validationIssues') : t('app.consistencyIssues')}
+                          </span>
+                          <span className="rounded-full bg-destructive/12 px-2 py-0.5 text-[10px] font-semibold text-destructive">{issue.source}</span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 leading-5">{issue.message}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {issue.focusPath && (
+                            <button type="button" onClick={() => openBlockingIssueInEditor(issue.focusPath)} className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary hover:underline">
+                              {t('app.openBlockingIssueInEditor')}
+                            </button>
+                          )}
+                          {issue.contextPath && (
+                            <button type="button" onClick={() => openBlockingIssueContext(issue.contextPath)} className="text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground/70 hover:text-foreground hover:underline">
+                              {t('app.openIssueContext')}
+                            </button>
+                          )}
+                          {issue.phaseId && (
+                            <button type="button" onClick={() => openBlockingIssuePhase(issue.phaseId)} className="text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground/70 hover:text-foreground hover:underline">
+                              {t('app.openIssuePhase')}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-emerald-900">{t('app.blockingIssueNone')}</p>
+                )}
+              </div>
+            </div>
+          </aside>
           <AnimatePresence mode="wait">
             {activeTab === 'pipeline' && (
               <motion.div
@@ -2112,6 +2264,22 @@ export function ReviewWorkspace({
                               onEditPhase={(phaseData) => setEditorConfig({ type: 'phase', payload: phaseData, phaseId: phaseData.id })}
                               onEditDecision={(node) => setEditorConfig({ type: 'decision', payload: node, phaseId: activePhaseData.id })}
                               modifiedPaths={modifiedPaths}
+                              evidence={{
+                                bridgeMode: activeBridgeMode,
+                                parserFindingCount: parserAnalysisFindings.length,
+                                supportingFileCount: supportFiles.length,
+                                latestValidationRun,
+                                latestConsistencyRun,
+                                latestPathTestRun,
+                              }}
+                              onOpenChecks={() => {
+                                setActiveBottomTab('checks');
+                                setActiveChecksSub('tests');
+                              }}
+                              onOpenSupportingFiles={() => {
+                                setActiveBottomTab('context');
+                                setActiveContextSub('files');
+                              }}
                             />
                           </Suspense>
                         ) : (
@@ -3102,13 +3270,17 @@ export function ReviewWorkspace({
       <Suspense fallback={null}>
         <SideEditor
           config={editorConfig}
-          onClose={() => setEditorConfig(null)}
+          onClose={() => {
+            setEditorConfig(null);
+            returnToIssueInbox();
+          }}
           onSave={(updatedData) => {
             if (!editorConfig) {
               return;
             }
             onSaveEdit(editorConfig, updatedData);
             setEditorConfig(null);
+            returnToIssueInbox();
           }}
         />
       </Suspense>

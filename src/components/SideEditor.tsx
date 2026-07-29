@@ -390,7 +390,10 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
 
   const fieldPathProps = (path: string) => (
     config.type === 'skillDocument'
-      ? { 'data-field-path': path }
+      ? {
+          'aria-label': path,
+          'data-field-path': path,
+        }
       : {}
   );
 
@@ -457,6 +460,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={onClose}
                   aria-label={t('editor.close')}
                   className="rounded-full p-1.5 text-muted-foreground/70 transition-colors hover:bg-muted/50 hover:text-foreground"
@@ -466,7 +470,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
               </div>
             </div>
 
-            <div className="custom-scrollbar flex-1 overflow-y-auto p-6">
+            <div className="custom-scrollbar flex-1 overflow-y-auto p-6 [&_label]:!text-muted-foreground">
               <div className="space-y-6">
                 {config.type === 'global' && (
                   <>
@@ -958,6 +962,7 @@ export function SideEditor({ config, onClose, onSave }: SideEditorProps) {
 
             <div className="border-t border-border/50 bg-muted/5 p-5">
               <button
+                type="button"
                 onClick={handleSave}
                 data-testid="side-editor-save"
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"

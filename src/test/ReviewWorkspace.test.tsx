@@ -11,9 +11,23 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('../components/Flowchart', () => ({ Flowchart: () => <div data-testid="flowchart" /> }));
+vi.mock('../components/Flowchart', () => ({
+  Flowchart: ({ phases, onSelectPhase }: any) => (
+    <button data-testid="flowchart" type="button" onClick={() => onSelectPhase(phases[0].id)}>
+      Select first phase
+    </button>
+  ),
+}));
 vi.mock('../components/Dashboard', () => ({ Dashboard: () => <div data-testid="dashboard" /> }));
-vi.mock('../components/PhaseDetails', () => ({ PhaseDetails: () => <div data-testid="phase-details" /> }));
+vi.mock('../components/PhaseDetails', () => ({
+  PhaseDetails: ({ evidence, onOpenChecks, onOpenSupportingFiles }: any) => (
+    <div data-testid="phase-details">
+      <div data-testid="phase-details-evidence">{`${evidence.parserFindingCount}:${evidence.supportingFileCount}`}</div>
+      <button type="button" onClick={onOpenChecks}>Open checks</button>
+      <button type="button" onClick={onOpenSupportingFiles}>Open files</button>
+    </div>
+  ),
+}));
 vi.mock('../components/VectorSpace', () => ({ VectorSpace: () => <div data-testid="vector-space" /> }));
 vi.mock('../components/SecurityMatrix', () => ({ SecurityMatrix: () => <div data-testid="security-matrix" /> }));
 vi.mock('../components/SideEditor', () => ({
@@ -227,6 +241,47 @@ describe('ReviewWorkspace', () => {
     expect(screen.queryByTestId('decomposition-board')).not.toBeInTheDocument();
   });
 
+  it('connects selected phase details to workspace-level evidence and navigation actions', async () => {
+    const supportFiles = [{
+      name: 'policy.md',
+      path: 'docs/policy.md',
+      type: '.md',
+      size: 12,
+      role: 'context' as const,
+      source: 'upload' as const,
+      text: '# Policy',
+    }];
+    render(<ReviewWorkspace data={sampleData} {...createProps()} supportFiles={supportFiles} />);
+
+    await openPipelineSubview('derived');
+    fireEvent.click(await screen.findByTestId('flowchart'));
+    expect(await screen.findByTestId('phase-details-evidence')).toHaveTextContent('0:1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open checks' }));
+    expect(await screen.findByTestId('insight-tab-checks')).toHaveClass('review-bottom-tab-button--active');
+    fireEvent.click(screen.getByRole('button', { name: 'Open files' }));
+    expect(await screen.findByTestId('insight-tab-context')).toHaveClass('review-bottom-tab-button--active');
+  });
+
+  it('keeps the review rail visible and routes blocking issues to the shared editor resolver', async () => {
+    const issueData = {
+      ...exportReadyData,
+      parserResult: {
+        ...exportReadyData.parserResult,
+        execution_paths: [{ id: '', name: 'default-path', steps: ['a_001'] }],
+      },
+    };
+    render(<ReviewWorkspace data={issueData} {...createProps()} />);
+
+    expect(await screen.findByTestId('persistent-review-rail')).toHaveTextContent('app.blockingIssueInbox');
+    expect(screen.getByTestId('blocking-issue-inbox')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('app.openBlockingIssueInEditor'));
+
+    expect(await screen.findByTestId('side-editor-config')).toHaveTextContent('skillDocument:execution_paths[0].id');
+    expect(screen.queryByText('app.openIssueContext')).not.toBeInTheDocument();
+    expect(screen.queryByText('app.openIssuePhase')).not.toBeInTheDocument();
+  });
+
   it('collapses the top toolbar context deck while keeping fixed tools visible', async () => {
     render(<ReviewWorkspace data={sampleData} {...createProps()} />);
 
@@ -392,6 +447,24 @@ describe('ReviewWorkspace', () => {
 
     expect(screen.queryByTestId('top-toolbar-open-structured-editor')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'app.exportReviewPacket' })).toBeInTheDocument();
+  });
+
+  it('opens the global editor from the expanded toolbar without submitting a parent form', async () => {
+    const handleSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => event.preventDefault());
+    const initialHref = window.location.href;
+
+    render(
+      <form onSubmit={handleSubmit}>
+        <ReviewWorkspace data={sampleData} {...createProps()} />
+      </form>,
+    );
+
+    await expandTopToolbarIfCollapsed();
+    fireEvent.click(screen.getByTestId('top-toolbar-open-global-editor-shortcut'));
+
+    expect(handleSubmit).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(initialHref);
+    expect(await screen.findByTestId('side-editor-config')).toHaveTextContent('global:none');
   });
 
   it('records a reviewer-facing validation run from the test panel', async () => {
@@ -728,6 +801,7 @@ describe('ReviewWorkspace', () => {
     const packet = JSON.parse(await readBlobAsText(packetBlob!)) as any;
     expect(packet.projectId).toBe('demo-skill');
     expect(packet.parserMode).toBe('skill-0');
+    expect(packet.canonicalRerunRequired).toBe(false);
     expect(packet.handoffState).toBe('approved_for_export');
     expect(packet.reviewProfile).toBe('mode_verification');
     expect(packet.reviewState.reviewerName).toBe('Miles');
@@ -786,6 +860,7 @@ describe('ReviewWorkspace', () => {
     expect(packetBlob).toBeDefined();
     const packet = JSON.parse(await readBlobAsText(packetBlob!)) as any;
     expect(packet.parserMode).toBe('llm-assisted');
+    expect(packet.canonicalRerunRequired).toBe(true);
     expect(packet.draftOnly).toBe(true);
     expect(packet.fallbackReason).toBe('Unknown document structure required AI-assisted recovery.');
     expect(packet.llmProvider).toBe('openai');
@@ -904,6 +979,7 @@ describe('ReviewWorkspace', () => {
     expect(reportText).toContain('- review_profile: mode_verification');
     expect(reportText).toContain('- review_status: approved');
     expect(reportText).toContain('- handoff_state: approved_for_export');
+    expect(reportText).toContain('- canonical_rerun_required: false');
     expect(reportText).toContain('- reviewer_signoff: reviewer-01');
     expect(reportText).toContain('- signoff_gates_completed: 4/4');
     expect(reportText).toContain('## Reviewer Summary');

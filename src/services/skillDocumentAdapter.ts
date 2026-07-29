@@ -450,6 +450,7 @@ export function buildReviewPacketFromReviewData(
   options: {
     bridgeMode: ReviewPacket['parserMode'];
     bridgeModeSource: string;
+    canonicalRerunRequired: boolean;
     contextSummary?: ContextSummaryItem[];
     equivalenceStatus: string;
     handoffState?: HandoffState;
@@ -492,6 +493,7 @@ export function buildReviewPacketFromReviewData(
       || (reviewerSummary?.draft_only === true)
       || (bridge?.draft_only === true),
     equivalenceStatus: options.equivalenceStatus,
+    canonicalRerunRequired: options.canonicalRerunRequired,
     exportedAt: new Date().toISOString(),
     fallbackReason: typeof reviewerSummary?.fallback_reason === 'string'
       ? reviewerSummary.fallback_reason
