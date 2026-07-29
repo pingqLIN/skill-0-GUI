@@ -45,14 +45,19 @@
 2. 安裝 Chromium 與 Playwright system dependencies；
 3. 執行相同的 `npm run test:e2e` contract。
 
-Workflow 設定已存在於本機，但 GitHub-hosted 執行仍為 `UNKNOWN`，因為本階段沒有 push 或發布任何 commit。
+後續已透過 pull request `#9` 發布這項整合。GitHub Actions run `30470757290` 已在 merge commit `a25be55` 成功完成：
+
+- `validate`：`VERIFIED`
+- `browser-qa`：`VERIFIED`
+
+Workflow 的 `actions/checkout` 與 `actions/setup-node` steps 維持在目前相容 Node 24 的 major 版本。Repository rules 要求兩項 job 都通過後，變更才能合併到 `main`。
 
 ## 剩餘風險
 
-- `npm ci` 回報一項 low-severity dependency advisory；本階段沒有自動重寫 dependency。
+- GitHub Dependabot 目前有零筆 open alert；這不取代重新執行 package-manager audit。
 - 標準 build 仍會產生已知的大型 lazy 3D vendor chunk，但強制執行的 entry-size 與 public-build boundary 均通過。
-- 未執行 remote push、公開部署、tunnel 修改或 production mutation。
+- Repository 已公開，但本次整合未執行產品部署、tunnel 修改或 production runtime mutation。
 
 ## 階段決策
 
-本機 task-first Review Studio hardening 整合驗收條件已滿足。下一個 release-facing 動作是取得獨立授權後 push，並觀察新的 GitHub `browser-qa` job。
+Task-first Review Studio hardening 的本機與 GitHub-hosted CI 驗收條件均已滿足。後續變更應持續透過 pull request，並以 `validate` 與 `browser-qa` 作為 required checks。
