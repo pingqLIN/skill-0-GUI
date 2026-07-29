@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 43190;
+const DEFAULT_PORT = 43190;
+const configuredPort = process.env.PLAYWRIGHT_PORT;
+const PORT = configuredPort === undefined ? DEFAULT_PORT : Number.parseInt(configuredPort, 10);
+
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65_535) {
+  throw new Error(`PLAYWRIGHT_PORT must be a valid TCP port; received "${configuredPort}".`);
+}
+
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
