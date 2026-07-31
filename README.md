@@ -1,156 +1,178 @@
 # Skill-0 Review Studio
 
-Review-first tooling for inspecting, validating, annotating, and signing off on Skill-0 parser output.
+<p align="center">
+  <strong>Turn Skill-0 parser output into an evidence-aware review, decision, and export package.</strong>
+</p>
 
-`Skill-0 Review Studio` sits between parser execution and final reviewer approval. It gives reviewers one place to:
+<p align="center">
+  <a href="./README.zh-tw.md">繁體中文</a> ·
+  <a href="./docs/getting-started.md">Guided tour</a> ·
+  <a href="./docs/README.md">Documentation</a> ·
+  <a href="./docs/shared/02-mode-and-equivalence-contract.md">Trust contract</a>
+</p>
 
-- load a `SKILL.md`, SkillDocument JSON, or bundled review context
-- switch between canonical bridge mode and standalone fallback mode
-- optionally use an LLM-assisted recovery fallback when deterministic parsing is insufficient
-- inspect validation, consistency, and path-walk results
-- capture reviewer notes, review status, decision log, summary, and sign-off
-- complete explicit sign-off gates before external review
-- export a dedicated review report plus `.skill.md` / `.json`
+<p align="center">
+  <a href="https://github.com/pingqLIN/skill-0-GUI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/pingqLIN/skill-0-GUI/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+  <a href="./.github/workflows/ci.yml"><img alt="Node.js CI baseline: 20" src="https://img.shields.io/badge/Node.js_CI-20-339933?logo=node.js&logoColor=white"></a>
+</p>
 
-## Why This Project Exists
+![Skill-0 Review Studio demo entry showing a read-only SKILL.md review and the intake-to-export workflow](docs/assets/readme/01-demo-entry-desktop.png)
 
-Raw parser output is useful, but it is not the same thing as a review workflow.
+Skill-0 Review Studio is the reviewer-facing workspace around
+[Skill-0](https://github.com/pingqLIN/skill-0). Load one `SKILL.md`, a bundle, a
+remote source, or a SkillDocument; keep parser provenance visible; record review
+findings and approval state; then export review-ready Markdown and JSON
+artifacts.
 
-This project focuses on the missing layer:
+The studio reviews skills. It does not execute them.
 
-- make parser mode visible
-- keep fidelity and equivalence wording honest
-- let reviewers record decisions instead of relying on screenshots or memory
-- produce exportable artifacts that are still understandable outside the UI
+## From input to review-ready evidence
 
-If you need the parser itself, see the upstream `skill-0` repository.
-If you need the reviewer-facing workspace around that parser output, this repository is the right entry point.
+```mermaid
+flowchart LR
+    A["Paste, URL, file, folder, ZIP,<br/>saved draft, or safe demo"] --> B["Analyze with canonical,<br/>standalone, or LLM-assisted mode"]
+    B --> C["Inspect validation, consistency,<br/>paths, provenance, and blocking issues"]
+    C --> D["Record notes, decision,<br/>status, checklist, and sign-off"]
+    D --> E{"Export gate satisfied?"}
+    E -- "No" --> C
+    E -- "Yes" --> F["Review report · review packet<br/>.skill.md · .skill.json"]
+```
 
-## Current Rebuild Direction
+### What the studio adds
 
-The active rebuild tracks two constraints at the same time:
+| Start with the review task | Keep evidence visible | Export with context |
+|---|---|---|
+| Paste one skill, import a URL or bundle, restore a browser-local draft, or load a guided demo. | Inspect parser mode, validation, consistency, path-walk results, source context, and blocking issues before editing. | Preserve review status, handoff state, equivalence status, canonical rerun requirements, and draft-only markers. |
 
-- reuse the strongest layout and visual ideas from the Stitch exploration as a style donor
-- keep the real product contract intact: `intake -> analysis -> review -> export`
+## Quick start
 
-What that means in practice:
-
-- Stitch output informs tone, grouping, and density decisions
-- the React app remains the source of truth for workflow, parser-mode wording, checks, sign-off, and exports
-- generic analytics cockpit patterns are intentionally rejected when they conflict with reviewer workflows
-
-## What You Can Do Today
-
-### For first-time users
-
-- paste a skill draft directly into the intake panel
-- import a SkillDocument JSON without calling the bridge
-- load a bundle with one primary skill file plus supporting context files
-- restore your last local draft automatically after reload
-
-### For reviewers
-
-- inspect parser mode and review guidance
-- run validation, consistency, and path-walk checks
-- add session notes and element-level notes
-- review the before/after diff summary
-- set review status: `draft`, `in review`, `changes requested`, `approved`
-- record reviewer summary and sign-off name
-- complete sign-off gates before external review
-- export a dedicated review report
-
-### For operators
-
-- run with the canonical local `skill-0` parser when available
-- run in standalone mode for self-contained demos or public deployment
-- enable server-side `llm-assisted` recovery for unknown or future formats on hosted builds
-- disable the optional 3D surface for lighter public builds
-
-## Quick Start
-
-Prerequisites:
-
-- Node.js 20+
-
-Install and run:
+CI uses Node.js 20. A lockfile is included, so `npm ci` is the reproducible
+setup path.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Then open:
+Open:
 
-- `http://localhost:3000/`
+- workspace: <http://127.0.0.1:5173/>
+- guided demo entry: <http://127.0.0.1:5173/demo>
 
-If you only want the deployable runtime:
+If `VITE_PORT` is set, use the port printed by Vite.
+
+To exercise the deployable server:
 
 ```bash
 npm run build
 npm start
 ```
 
-## Two Runtime Modes
+The production server uses `PORT=4173` by default.
 
-### Canonical mode
+## Your first review
 
-The app calls the real `skill-0` parser through the local bridge. Use this when you want the strongest review confidence.
+### 1. Choose a goal and prepare the source
 
-### Standalone mode
+Select a single-skill review, bundle review, saved draft, or the demo-safe
+workspace. The studio only shows inputs relevant to that goal.
 
-The app uses the bundled fallback parser. Use this for demos, lightweight review, or external hosting where the local `skill-0` repository is not available.
+![Guided intake with the demo-safe workspace selected and parser mode visible](docs/assets/readme/02-guided-intake-desktop.png)
 
-Important: standalone mode is compatibility-oriented. It should not be presented as strict canonical equivalence unless separate evidence exists.
+### 2. Analyze, then inspect evidence before editing
 
-### LLM-assisted fallback
+Open blocking issues from the persistent review rail. Review parser mode,
+source context, validation, consistency, and path evidence before changing the
+document.
 
-When `SKILL0_LLM_MODE=fallback` is configured with a supported server-side provider, the app can promote failed or too-sparse deterministic parses into an `llm-assisted` recovery path. A testing-only `SKILL0_LLM_MODE=force` profile is also available to bypass deterministic parsing and run the AI recovery adapter first.
+![Review workspace with standalone provenance, blocking issues, and export readiness visible](docs/assets/readme/03-review-workspace-evidence.png)
 
-Important:
+### 3. Complete the review gate before exporting
 
-- this path is `draft-only`
-- it is useful for unknown or future formats
-- it must not be presented as final equivalence evidence
-- `force` mode is for AI-priority testing and should not be the public default
-- the in-app `AI settings` console can inspect or adjust the server-side runtime when `SKILL0_RUNTIME_CONFIG_MUTABLE=true`
+After resolving or accepting findings, record reviewer notes, a decision,
+checklist state, handoff state, and sign-off.
 
-Advanced contract:
+![Reviewer decision drawer showing draft status, incomplete sign-off, and the next required action](docs/assets/readme/04-review-decision-gate.png)
 
-- [Mode and equivalence contract](docs/shared/02-mode-and-equivalence-contract.md)
-- [Parser contract](docs/shared/01-parser-contract.md)
+Formal exports remain locked while evidence or approval is incomplete.
 
-## New User Path
+The screenshots above are regenerated from the real app with built-in,
+demo-safe content in `standalone` mode. They demonstrate product interaction,
+not canonical equivalence or production approval. See the
+[step-by-step guide](docs/getting-started.md) for the exact commands and trust
+boundaries.
 
-If you are new to the project, read in this order:
+## Core capabilities
 
-1. this README
-2. [Documentation index](docs/README.md)
-3. [Project overview](docs/01-project-overview.md)
-4. [Functional modules](docs/03-functional-modules.md)
-5. [Frontend workbench](docs/05-frontend-workbench.md)
+- Task-first intake for a single skill, bundle, saved draft, or guided demo
+- Paste, supported URL, file, folder, ZIP, and SkillDocument inputs
+- Editable imported sources before analysis
+- Canonical parser bridge when a controlled local `skill-0` checkout is available
+- Self-contained standalone parser for demos and public hosting
+- Optional server-side LLM-assisted recovery for unknown or sparse formats
+- Validation, consistency, path-walk, provenance, and blocking-issue surfaces
+- Browser-local draft persistence and draft export
+- Reviewer notes, decision log, status, checklist, summary, and sign-off
+- English and Traditional Chinese reviewer interface
+- Standard and public builds, with optional 3D visualization excluded from the public profile
 
-If you want to understand deployment and hosting:
+## Choose the right parser mode
 
-1. [Deployment, operations, and configuration](docs/06-deployment-operations-and-configuration.md)
-2. [GitHub hosting strategy](docs/github-hosting-strategy-2026-03-23.md)
-3. [Online demo plan](docs/20-online-demo-plan-2026-04-03.md)
-4. [UI rebuild backlog](docs/13-ui-rebuild-backlog.md)
+| Mode | Best for | Trust statement |
+|---|---|---|
+| `canonical` | Controlled local review with the `skill-0` parser available | Uses the canonical parser path. Material edits may still require a canonical rerun before final approval. |
+| `standalone` | Demos, portable review, and self-contained hosting | Compatibility-oriented fallback. It is not proof of strict canonical equivalence. |
+| `llm-assisted` | Recovery for unknown or future formats | Draft-only. It must never be presented as final equivalence evidence. |
 
-If you want the current execution status:
+The UI and every export keep the active mode visible. The normative wording
+lives in the [mode and equivalence contract](docs/shared/02-mode-and-equivalence-contract.md).
 
-1. [Late-stage development plan](docs/17-late-stage-development-plan-2026-03-28.md)
-2. [MVP execution plan](docs/18-mvp-execution-plan-2026-03-28.md)
-3. [MVP consistency and next execution brief](docs/19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
+## Review outputs
 
-## Common Commands
+| Output | Purpose |
+|---|---|
+| Review report (`.md`) | Human-readable findings, evidence posture, review status, checklist, summary, and sign-off |
+| Review packet (`.json`) | Machine-readable review state and evidence for downstream tooling |
+| Skill export (`.skill.md`) | Reviewed skill content with mode-aware export naming |
+| SkillDocument (`.skill.json`) | Structured parser output for compatible consumers |
+| Draft (`.draft.json`) | Browser-local workspace state for later continuation |
 
-Development:
+Formal review exports are gated. Standalone and LLM-assisted exports retain
+their compatibility or draft-only limitations.
 
-```bash
-npm run dev
-```
+## Documentation
 
-Verification:
+| If you want to… | Start here |
+|---|---|
+| Run one complete local review | [Guided tour](docs/getting-started.md) |
+| Understand the product and repository boundary | [Project overview](docs/01-project-overview.md) |
+| Integrate or inspect the runtime | [Runtime architecture](docs/02-runtime-and-system-architecture.md) |
+| Configure canonical, standalone, or hosted operation | [Deployment and configuration](docs/06-deployment-operations-and-configuration.md) |
+| Verify parser-mode claims | [Mode and equivalence contract](docs/shared/02-mode-and-equivalence-contract.md) |
+| Browse every current and historical document | [Documentation hub](docs/README.md) |
+| Read release-facing translations | [Multilingual release docs](docs/i18n/README.md) |
+
+## Configuration
+
+Most local reviews work with defaults. Common overrides are:
+
+| Variable | Use |
+|---|---|
+| `VITE_PORT` | Development and preview port; defaults to `5173` |
+| `PORT` | Production Express port; defaults to `4173` |
+| `SKILL0_MODE` | `auto` or `standalone` parser selection |
+| `SKILL0_PARSER_ROOT` | Controlled local path to the canonical `skill-0` checkout |
+| `SKILL0_LLM_MODE` | `disabled`, `fallback`, or test-only `force` recovery |
+| `VITE_ENABLE_3D` | Optional 3D build surface; public builds set this to `false` |
+
+See [.env.example](.env.example) for the complete contract. Keep provider keys
+server-side, never in `VITE_*` variables, source control, screenshots, or
+exported review material.
+
+## Verification
+
+Run the smallest relevant check first, then the complete gate before merging:
 
 ```bash
 npm run lint
@@ -161,156 +183,33 @@ npm run verify:public-build
 npm run test:e2e
 ```
 
-Builds:
+Refresh the real application screenshots with:
 
 ```bash
-npm run build
-npm run build:public
-npm run verify:build-size
-npm run verify:public-build
+npm run docs:capture-screenshots
 ```
 
-Shared docs:
+The capture command forces `standalone` mode, uses built-in demo-safe data, and
+runs at the repo-owned Playwright viewport.
 
-```bash
-npm run docs:sync
-npm run docs:check
-```
+## Trust and data boundaries
 
-## Environment Variables
-
-Most users can start with defaults. These are the main variables when you need more control:
-
-- `SKILL0_MODE`
-- `SKILL0_PARSER_ROOT`
-- `SKILL0_ROOT`
-- `SKILL0_API_BODY_LIMIT`
-- `SKILL0_REQUEST_TIMEOUT_MS`
-- `SKILL0_LLM_MODE`
-- `SKILL0_LLM_PROVIDER`
-- `SKILL0_LLM_MODEL`
-- `SKILL0_LLM_API_KEY`
-- `SKILL0_LLM_TIMEOUT_MS`
-- `SKILL0_LLM_MAX_INPUT_CHARS`
-- `SKILL0_RUNTIME_CONFIG_MUTABLE`
-- `PORT`
-- `VITE_ENABLE_3D`
-
-For detailed runtime behavior, see:
-
-- [Deployment, operations, and configuration](docs/06-deployment-operations-and-configuration.md)
-- [Bridge parser and analysis](docs/04-bridge-parser-and-analysis.md)
-
-## Render Deployment
-
-The first hosted profile is intentionally conservative:
-
-- use a Node-capable host
-- deploy `server.mjs`, not a static-only export
-- run in `SKILL0_MODE=standalone`
-- set `SKILL0_LLM_MODE=fallback` if you want server-side recovery for unknown formats
-- use `SKILL0_LLM_MODE=force` only when you intentionally want AI-priority parsing for testing
-- build with `VITE_ENABLE_3D=false`
-- do not set `SKILL0_PARSER_ROOT` or `SKILL0_ROOT`
-
-This repository now includes a starter Render Blueprint:
-
-- [render.yaml](render.yaml)
-
-Recommended rollout:
-
-1. validate the standalone public profile on Render Free
-2. keep browser-local drafts and treat server storage as ephemeral
-3. upgrade to Render Starter only after the standalone review flow is stable
-
-Detailed instructions live in:
-
-- [Deployment, operations, and configuration](docs/06-deployment-operations-and-configuration.md)
-- [Online demo plan](docs/20-online-demo-plan-2026-04-03.md)
-
-## Documentation Map
-
-Beginner-friendly:
-
-- [docs/README.md](docs/README.md)
-- [docs/01-project-overview.md](docs/01-project-overview.md)
-- [docs/03-functional-modules.md](docs/03-functional-modules.md)
-- [docs/05-frontend-workbench.md](docs/05-frontend-workbench.md)
-
-Architecture and implementation:
-
-- [docs/02-runtime-and-system-architecture.md](docs/02-runtime-and-system-architecture.md)
-- [docs/04-bridge-parser-and-analysis.md](docs/04-bridge-parser-and-analysis.md)
-- [docs/07-technology-stack-and-implementation.md](docs/07-technology-stack-and-implementation.md)
-
-Planning and roadmap:
-
-- [docs/16-development-execution-brief-2026-03-28.md](docs/16-development-execution-brief-2026-03-28.md)
-- [docs/17-late-stage-development-plan-2026-03-28.md](docs/17-late-stage-development-plan-2026-03-28.md)
-- [docs/18-mvp-execution-plan-2026-03-28.md](docs/18-mvp-execution-plan-2026-03-28.md)
-- [docs/19-mvp-consistency-and-next-execution-brief-2026-03-28.md](docs/19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
-- [docs/20-online-demo-plan-2026-04-03.md](docs/20-online-demo-plan-2026-04-03.md)
-
-Shared contracts:
-
-- [docs/shared/README.md](docs/shared/README.md)
-- [docs/shared/02-mode-and-equivalence-contract.md](docs/shared/02-mode-and-equivalence-contract.md)
-- [docs/shared/03-shared-terminology.md](docs/shared/03-shared-terminology.md)
-
-## Online Demo Direction
-
-The project is ready for a standalone public demo profile, but the best demo surface still needs product decisions.
-
-The current recommendation is:
-
-- host a public standalone build
-- keep parser-mode wording explicit
-- disable 3D for the first external demo
-- optimize for clear review storytelling, not feature maximalism
-
-Detailed planning lives here:
-
-- [Online demo plan](docs/20-online-demo-plan-2026-04-03.md)
-
-## Current Status
-
-Implemented:
-
-- dedicated review report export
-- local draft persistence and reload recovery
-- reviewer notes, review status, and decision log
-- reviewer summary, sign-off, and explicit sign-off gates
-- i18n coverage for the reviewer workflow
-
-Not yet in scope:
-
-- multi-user collaboration
-- server-backed persistence
-- GitHub PR automation inside the product UI
-- strict canonical-equivalence claims without evidence fixtures and repeatable comparison rules
-
-## Security And Trust Notes
-
-- exported artifacts must preserve parser mode and review status context
-- standalone mode is useful, but it is not the same as canonical proof
-- shared contract docs must stay synchronized with `skill-0`
-- transitive dependency overrides in `package.json` are currently used to keep the dependency graph free of known audited vulnerabilities
+- The active parser mode is review evidence and must remain visible.
+- Browser-local drafts are not server-backed collaboration or durable remote storage.
+- Uploaded material is processed for the active session; public hosts should assume ephemeral server storage.
+- Standalone output is compatibility-oriented, not universal equivalence proof.
+- LLM-assisted output is draft-only and requires a separately configured server-side provider.
+- No public deployment, shared persistence, multi-user review history, or in-product GitHub PR automation is implied by this repository.
 
 ## Contributing
 
-Before pushing changes, run:
+Keep changes scoped, preserve parser-mode wording, and add tests when behavior
+changes. Shared contract files under `docs/shared/` are managed mirrors; use
+`npm run docs:sync` only when updating them from the canonical source.
 
-```bash
-npm run lint
-npm test
-npm run docs:check
-npm run verify:build-size
-npm run verify:public-build
-npm run test:e2e
-```
+See [CONTRIBUTING guidance in the documentation hub](docs/README.md#contributing-and-documentation-rules)
+for the review checklist.
 
-If you update shared contract-facing documentation, also run:
+## License
 
-```bash
-npm run docs:sync
-```
+[MIT](LICENSE)

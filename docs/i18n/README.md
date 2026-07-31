@@ -1,6 +1,14 @@
 # Multilingual Release Docs
 
-The public-release core docs for `Skill-0 Review Studio` are available in:
+The public-release core docs for `Skill-0 Review Studio` are available below.
+The English set is the publishable semantic authority. Traditional Chinese is
+the maintained human-readable companion for the current documentation refresh.
+Other translations may lag and must be revalidated before release.
+
+For a screenshot-backed product walkthrough, use:
+
+- [Guided local review](../getting-started.md)
+- [Traditional Chinese guided review](../getting-started.zh-tw.md)
 
 | Language | Overview | Features | Deployment |
 |---|---|---|---|
@@ -19,4 +27,7 @@ These files are the release-facing docs set for the new public project name and 
 - Product name: `Skill-0 Review Studio`
 - Public release mode: `standalone`
 - Public release graphics profile: `VITE_ENABLE_3D=false`
-- Persistence: not included in the current public release
+- Persistence: browser-local drafts are available; server-backed persistence
+  and multi-user history are not included
+- Trust boundary: standalone output is compatibility-oriented and is not strict
+  canonical-equivalence proof
