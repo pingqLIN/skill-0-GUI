@@ -127,6 +127,25 @@ test.describe('review studio browser contract', () => {
     expect(results.violations.filter(({ impact }) => impact === 'serious' || impact === 'critical')).toEqual([]);
   });
 
+  test('keeps the responsive source editor usable on a mobile viewport', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-mobile', 'This check exercises the mobile source-editor layout.');
+
+    await page.getByTestId('intake-task-compare').click();
+    await page.locator('input[type="file"]').first().setInputFiles([
+      { name: 'SKILL.md', mimeType: 'text/markdown', buffer: Buffer.from('# Mobile source\n') },
+      { name: 'policy.md', mimeType: 'text/markdown', buffer: Buffer.from('# Mobile policy\n') },
+    ]);
+
+    await page.getByRole('button', { name: 'Editor' }).click();
+    const editor = page.getByRole('textbox', { name: 'SKILL.md source content' });
+    await expect(editor).toBeEditable();
+    await editor.fill('# Edited on mobile\n');
+    await expect(editor).toHaveValue('# Edited on mobile\n');
+    const editorBox = await editor.boundingBox();
+    expect(editorBox?.width).toBeGreaterThan(250);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
   test('has no serious or critical axe violations in the review editor flow', async ({ page }) => {
     await page.getByTestId('intake-task-review').click();
     await page
@@ -146,6 +165,22 @@ test.describe('review studio browser contract', () => {
       ({ impact }) => impact === 'serious' || impact === 'critical',
     );
     expect(blockingViolations).toEqual([]);
+  });
+
+  test('connects reviewer controls to the insight drawer and exposes dismissal', async ({ page }) => {
+    await page.getByTestId('intake-task-review').click();
+    await page.locator('textarea').first().fill('# Drawer QA Skill\n\n- Validate reviewer controls.');
+    await page.getByRole('button', { name: /Analyze|分析/ }).last().click();
+    await expect(page.getByTestId('persistent-review-rail')).toBeVisible({ timeout: 30_000 });
+
+    const reviewControl = page.getByTestId('insight-tab-review');
+    await reviewControl.click();
+    await expect(reviewControl).toHaveAttribute('aria-expanded', 'true');
+    const drawer = page.locator('#review-insight-drawer');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('button', { name: /Close|關閉/ })).toBeVisible();
+    await drawer.getByRole('button', { name: /Close|關閉/ }).click();
+    await expect(drawer).toHaveCount(0);
   });
 
   test('keeps intake and review workspace bounded at the active viewport', async ({ page }, testInfo) => {

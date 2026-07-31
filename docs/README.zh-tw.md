@@ -18,6 +18,7 @@
 | 設定或部署服務 | [部署、維運與設定](06-deployment-operations-and-configuration.md) |
 | 評估解析模式可信度 | [模式與等價性契約](shared/02-mode-and-equivalence-contract.md) |
 | 檢查目前交付證據 | [任務式審查強化整合報告](28-task-first-review-hardening-integration-2026-07-29.zh-tw.md) |
+| 了解目前 UI/UX 視覺契約 | [UI/UX v2 設計契約](29-uiux-v2-design-contract-2026-07-31.zh-tw.md) |
 
 ## 目前產品文件
 
@@ -73,6 +74,7 @@ npm run docs:check
 |---|---|
 | [28. 任務式審查強化整合](28-task-first-review-hardening-integration-2026-07-29.md) | 特定時間點的整合、CI、瀏覽器與無障礙證據 |
 | [28. 繁中參考版](28-task-first-review-hardening-integration-2026-07-29.zh-tw.md) | 供人工閱讀的繁中 companion |
+| [29. UI/UX v2 設計契約](29-uiux-v2-design-contract-2026-07-31.zh-tw.md) | 已實作的工作台殼層、響應式行為與視覺參考 |
 | [27. 審查工作台細節對齊](27-review-workspace-polish-alignment-2026-04-09.md) | 有界線的視覺改善摘要 |
 
 報告只記錄其日期與 commit 當下已驗證的內容，不會自動證明目前 checkout

@@ -2,7 +2,7 @@ import { useCallback, useReducer, useState, type ChangeEvent, type DragEvent } f
 import { applyEditorSave } from '../services/editorSaveService';
 import { analyzeSkillText, resolveSkillUrl } from '../services/parserBridgeService';
 import { buildReviewDataFromSkillDocument, parseSkillDocumentJson } from '../services/skillDocumentAdapter';
-import { prepareUploads } from '../services/uploadPreparationService';
+import { prepareUploads, UploadPreparationError } from '../services/uploadPreparationService';
 import type { DemoReviewPreset, DemoScenarioDefinition } from '../types/demo';
 import type { PreparedUploadFile, UploadedContextFile } from '../types/intake';
 import type { SkillDocument } from '../types/skillDocument';
@@ -140,7 +140,26 @@ export function useReviewStudioSession({ exampleDemoPreset, t }: UseReviewStudio
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
 
-    const preparedFiles = await prepareUploads(files);
+    let preparedFiles: PreparedUploadFile[];
+    try {
+      preparedFiles = await prepareUploads(files);
+    } catch (error) {
+      if (error instanceof UploadPreparationError) {
+        const errorKey = {
+          zip_input_too_large: 'app.errorZipInputTooLarge',
+          zip_entry_limit_exceeded: 'app.errorZipEntryLimit',
+          zip_entry_too_large: 'app.errorZipEntryTooLarge',
+          zip_total_size_exceeded: 'app.errorZipTotalSize',
+          zip_invalid: 'app.errorZipInvalid',
+        }[error.code];
+        setError(t(errorKey));
+      } else {
+        console.error(error);
+        setError(t('app.errorZipInvalid'));
+      }
+      return;
+    }
+
     const primaryFile = preparedFiles.find((file) => file.isPrimaryCandidate && file.text) ?? null;
     setPendingUploadFiles(preparedFiles);
     setPendingPrimaryPath(primaryFile?.path ?? null);

@@ -100,11 +100,11 @@ export type GuidedIntakeLandingProps = {
 };
 
 const navItems = [
-  { label: 'Pipeline', icon: Workflow, active: true },
-  { label: 'Vector', icon: Network },
-  { label: 'Matrix', icon: Grid3X3 },
-  { label: 'Editor', icon: Code2 },
-  { label: 'JSON', icon: Braces },
+  { id: 'overview', label: 'Pipeline', labelKey: 'app.intakeNavPipeline', icon: Workflow, active: true },
+  { id: 'vector', label: 'Vector', labelKey: 'app.intakeNavVector', icon: Network },
+  { id: 'matrix', label: 'Matrix', labelKey: 'app.intakeNavMatrix', icon: Grid3X3 },
+  { id: 'source-editor', label: 'Editor', labelKey: 'app.intakeNavEditor', icon: Code2 },
+  { id: 'json', label: 'JSON', labelKey: 'app.intakeNavJson', icon: Braces },
 ];
 
 const DEMO_SKILL_CONTENT = `---
@@ -383,13 +383,14 @@ export function GuidedIntakeLanding({
       <nav className="guided-intake-nav" aria-label={isZh ? '工作區導覽' : 'Workspace navigation'}>
         <div className="guided-intake-mark" aria-hidden="true">&gt;_</div>
         <div className="guided-intake-nav-items">
-          {navItems.map(({ label, icon: Icon, active }) => {
-            const isEditor = label === 'Editor';
+          {navItems.map(({ id, label: defaultLabel, labelKey, icon: Icon, active }) => {
+            const label = isZh ? t(labelKey) : defaultLabel;
+            const isEditor = id === 'source-editor';
             const isAvailable = active || (isEditor && pendingUploadFiles.length > 0);
             const isActive = active ? activeUtilityTab === 'overview' : (isEditor && activeUtilityTab === 'source-editor');
             return (
             <button
-              key={label}
+              key={id}
               type="button"
               className={isActive ? 'is-active' : ''}
               aria-current={isActive ? 'page' : undefined}
@@ -404,10 +405,16 @@ export function GuidedIntakeLanding({
             );
           })}
         </div>
-        <div className="guided-intake-nav-export">
+        <button
+          type="button"
+          className={`guided-intake-nav-export ${activeUtilityTab === 'outputs' ? 'is-active' : ''}`}
+          aria-current={activeUtilityTab === 'outputs' ? 'page' : undefined}
+          onClick={() => onUtilityTabChange('outputs')}
+          title={t('app.landingOutputsTab')}
+        >
           <Download size={20} aria-hidden="true" />
-          <span>Export</span>
-        </div>
+          <span>{isZh ? t('app.landingOutputsTab') : 'Export'}</span>
+        </button>
       </nav>
 
       <header className="guided-intake-topbar">
@@ -461,6 +468,11 @@ export function GuidedIntakeLanding({
           </div>
         )}
 
+        <div
+          id={`guided-utility-panel-${activeUtilityTab}`}
+          role="tabpanel"
+          aria-labelledby={`guided-utility-${activeUtilityTab}`}
+        >
         {activeUtilityTab === 'source-editor' ? (
           <IntakeSourceEditor
             files={pendingUploadFiles}
@@ -507,6 +519,7 @@ export function GuidedIntakeLanding({
               <BundleIntakePanel
                 language={language}
                 isBusy={isBusy}
+                error={error}
                 pendingFileCount={pendingUploadFiles.length}
                 hasPrimaryFile={Boolean(pendingPrimaryPath)}
                 onUploadFiles={() => fileInputRef.current?.click()}
@@ -593,6 +606,7 @@ export function GuidedIntakeLanding({
             )}
           </UtilityPanel>
         )}
+        </div>
       </main>
 
       <IntakeReviewRail
@@ -619,6 +633,7 @@ export function GuidedIntakeLanding({
               type="button"
               role="tab"
               aria-selected={activeUtilityTab === tab.id}
+              aria-controls={`guided-utility-panel-${tab.id}`}
               tabIndex={activeUtilityTab === tab.id ? 0 : -1}
               onClick={() => onUtilityTabChange(tab.id)}
               onKeyDown={(event) => handleUtilityKeyDown(index, event)}

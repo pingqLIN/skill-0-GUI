@@ -19,6 +19,7 @@ Last reorganized: `2026-07-31`
 | Configure or deploy the service | [Deployment and configuration](06-deployment-operations-and-configuration.md) |
 | Evaluate parser-mode trust | [Mode and equivalence contract](shared/02-mode-and-equivalence-contract.md) |
 | Review current delivery evidence | [Task-first hardening integration report](28-task-first-review-hardening-integration-2026-07-29.md) |
+| Understand the current UI/UX visual contract | [UI/UX v2 design contract](29-uiux-v2-design-contract-2026-07-31.md) |
 
 ## Current product documentation
 
@@ -76,6 +77,7 @@ other documentation is current or that translations are semantically equal.
 |---|---|
 | [28. Task-first review hardening integration](28-task-first-review-hardening-integration-2026-07-29.md) | Point-in-time integration, CI, browser, and accessibility evidence |
 | [28. Traditional Chinese companion](28-task-first-review-hardening-integration-2026-07-29.zh-tw.md) | Human-readable Traditional Chinese companion |
+| [29. UI/UX v2 design contract](29-uiux-v2-design-contract-2026-07-31.md) | Implemented workbench shell, responsive behavior, and visual references |
 | [27. Review workspace polish alignment](27-review-workspace-polish-alignment-2026-04-09.md) | Bounded visual refinement brief |
 
 Reports record what was verified at their stated date and commit. They are not

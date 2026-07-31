@@ -4,6 +4,33 @@ import type { PreparedUploadFile } from '../types/intake';
 const PRIMARY_SKILL_EXTENSIONS = ['.md', '.skill', '.txt'];
 const CONTEXT_PREVIEW_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.csv', '.tsv', '.log'];
 
+export const ZIP_INTAKE_LIMITS = {
+  maxCompressedBytes: 10 * 1024 * 1024,
+  maxEntries: 256,
+  maxEntryUncompressedBytes: 2 * 1024 * 1024,
+  maxTotalUncompressedBytes: 8 * 1024 * 1024,
+} as const;
+
+export type UploadPreparationErrorCode =
+  | 'zip_input_too_large'
+  | 'zip_entry_limit_exceeded'
+  | 'zip_entry_too_large'
+  | 'zip_total_size_exceeded'
+  | 'zip_invalid';
+
+export class UploadPreparationError extends Error {
+  constructor(public readonly code: UploadPreparationErrorCode, options?: ErrorOptions) {
+    super(code, options);
+    this.name = 'UploadPreparationError';
+  }
+}
+
+type ZipEntryWithSizeMetadata = {
+  _data?: {
+    uncompressedSize?: unknown;
+  };
+};
+
 function getExtension(fileName: string) {
   const dotIndex = fileName.lastIndexOf('.');
   return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
@@ -70,13 +97,45 @@ async function prepareUploadFile(file: File): Promise<PreparedUploadFile> {
 }
 
 async function expandZipUpload(file: File): Promise<PreparedUploadFile[]> {
+  if (file.size > ZIP_INTAKE_LIMITS.maxCompressedBytes) {
+    throw new UploadPreparationError('zip_input_too_large');
+  }
+
   const { default: JSZip } = await import('jszip');
-  const zip = await JSZip.loadAsync(file);
+  let zip: Awaited<ReturnType<typeof JSZip.loadAsync>>;
+  try {
+    zip = await JSZip.loadAsync(file);
+  } catch (error) {
+    throw new UploadPreparationError('zip_invalid', { cause: error });
+  }
+
   const prepared: PreparedUploadFile[] = [];
+  const fileEntries = Object.values(zip.files).filter((entry) => !entry.dir);
 
-  for (const entry of Object.values(zip.files)) {
-    if (entry.dir) continue;
+  if (fileEntries.length > ZIP_INTAKE_LIMITS.maxEntries) {
+    throw new UploadPreparationError('zip_entry_limit_exceeded');
+  }
 
+  let declaredTotalBytes = 0;
+  for (const entry of fileEntries) {
+    // JSZip exposes the central-directory size on loaded entries but keeps it out of
+    // the public type. Check it before inflation, then verify actual text bytes below.
+    const declaredSize = (entry as typeof entry & ZipEntryWithSizeMetadata)._data?.uncompressedSize;
+    if (typeof declaredSize !== 'number' || !Number.isFinite(declaredSize) || declaredSize < 0) continue;
+
+    if (declaredSize > ZIP_INTAKE_LIMITS.maxEntryUncompressedBytes) {
+      throw new UploadPreparationError('zip_entry_too_large');
+    }
+
+    declaredTotalBytes += declaredSize;
+    if (declaredTotalBytes > ZIP_INTAKE_LIMITS.maxTotalUncompressedBytes) {
+      throw new UploadPreparationError('zip_total_size_exceeded');
+    }
+  }
+
+  let extractedTextBytes = 0;
+
+  for (const entry of fileEntries) {
     const path = entry.name;
     const basename = path.split('/').pop() || path;
     const extension = getExtension(basename);
@@ -96,12 +155,22 @@ async function expandZipUpload(file: File): Promise<PreparedUploadFile[]> {
     if (isTextLike) {
       try {
         item.text = await entry.async('string');
-        item.size = item.text.length;
+        item.size = new TextEncoder().encode(item.text).byteLength;
+        if (item.size > ZIP_INTAKE_LIMITS.maxEntryUncompressedBytes) {
+          throw new UploadPreparationError('zip_entry_too_large');
+        }
+
+        extractedTextBytes += item.size;
+        if (extractedTextBytes > ZIP_INTAKE_LIMITS.maxTotalUncompressedBytes) {
+          throw new UploadPreparationError('zip_total_size_exceeded');
+        }
+
         item.preview = item.text.slice(0, 280);
         const isSkillDocumentImport = Boolean(parseSkillDocumentJson(item.text));
         item.isPrimaryCandidate = isPrimaryPathCandidate || isSkillDocumentImport;
         item.role = item.isPrimaryCandidate ? 'primary' : 'context';
-      } catch {
+      } catch (error) {
+        if (error instanceof UploadPreparationError) throw error;
         item.text = undefined;
       }
     } else {
