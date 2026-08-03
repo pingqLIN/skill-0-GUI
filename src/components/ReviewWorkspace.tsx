@@ -1550,19 +1550,33 @@ export function ReviewWorkspace({
                 id={`workspace-view-${view.id}`}
                 type="button"
                 role="tab"
+                tabIndex={activeTab === view.id ? 0 : -1}
                 aria-selected={activeTab === view.id}
                 aria-controls={`workspace-stage-${view.id}`}
                 onClick={() => {
                   setActiveTab(view.id);
                   setIsWorkspaceFocusMode(view.id !== 'pipeline');
                 }}
+                onKeyDown={(event) => {
+                  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                  event.preventDefault();
+                  const currentIndex = workspaceTabs.findIndex((tab) => tab.id === activeTab);
+                  const lastIndex = workspaceTabs.length - 1;
+                  const nextIndex = event.key === 'Home'
+                    ? 0
+                    : event.key === 'End'
+                      ? lastIndex
+                      : event.key === 'ArrowLeft'
+                        ? (currentIndex > 0 ? currentIndex - 1 : lastIndex)
+                        : (currentIndex < lastIndex ? currentIndex + 1 : 0);
+                  const nextId = workspaceTabs[nextIndex]?.id;
+                  if (!nextId) return;
+                  setActiveTab(nextId);
+                  setIsWorkspaceFocusMode(nextId !== 'pipeline');
+                  requestAnimationFrame(() => document.getElementById(`workspace-view-${nextId}`)?.focus());
+                }}
                 className={`flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 text-sm transition-colors ${activeTab === view.id ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground/70'}`}
               >
-                <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${activeTab === view.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-foreground/10 text-foreground/70'}`}>
-                  {index + 1}
-                </span>
-                <span>{view.label}</span>
-              </button>
             </div>
           ))}
         </nav>
