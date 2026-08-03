@@ -134,6 +134,7 @@ async function expandZipUpload(file: File): Promise<PreparedUploadFile[]> {
   }
 
   let extractedTextBytes = 0;
+  const textEncoder = new TextEncoder();
 
   for (const entry of fileEntries) {
     const path = entry.name;
@@ -155,7 +156,7 @@ async function expandZipUpload(file: File): Promise<PreparedUploadFile[]> {
     if (isTextLike) {
       try {
         item.text = await entry.async('string');
-        item.size = new TextEncoder().encode(item.text).byteLength;
+        item.size = textEncoder.encode(item.text).byteLength;
         if (item.size > ZIP_INTAKE_LIMITS.maxEntryUncompressedBytes) {
           throw new UploadPreparationError('zip_entry_too_large');
         }
