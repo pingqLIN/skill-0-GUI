@@ -1,17 +1,38 @@
 # Skill-0 Review Studio 功能說明
 
-## 核心能力
+英文權威版本：[../en/FEATURES.md](../en/FEATURES.md)
 
-- 可匯入主 skill 檔與輔助 context files 的 intake 工作區
-- 在本機 `skill-0` 存在時，可走 canonical parser bridge
-- 提供 standalone fallback parser，適合公開 demo 與外部審查
-- 以 parser 輸出為主的 decomposition board
-- 以 findings、traceability、risk framing 為核心的 dashboard 與 security matrix
-- 以輕量 semantic review map 作為公開版主要視覺化介面
-- 支援記憶體內編修與 `.skill.md` 匯出
+## 匯入與來源準備
 
-## 公開版邊界
+- 以任務為起點，可選擇單一技能、技能套件、已存草稿或安全示範
+- 支援貼上、受支援網址、檔案、資料夾、ZIP 與 SkillDocument
+- 可為技能套件選擇主要檔案
+- 可在分析前編輯已匯入來源
+- 瀏覽器本機草稿庫支援還原、匯出與確認後刪除
 
-- 公開版不提供互動式 3D 工作區
-- 公開版不提供 server-side persistence、共享草稿或多人審查歷史
-- 若部署只用 standalone mode，不應宣稱與 canonical parser 完全等價
+## 以證據為基礎的審查
+
+- 受控本機環境有 `skill-0` 時，可使用 canonical parser bridge（標準解析器橋接）
+- 提供 standalone fallback parser（獨立備援解析器），適合示範與自包含託管
+- 可選用 LLM-assisted recovery（大型語言模型輔助修復）處理未知或內容稀疏格式
+- 解析器模式、來源證據、驗證、一致性與路徑測試介面
+- 固定顯示的阻擋問題側欄與結構化編輯器交接
+- 審查者備註、決策紀錄、狀態、摘要、檢查清單與簽核
+
+## 輸出
+
+- 供人工閱讀的審查報告
+- 機器可讀的審查封包
+- `.skill.md` 與 `.skill.json` 匯出
+- `.draft.json` 瀏覽器本機工作區匯出
+
+若證據或核准門檻尚未完成，正式輸出會維持鎖定。匯出內容會保留模式、
+等價性、canonical 重新執行要求與僅限草稿等脈絡。
+
+## 公開版界線
+
+- 公開版不包含可選的互動式 3D 工作區。
+- 瀏覽器本機草稿不等同伺服器端持久化或共享歷史。
+- 只使用 standalone 的部署不得宣稱嚴格 canonical 等價性。
+- LLM-assisted 輸出僅限草稿。
+- 產品用於審查技能內容，不會執行技能。

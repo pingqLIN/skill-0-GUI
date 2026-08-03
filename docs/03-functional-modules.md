@@ -1,157 +1,134 @@
 # Chapter 3. Functional Modules
 
-Back to index: [README.md](./README.md)
+Traditional Chinese companion:
+[03-functional-modules.zh-tw.md](./03-functional-modules.zh-tw.md)
 
-Related chapters:
-- [02-runtime-and-system-architecture.md](./02-runtime-and-system-architecture.md)
-- [04-bridge-parser-and-analysis.md](./04-bridge-parser-and-analysis.md)
-- [05-frontend-workbench.md](./05-frontend-workbench.md)
+Back to the [documentation hub](./README.md).
 
-## 3.1 Functional Breakdown
+## 3.1 Task-first intake
 
-The application can be understood as six functional modules:
+The landing workspace starts with the review goal rather than exposing every
+control at once:
 
-1. Input and intake
-2. Example loading
-3. Parser execution
-4. Visualization workspace
-5. Editing and export
-6. Mode awareness and deployment safety
+1. **Review one skill** - paste text, import a supported URL, or prepare a
+   compatible source file.
+2. **Review a skill bundle** - import files, a folder, or ZIP, select the
+   primary skill, inspect supporting files, and edit sources before analysis.
+3. **Continue a saved draft** - restore, export, continue, or confirm deletion
+   of a browser-local draft.
+4. **Open a demo workspace** - load built-in demo-safe content and follow the
+   complete review path.
 
-## 3.2 Input and Intake
+The intake rail keeps active parser mode, draft state, recent activity, review
+readiness, and export readiness visible.
 
-Based on tracked source behavior in `HEAD`:
+## 3.2 Source preparation
 
-- `src/App.tsx`
-- `src/types/intake.ts`
+The upload preparation layer:
 
-The intake pipeline supports:
+- normalizes supported file input;
+- identifies candidate primary skill files;
+- distinguishes primary and context roles;
+- expands ZIP input through the dynamic JSZip path;
+- blocks unsafe or ambiguous bundle conditions;
+- makes imported source content editable before parser execution.
 
-- direct text paste
-- multi-file selection
-- folder upload
-- `.zip` expansion
-- primary skill file detection
-- support/context file collection
+URL intake supports explicitly resolved remote sources and returns clear
+user-facing errors for unsupported or unsafe requests.
 
-Primary file detection is designed around:
+## 3.3 Parser integration
 
-- `.md`
-- `.skill`
-- `.txt`
-- filenames ending in `skill.md`
+The frontend posts review material to `/api/parse-skill`. Shared integration
+logic in `bridge/skill0Bridge.mjs` chooses:
 
-Support files can include:
+- the configured canonical Skill-0 parser;
+- the bundled standalone fallback;
+- an optional server-side LLM-assisted recovery adapter.
 
-- `.json`
-- `.yaml`
-- `.yml`
-- `.toml`
-- `.ini`
-- `.cfg`
-- `.csv`
-- `.tsv`
-- `.log`
+Every result carries mode and provenance information. The mode determines the
+allowed equivalence language and export posture.
 
-The intake model distinguishes:
+## 3.4 Review workspace
 
-- `primary` content
-- `context` content
-- `upload` source
-- `zip` source
+The post-analysis workspace combines:
 
-## 3.3 Example Loading
+- an executive summary and parser metrics;
+- decomposition, pipeline, vector, and compliance views;
+- a persistent review rail;
+- prioritized blocking issues;
+- source and supporting-file context;
+- parser findings and provenance;
+- validation, consistency, and path-test evidence;
+- review decision and handoff state.
 
-The application supports loading an example skill through `/api/example-skill`.
+The interface keeps unavailable evidence explicit. Workspace-level checks must
+not be presented as proof that an individual phase executed.
 
-Operational behavior:
+## 3.5 Editing and revalidation
 
-- if canonical `skill-0` is available, the example is loaded from `converted-skills/reactjs/SKILL.md`
-- otherwise, the example is loaded from `standalone/example-skill.md`
+Reviewers can:
 
-This gives the UI a non-empty operating mode even before user-provided uploads exist.
+- open blocking issues in the structured editor;
+- edit source-oriented or SkillDocument fields;
+- inspect JSON when structured context is required;
+- track modified paths;
+- compare current and original content;
+- undo or reset edits;
+- rerun relevant checks after material changes.
 
-## 3.4 Parser Execution
+Editing does not silently upgrade parser equivalence. Exports can require a
+canonical rerun after material changes.
 
-The main analysis trigger is the call path behind `analyzeSkillText(...)`.
+## 3.6 Review decision and sign-off
 
-Current runtime behavior:
+The decision layer records:
 
-- frontend posts to `/api/parse-skill`
-- runtime decides bridge mode
-- runtime returns a GUI-oriented envelope
+- global and element-level notes;
+- review status;
+- reviewer name and summary;
+- decision log;
+- sign-off identity;
+- four sign-off checks;
+- handoff state;
+- export-blocking reasons.
 
-Legacy source evolution:
+Formal exports are enabled only when status, checklist, and blocking evidence
+satisfy the handoff gate.
 
-- an older static analyzer existed in `src/services/staticAnalyzerService.ts`
-- the preferred source-driven service is `src/services/parserBridgeService.ts`, which delegates to `/api/parse-skill`
-- `src/services/geminiService.ts` remains only as a backward-compatible alias during cleanup
+## 3.7 Outputs
 
-This shows an architectural shift from mock or local simulation toward canonical parser-backed analysis.
+The workspace can produce:
 
-## 3.5 Visualization Workspace
+- a human-readable review report;
+- a machine-readable review packet;
+- `.skill.md`;
+- `.skill.json`;
+- `.draft.json` for browser-local continuation.
 
-The intended workbench includes three major views:
+Mode, equivalence, `canonical_rerun_required`, and draft-only fields remain part
+of the export contract.
 
-- pipeline
-- vector
-- matrix
+## 3.8 Persistence and localization
 
-These views are described in:
-- [05-frontend-workbench.md](./05-frontend-workbench.md)
+- Workspace drafts are stored in browser-local IndexedDB.
+- Reviewer decision state is stored locally for the active browser profile.
+- The public runtime does not provide server-backed shared persistence.
+- The reviewer UI supports English and Traditional Chinese.
 
-At the data level, the workspace presents:
+Local storage is a convenience and recovery feature, not a collaboration or
+retention guarantee.
 
-- parser metadata
-- actions
-- rules
-- directives
-- execution phases
-- decision nodes
-- risk and confidence metrics
-- security findings
+## 3.9 Verification surfaces
 
-## 3.6 Editing and Export
+Current repository tests cover:
 
-Based on tracked `HEAD` behavior in `src/App.tsx` and `src/components/SideEditor.tsx`, the GUI supports:
+- task-first keyboard navigation;
+- browser-local draft restore and export;
+- issue-to-editor routing;
+- editable bundle sources;
+- desktop and mobile viewport bounds;
+- serious and critical accessibility violations;
+- parser, server route, and export contracts.
 
-- global metadata editing
-- phase editing
-- decision-node editing
-- edit tracking via `modifiedPaths`
-- undo/reset against `originalData`
-- export to markdown-based `.skill.md`
-
-Export behavior supports two output shapes:
-
-1. parser-result-oriented export
-2. higher-level phase-flow export when parser result is absent
-
-Every exported review artifact should also carry parser mode, mode source, and an explicit equivalence framing such as `implementation_identity`, `equivalence_unverified`, or `degraded_path`.
-
-## 3.7 Mode Awareness and Deployment Safety
-
-The system now has an explicit operational distinction between:
-
-- canonical bridge mode
-- standalone fallback mode
-
-This is exposed to callers through:
-
-- bridge metadata in API responses
-- `GET /api/bridge-status`
-
-This is especially important for external review or public deployment scenarios.
-
-## 3.8 Functional Summary
-
-The project is not only a parser wrapper. It is intended as an analysis workstation with:
-
-- ingestion
-- parsing
-- decomposition review
-- risk framing
-- security review presentation
-- limited editing
-- export
-- multi-mode runtime safety
+Use the current source and test output for verification. Dated reports record
+point-in-time results only.

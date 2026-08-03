@@ -1541,13 +1541,50 @@ export function ReviewWorkspace({
         initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={shellTransition}
-        className="relative flex h-screen flex-col overflow-x-hidden"
+        className="review-workbench-v2 relative flex h-screen flex-col overflow-x-hidden"
       >
+        <nav className="review-workspace-navigation flex flex-wrap items-center gap-1" role="tablist" aria-label={t('app.workspaceViews')}>
+          {workspaceTabs.map((view, index) => (
+            <div key={view.id} className="flex items-center gap-1">
+              <button
+                id={`workspace-view-${view.id}`}
+                type="button"
+                role="tab"
+                tabIndex={activeTab === view.id ? 0 : -1}
+                aria-selected={activeTab === view.id}
+                aria-controls={`workspace-stage-${view.id}`}
+                onClick={() => {
+                  setActiveTab(view.id);
+                  setIsWorkspaceFocusMode(view.id !== 'pipeline');
+                }}
+                onKeyDown={(event) => {
+                  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                  event.preventDefault();
+                  const currentIndex = workspaceTabs.findIndex((tab) => tab.id === activeTab);
+                  const lastIndex = workspaceTabs.length - 1;
+                  const nextIndex = event.key === 'Home'
+                    ? 0
+                    : event.key === 'End'
+                      ? lastIndex
+                      : event.key === 'ArrowLeft'
+                        ? (currentIndex > 0 ? currentIndex - 1 : lastIndex)
+                        : (currentIndex < lastIndex ? currentIndex + 1 : 0);
+                  const nextId = workspaceTabs[nextIndex]?.id;
+                  if (!nextId) return;
+                  setActiveTab(nextId);
+                  setIsWorkspaceFocusMode(nextId !== 'pipeline');
+                  requestAnimationFrame(() => document.getElementById(`workspace-view-${nextId}`)?.focus());
+                }}
+                className={`flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 text-sm transition-colors ${activeTab === view.id ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground/70'}`}
+              >
+            </div>
+          ))}
+        </nav>
         <header className="sticky top-0 z-20 shrink-0">
           <div className="review-top-dock px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                <div className="min-w-0 flex flex-1 items-start gap-3">
+                <div className="review-workspace-identity min-w-0 flex flex-1 items-start gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[calc(var(--radius)*1.05)] bg-primary text-sm font-bold text-primary-foreground">
                     S0
                   </div>
@@ -1565,7 +1602,7 @@ export function ReviewWorkspace({
                         {t('app.currentFocus')}: <span className="font-medium text-foreground">{currentFocusTitle}</span>
                       </span>
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-foreground/72">
+                    <div className="review-workspace-metadata mt-2 flex flex-wrap items-center gap-2 text-xs text-foreground/72">
                       <div
                         className={`inline-flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 ${reviewReadinessStyles}`}
                       >
@@ -1597,7 +1634,7 @@ export function ReviewWorkspace({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-stretch gap-2 xl:justify-end">
+                <div className="review-workspace-top-actions flex flex-wrap items-stretch gap-2 xl:justify-end">
                   <span className="landing-toolbar-control hidden rounded-[calc(var(--radius)*1.02)] bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground xl:inline-flex">
                     {t('app.toolbarFixedTools')}
                   </span>
@@ -1919,25 +1956,6 @@ export function ReviewWorkspace({
               </AnimatePresence>
 
               <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-center gap-1">
-                  {workspaceTabs.map((view, index) => (
-                    <div key={view.id} className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          setActiveTab(view.id);
-                          setIsWorkspaceFocusMode(view.id !== 'pipeline');
-                        }}
-                        className={`flex items-center gap-2 rounded-[calc(var(--radius)*1.02)] px-3 py-1.5 text-sm transition-colors ${activeTab === view.id ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground/70'}`}
-                      >
-                        <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${activeTab === view.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-foreground/10 text-foreground/70'}`}>
-                          {index + 1}
-                        </span>
-                        <span>{view.label}</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
                 {activeTab === 'pipeline' && (
                   <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex flex-wrap items-center gap-1" data-testid="pipeline-subview-nav">
@@ -2049,6 +2067,9 @@ export function ReviewWorkspace({
                 transition={surfaceTransition}
                 className="space-y-4 lg:space-y-5"
                 data-testid={`pipeline-section-content-${activePipelineSubview}`}
+                id="workspace-stage-pipeline"
+                role="tabpanel"
+                aria-labelledby="workspace-view-pipeline"
               >
                 {activePipelineSubview === 'summary' && (
                   <Suspense fallback={<PanelFallback heightClassName="min-h-[220px]" />}>
@@ -2305,6 +2326,9 @@ export function ReviewWorkspace({
                 animate={{ opacity: 1, y: 0 }}
                 exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
                 transition={surfaceTransition}
+                id="workspace-stage-vector"
+                role="tabpanel"
+                aria-labelledby="workspace-view-vector"
               >
                 <div className="review-structural-panel glass-panel overflow-hidden p-3 sm:p-4">
                   <Suspense fallback={<PanelFallback heightClassName="min-h-[420px]" />}>
@@ -2321,6 +2345,9 @@ export function ReviewWorkspace({
                 animate={{ opacity: 1, y: 0 }}
                 exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
                 transition={surfaceTransition}
+                id="workspace-stage-matrix"
+                role="tabpanel"
+                aria-labelledby="workspace-view-matrix"
               >
                 <div className="review-structural-panel glass-panel overflow-hidden p-3 sm:p-4">
                   <Suspense fallback={<PanelFallback heightClassName="min-h-[420px]" />}>
@@ -2342,45 +2369,50 @@ export function ReviewWorkspace({
                 animate={{ y: 0, opacity: 1 }}
                 exit={prefersReducedMotion ? { y: 0, opacity: 1 } : { y: '100%', opacity: 0 }}
                 transition={drawerTransition}
+                id="review-insight-drawer"
+                role="region"
+                aria-labelledby="review-insight-drawer-title"
                 className="review-bottom-drawer w-full max-w-[1980px] pointer-events-auto bg-card border-t border-border shadow-2xl rounded-t-3xl max-h-[55vh] flex flex-col"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3 border-b border-border/50">
                   <div className="flex flex-wrap items-center gap-4">
-                    <h3 className="font-semibold text-lg text-foreground whitespace-nowrap">
+                    <h3 id="review-insight-drawer-title" className="font-semibold text-lg text-foreground whitespace-nowrap">
                       {insightTabs.find(t => t.id === activeBottomTab)?.label}
                     </h3>
 
                     {activeBottomTab === 'review' && (
-                      <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 overflow-x-auto hide-scrollbar">
-                        <button data-testid="review-subtab-decision" onClick={() => setActiveReviewSub('decision')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'decision' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewDecision')}</button>
-                        <button data-testid="review-subtab-notes" onClick={() => setActiveReviewSub('notes')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'notes' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewNotes')}</button>
-                        <button data-testid="review-subtab-diff" onClick={() => setActiveReviewSub('diff')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'diff' ? 'drawer-subtab-button--active' : ''}`}>{t('app.diffSummary')}</button>
+                      <div aria-label={t('app.reviewDecisionPanel')} className="flex bg-muted/50 rounded-full p-1 border border-border/50 overflow-x-auto hide-scrollbar">
+                        <button id="review-subtab-decision" aria-pressed={activeReviewSub === 'decision'} aria-controls="drawer-view-review-decision" data-testid="review-subtab-decision" onClick={() => setActiveReviewSub('decision')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'decision' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewDecision')}</button>
+                        <button id="review-subtab-notes" aria-pressed={activeReviewSub === 'notes'} aria-controls="drawer-view-review-notes" data-testid="review-subtab-notes" onClick={() => setActiveReviewSub('notes')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'notes' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewNotes')}</button>
+                        <button id="review-subtab-diff" aria-pressed={activeReviewSub === 'diff'} aria-controls="drawer-view-review-diff" data-testid="review-subtab-diff" onClick={() => setActiveReviewSub('diff')} className={`drawer-subtab-button px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeReviewSub === 'diff' ? 'drawer-subtab-button--active' : ''}`}>{t('app.diffSummary')}</button>
                       </div>
                     )}
 
                     {activeBottomTab === 'checks' && (
-                      <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar">
-                        <button data-testid="checks-subtab-posture" onClick={() => setActiveChecksSub('posture')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'posture' ? 'drawer-subtab-button--active' : ''}`}>{t('app.checksPosture')}</button>
-                        <button data-testid="checks-subtab-schema" onClick={() => setActiveChecksSub('schema')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'schema' ? 'drawer-subtab-button--active' : ''}`}>{t('app.schemaValidation')}</button>
-                        <button data-testid="checks-subtab-consistency" onClick={() => setActiveChecksSub('consistency')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'consistency' ? 'drawer-subtab-button--active' : ''}`}>{t('app.consistencyChecks')}</button>
-                        <button data-testid="checks-subtab-tests" onClick={() => setActiveChecksSub('tests')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'tests' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewerTests')}</button>
-                        <button data-testid="checks-subtab-evidence" onClick={() => setActiveChecksSub('evidence')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'evidence' ? 'drawer-subtab-button--active' : ''}`}>{t('app.validationEvidence')}</button>
+                      <div aria-label={t('app.detailsPanel')} className="flex bg-muted/50 rounded-full p-1 border border-border/50 flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar">
+                        <button id="checks-subtab-posture" aria-pressed={activeChecksSub === 'posture'} aria-controls="drawer-view-checks-posture" data-testid="checks-subtab-posture" onClick={() => setActiveChecksSub('posture')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'posture' ? 'drawer-subtab-button--active' : ''}`}>{t('app.checksPosture')}</button>
+                        <button id="checks-subtab-schema" aria-pressed={activeChecksSub === 'schema'} aria-controls="drawer-view-checks-schema" data-testid="checks-subtab-schema" onClick={() => setActiveChecksSub('schema')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'schema' ? 'drawer-subtab-button--active' : ''}`}>{t('app.schemaValidation')}</button>
+                        <button id="checks-subtab-consistency" aria-pressed={activeChecksSub === 'consistency'} aria-controls="drawer-view-checks-consistency" data-testid="checks-subtab-consistency" onClick={() => setActiveChecksSub('consistency')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'consistency' ? 'drawer-subtab-button--active' : ''}`}>{t('app.consistencyChecks')}</button>
+                        <button id="checks-subtab-tests" aria-pressed={activeChecksSub === 'tests'} aria-controls="drawer-view-checks-tests" data-testid="checks-subtab-tests" onClick={() => setActiveChecksSub('tests')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'tests' ? 'drawer-subtab-button--active' : ''}`}>{t('app.reviewerTests')}</button>
+                        <button id="checks-subtab-evidence" aria-pressed={activeChecksSub === 'evidence'} aria-controls="drawer-view-checks-evidence" data-testid="checks-subtab-evidence" onClick={() => setActiveChecksSub('evidence')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeChecksSub === 'evidence' ? 'drawer-subtab-button--active' : ''}`}>{t('app.validationEvidence')}</button>
                       </div>
                     )}
 
                     {activeBottomTab === 'context' && (
-                      <div className="flex bg-muted/50 rounded-full p-1 border border-border/50 flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar">
-                        <button data-testid="context-subtab-summary" onClick={() => setActiveContextSub('summary')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'summary' ? 'drawer-subtab-button--active' : ''}`}>{t('app.projectSummary')}</button>
-                        <button data-testid="context-subtab-policy" onClick={() => setActiveContextSub('policy')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'policy' ? 'drawer-subtab-button--active' : ''}`}>{t('app.commandReferences')}</button>
-                        <button data-testid="context-subtab-files" onClick={() => setActiveContextSub('files')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'files' ? 'drawer-subtab-button--active' : ''}`}>{t('app.supportingFiles')}</button>
-                        <button data-testid="context-subtab-analysis" onClick={() => setActiveContextSub('analysis')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'analysis' ? 'drawer-subtab-button--active' : ''}`}>{t('app.analysisResult')}</button>
-                        <button data-testid="context-subtab-source" onClick={() => setActiveContextSub('source')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'source' ? 'drawer-subtab-button--active' : ''}`}>{t('app.contextBucketSourceProvenance')}</button>
-                        <button data-testid="context-subtab-links" onClick={() => setActiveContextSub('links')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'links' ? 'drawer-subtab-button--active' : ''}`}>{t('app.sourceLinks')}</button>
+                      <div aria-label={t('app.projectSummary')} className="flex bg-muted/50 rounded-full p-1 border border-border/50 flex-wrap sm:flex-nowrap overflow-x-auto hide-scrollbar">
+                        <button id="context-subtab-summary" aria-pressed={activeContextSub === 'summary'} aria-controls="drawer-view-context-summary" data-testid="context-subtab-summary" onClick={() => setActiveContextSub('summary')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'summary' ? 'drawer-subtab-button--active' : ''}`}>{t('app.projectSummary')}</button>
+                        <button id="context-subtab-policy" aria-pressed={activeContextSub === 'policy'} aria-controls="drawer-view-context-policy" data-testid="context-subtab-policy" onClick={() => setActiveContextSub('policy')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'policy' ? 'drawer-subtab-button--active' : ''}`}>{t('app.commandReferences')}</button>
+                        <button id="context-subtab-files" aria-pressed={activeContextSub === 'files'} aria-controls="drawer-view-context-files" data-testid="context-subtab-files" onClick={() => setActiveContextSub('files')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'files' ? 'drawer-subtab-button--active' : ''}`}>{t('app.supportingFiles')}</button>
+                        <button id="context-subtab-analysis" aria-pressed={activeContextSub === 'analysis'} aria-controls="drawer-view-context-analysis" data-testid="context-subtab-analysis" onClick={() => setActiveContextSub('analysis')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'analysis' ? 'drawer-subtab-button--active' : ''}`}>{t('app.analysisResult')}</button>
+                        <button id="context-subtab-source" aria-pressed={activeContextSub === 'source'} aria-controls="drawer-view-context-source" data-testid="context-subtab-source" onClick={() => setActiveContextSub('source')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'source' ? 'drawer-subtab-button--active' : ''}`}>{t('app.contextBucketSourceProvenance')}</button>
+                        <button id="context-subtab-links" aria-pressed={activeContextSub === 'links'} aria-controls="drawer-view-context-links" data-testid="context-subtab-links" onClick={() => setActiveContextSub('links')} className={`drawer-subtab-button px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeContextSub === 'links' ? 'drawer-subtab-button--active' : ''}`}>{t('app.sourceLinks')}</button>
                       </div>
                     )}
                   </div>
                   <button
+                    type="button"
                     onClick={() => setActiveBottomTab(null)}
+                    aria-label={t('app.close')}
                     className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors shrink-0"
                   >
                     <ChevronDown size={20} />
@@ -2391,6 +2423,9 @@ export function ReviewWorkspace({
                     <AnimatePresence mode="wait" initial={false}>
                       <motion.div
                         key={drawerSubviewKey}
+                        id={`drawer-view-${drawerSubviewKey}`}
+                        role="region"
+                        aria-labelledby="review-insight-drawer-title"
                         data-testid={`drawer-view-${drawerSubviewKey}`}
                         initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -3248,6 +3283,8 @@ export function ReviewWorkspace({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveBottomTab(isActive ? null : tab.id)}
+                    aria-expanded={isActive}
+                    aria-controls="review-insight-drawer"
                     data-testid={`insight-tab-${tab.id}`}
                     className={`review-bottom-tab-button flex items-center gap-3 px-4 py-2.5 rounded-full ${
                       isActive

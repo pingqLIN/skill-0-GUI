@@ -724,6 +724,24 @@ describe('App smoke test', () => {
     });
   });
 
+  it('reports a corrupted ZIP without leaving an unhandled intake rejection', async () => {
+    vi.mocked(JSZip.loadAsync).mockRejectedValue(new Error('corrupted central directory'));
+
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByTestId('intake-task-compare'));
+    const fileInput = container.querySelector('input[accept=".zip,application/zip"]') as HTMLInputElement | null;
+    expect(fileInput).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.change(fileInput!, {
+        target: { files: [new File(['not-a-zip'], 'broken.zip', { type: 'application/zip' })] },
+      });
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('app.errorZipInvalid');
+    expect(screen.getByTestId('bundle-analyze-button')).toBeDisabled();
+  });
+
   it('offers the last workspace draft for manual restore instead of auto-opening it', async () => {
     window.localStorage.setItem(WORKSPACE_DRAFT_STORAGE_KEY, JSON.stringify({
       data: {

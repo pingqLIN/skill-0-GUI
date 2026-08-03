@@ -13,7 +13,7 @@ Related chapters:
 Defined in [../package.json](../package.json):
 
 - `npm run dev`
-  Starts the Vite development server on port `3000`.
+  Starts the Vite development server on `127.0.0.1:5173` by default.
 
 - `npm run build`
   Builds the frontend bundle.
@@ -45,6 +45,9 @@ Defined or documented in [../.env.example](../.env.example):
 
 - `PORT`
   Runtime port for `server.mjs`.
+
+- `VITE_PORT`
+  Optional development and preview port override. Defaults to `5173`.
 
 - `SKILL0_MODE`
   `auto` or `standalone`.
@@ -94,7 +97,7 @@ Use when the deployment environment has local access to the canonical repository
 Recommended:
 
 - `SKILL0_MODE=auto`
-- `SKILL0_PARSER_ROOT=/home/miles/dev2/skill-0`
+- `SKILL0_PARSER_ROOT=/path/to/skill-0`
 - `VITE_ENABLE_3D=true`
 
 ### External or public deployment
@@ -108,7 +111,7 @@ Recommended:
 - omit `SKILL0_PARSER_ROOT`
 - `VITE_ENABLE_3D=false`
 
-This prevents filesystem assumptions about `/home/miles/...`.
+This prevents public deployments from depending on host-specific checkout paths.
 
 ### Render-first public deployment
 
@@ -221,7 +224,12 @@ This keeps the first public deployment simple while leaving room for a stricter 
 
 ## 6.10 Validation Performed
 
-The following verification was completed during this update:
+This section preserves a point-in-time validation record from the original
+deployment update. It is not automatic proof of the current checkout; rerun the
+repository gate below. The development-server check in that historical run used
+an explicit `VITE_PORT=3000` override.
+
+The following verification was completed during that update:
 
 - `npm run lint`
 - `node --check server.mjs`
@@ -230,14 +238,14 @@ The following verification was completed during this update:
 - `npm test`
 - `npm run build`
 - `npm run dev`
-- development endpoint validation on port `3000`
+- development endpoint validation with `VITE_PORT=3000`
 - `npm start`
 - production endpoint validation on port `4173`
 - forced standalone validation with `SKILL0_MODE=standalone` on port `4174`
 
 Validated outcomes:
 
-- canonical bridge mode resolves `/home/miles/dev2/skill-0`
+- canonical bridge mode resolved the configured local `skill-0` checkout
 - example skill loads from canonical repo when available
 - parser requests succeed through canonical `auto_parse.py`
 - standalone mode returns bundled sample and fallback parser output
@@ -259,7 +267,9 @@ It currently validates:
 - TypeScript with `npm run lint`
 - mirrored docs with `npm run docs:check`
 - tests with `npm test`
-- production build with `npm run build`
+- standard build size with `npm run verify:build-size`
+- public build boundaries with `npm run verify:public-build`
+- browser and accessibility behavior with `npm run test:e2e`
 
 ## 6.12 Operational Caveat
 
@@ -275,7 +285,7 @@ The deployable runtime is ready, and the source-driven frontend baseline is now 
 1. Decide whether deployment should be canonical-bridge or standalone.
 2. Set `SKILL0_MODE` explicitly.
 3. If canonical mode is required, set `SKILL0_PARSER_ROOT` explicitly.
-4. Build and serve `dist/`.
+4. Build the intended profile and serve `dist/`.
 5. Smoke-test `/healthz` plus all API endpoints.
 6. Record whether results are coming from canonical or fallback mode.
 7. Decide whether the deployment should expose the optional 3D vector workspace; default public posture is `VITE_ENABLE_3D=false`.

@@ -1,223 +1,173 @@
-# Skill-0 Review Studio Documentation Index
+# Skill-0 Review Studio Documentation
 
-Updated: `2026-04-09`
+Traditional Chinese companion: [README.zh-tw.md](./README.zh-tw.md)
 
-This documentation set is the primary review package for `Skill-0 Review Studio`. It is organized as a main index plus chaptered companion documents so each functional area can be reviewed independently while still mapping back to one master table of contents.
+This hub separates current product guidance from dated planning and review
+records. Use the current source, contracts, tests, and latest verified reports
+for operational decisions; use older documents for design history.
 
-Localized release docs for the public release are indexed at [i18n/README.md](./i18n/README.md).
+Last reorganized: `2026-07-31`
 
-## Scope Note
+## Start by goal
 
-This repository now has a restored source-driven frontend baseline in the working tree, but some earlier review notes still discuss the period when only the runtime shell was available. Read the docs with that transition in mind:
+| Goal | Recommended path |
+|---|---|
+| Understand the product in five minutes | [Root README](../README.md) → [Project overview](01-project-overview.md) |
+| Run one complete local review | [Guided local review](getting-started.md) |
+| Understand features and reviewer workflows | [Functional modules](03-functional-modules.md) → [Frontend workbench](05-frontend-workbench.md) |
+| Integrate the parser or runtime | [Runtime architecture](02-runtime-and-system-architecture.md) → [Bridge parser](04-bridge-parser-and-analysis.md) |
+| Configure or deploy the service | [Deployment and configuration](06-deployment-operations-and-configuration.md) |
+| Evaluate parser-mode trust | [Mode and equivalence contract](shared/02-mode-and-equivalence-contract.md) |
+| Review current delivery evidence | [Task-first hardening integration report](28-task-first-review-hardening-integration-2026-07-29.md) |
+| Understand the current UI/UX visual contract | [UI/UX v2 design contract](29-uiux-v2-design-contract-2026-07-31.md) |
 
-1. The current working runtime and source baseline
-   This is the actively executable and editable layer in the working tree today. It is centered on:
-   - `src/`
-   - `vite.config.ts`
-   - `server.mjs`
-   - `bridge/skill0Bridge.mjs`
-   - `standalone/`
-   - `dist/` as the build artifact generated from source
+## Current product documentation
 
-2. Historical design-model review context
-   Some chapters were written while the source-driven UI was only being inferred from tracked history. Those chapters remain useful for product and rebuild analysis, but the source files are now present again in the working tree:
-   - `src/App.tsx`
-   - `src/components/*`
-   - `src/services/*`
-   - `src/i18n.ts`
+| Document | Purpose |
+|---|---|
+| [Guided local review](getting-started.md) | Reproducible, screenshot-backed intake-to-export walkthrough |
+| [1. Project overview](01-project-overview.md) | Product purpose, users, and repository boundary |
+| [2. Runtime and system architecture](02-runtime-and-system-architecture.md) | Development and production topology |
+| [3. Functional modules](03-functional-modules.md) | User-facing capabilities and workflows |
+| [4. Bridge parser and analysis](04-bridge-parser-and-analysis.md) | Canonical bridge, standalone parser, and analysis behavior |
+| [5. Frontend workbench](05-frontend-workbench.md) | Review UI, editor, visualization, and localization |
+| [6. Deployment, operations, and configuration](06-deployment-operations-and-configuration.md) | Scripts, environment variables, endpoints, and hosting |
+| [7. Technology stack and implementation](07-technology-stack-and-implementation.md) | Main libraries and implementation choices |
+| [8. Development status, risks, and roadmap](08-development-status-risks-and-roadmap.md) | Broader status and risk register; verify dated claims before reuse |
+| [9. Complex skill analysis specification](09-complex-skill-analysis-spec.md) | Resource-aware multi-file analysis method |
+| [10. Complex skill risk schema](10-complex-skill-risk-schema.md) | Severity, confidence, and prioritization contract |
+| [11. Evidence-based warning template](11-evidence-based-warning-template.md) | Review-ready warning language |
 
-This dossier documents both layers explicitly and distinguishes between:
+The executable authority for current behavior is the repository source and
+tests, especially:
 
-- `Current runtime`
-- `Tracked design/source model`
+- `src/App.tsx`
+- `src/components/GuidedIntakeLanding.tsx`
+- `src/components/ReviewWorkspace.tsx`
+- `bridge/skill0Bridge.mjs`
+- `server.mjs`
+- `vite.config.ts`
+- `e2e/review-studio.spec.ts`
+- `.github/workflows/ci.yml`
 
-## Chapter Map
+## Shared trust contracts
 
-| Chapter | File | Focus | Key Cross References |
-|---|---|---|---|
-| 1 | [01-project-overview.md](./01-project-overview.md) | Product purpose, target users, repository scope | Ch. 2, Ch. 3, Ch. 8 |
-| 2 | [02-runtime-and-system-architecture.md](./02-runtime-and-system-architecture.md) | Runtime topology, dev/prod paths, component boundaries | Ch. 3, Ch. 4, Ch. 6 |
-| 3 | [03-functional-modules.md](./03-functional-modules.md) | End-user functions and operational workflows | Ch. 2, Ch. 4, Ch. 5 |
-| 4 | [04-bridge-parser-and-analysis.md](./04-bridge-parser-and-analysis.md) | Parser bridge, fallback parser, transformation logic, analysis behavior | Ch. 2, Ch. 3, Ch. 7 |
-| 5 | [05-frontend-workbench.md](./05-frontend-workbench.md) | React workbench design, visualization modules, editor, i18n | Ch. 3, Ch. 7, Ch. 8 |
-| 6 | [06-deployment-operations-and-configuration.md](./06-deployment-operations-and-configuration.md) | Scripts, env vars, deployable server, operations guidance | Ch. 2, Ch. 4, Ch. 8 |
-| 7 | [07-technology-stack-and-implementation.md](./07-technology-stack-and-implementation.md) | Languages, libraries, implementation choices, dependency rationale | Ch. 4, Ch. 5, Ch. 6 |
-| 8 | [08-development-status-risks-and-roadmap.md](./08-development-status-risks-and-roadmap.md) | Delivery status, constraints, risks, next steps | Ch. 1, Ch. 5, Ch. 6 |
-| 9 | [09-complex-skill-analysis-spec.md](./09-complex-skill-analysis-spec.md) | Resource-aware analysis flow for main skills, subskills, and command references | Ch. 4, Ch. 8, Ch. 10 |
-| 10 | [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md) | Risk categories, severity/confidence model, ranking contract | Ch. 4, Ch. 9, Ch. 11 |
-| 11 | [11-evidence-based-warning-template.md](./11-evidence-based-warning-template.md) | Evidence-backed warning language, reminder patterns, output style | Ch. 3, Ch. 9, Ch. 10 |
-| 12 | [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md) | UI quality review for the tracked workbench design model | Ch. 5, Ch. 8, Ch. 13 |
-| 13 | [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md) | Execution-oriented rebuild backlog for restoring the workbench UI | Ch. 5, Ch. 8, Ch. 12 |
-| 14 | [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md) | Integrated development plan for UI recovery and remaining engineering work | Ch. 8, Ch. 12, Ch. 13 |
-| 15 | [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md) | Issue-ready milestone list derived from the development plan | Ch. 13, Ch. 14 |
-| 16 | [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md) | Active execution baseline, closed findings, and current priority order | Ch. 8, Ch. 14, Ch. 15 |
-| 17 | [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md) | Reconciled late-stage roadmap after MVP-plan review and current upstream audit | Ch. 14, Ch. 15, Ch. 16 |
-| 18 | [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md) | Repository-grounded execution order derived from the local MVP planning draft | Ch. 17 |
-| 19 | [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md) | Current MVP completion boundary, consistency-check closure, and next execution order | Ch. 18 |
-| 20 | [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md) | First-pass plan for a standalone public demo, landing-page narrative, and deployment scope | Ch. 6, Ch. 8, Ch. 19 |
-| 21 | [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md) | Repo-local execution and verification brief for the single-screen workspace and sub-tab drawer model | Ch. 5, Ch. 19, Ch. 20 |
-| 22 | [22-structural-depth-and-toolbar-execution-brief-2026-04-08.md](./22-structural-depth-and-toolbar-execution-brief-2026-04-08.md) | Execution brief for the bounded top toolbar, structural depth cues, and viewport-stable workspace shell | Ch. 21, Ch. 23, Ch. 24 |
-| 23 | [23-browser-density-review-loop-2026-04-08.md](./23-browser-density-review-loop-2026-04-08.md) | Browser-review loop plan for density, bounded scrolling, and toolbar/drawer interaction checks | Ch. 22, Ch. 24 |
-| 24 | [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md) | Three-round browser validation report for workspace density, scroll bounds, and interaction polish | Ch. 22, Ch. 23, Ch. 25 |
-| 25 | [25-editor-verification-loop-2026-04-08.md](./25-editor-verification-loop-2026-04-08.md) | Focused verification loop for editor entry points, save paths, and validation affordances | Ch. 21, Ch. 24, Ch. 26 |
-| 26 | [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md) | Three-round editor verification report covering save, invalid-state, and diff workflows | Ch. 25, Ch. 27 |
-| 27 | [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md) | Repo-grounded polish brief for restrained motion, surface depth, and non-regressive workspace refinement | Ch. 22, Ch. 24, Ch. 26 |
+The files under `docs/shared/` are managed mirrors from the canonical
+`skill-0/docs/shared/` source:
 
-## Fast Reading Paths
+- [Shared contract index](shared/README.md)
+- [Parser contract](shared/01-parser-contract.md)
+- [Mode and equivalence contract](shared/02-mode-and-equivalence-contract.md)
+- [Shared terminology](shared/03-shared-terminology.md)
+- [Cross-repository session rules](shared/04-cross-repo-session-rules.md)
 
-### For external reviewers
-
-Read in this order:
-
-Before trusting exported review artifacts, read [shared/02-mode-and-equivalence-contract.md](./shared/02-mode-and-equivalence-contract.md) first.
-
-1. [01-project-overview.md](./01-project-overview.md)
-2. [02-runtime-and-system-architecture.md](./02-runtime-and-system-architecture.md)
-3. [03-functional-modules.md](./03-functional-modules.md)
-4. [08-development-status-risks-and-roadmap.md](./08-development-status-risks-and-roadmap.md)
-5. [09-complex-skill-analysis-spec.md](./09-complex-skill-analysis-spec.md)
-6. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
-7. [11-evidence-based-warning-template.md](./11-evidence-based-warning-template.md)
-8. [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md)
-9. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
-10. [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md)
-11. [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
-12. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
-13. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
-14. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
-15. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
-16. [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md)
-17. [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md)
-18. [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md)
-19. [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md)
-
-### For engineers
-
-Read in this order:
-
-1. [02-runtime-and-system-architecture.md](./02-runtime-and-system-architecture.md)
-2. [04-bridge-parser-and-analysis.md](./04-bridge-parser-and-analysis.md)
-3. [05-frontend-workbench.md](./05-frontend-workbench.md)
-4. [07-technology-stack-and-implementation.md](./07-technology-stack-and-implementation.md)
-5. [09-complex-skill-analysis-spec.md](./09-complex-skill-analysis-spec.md)
-6. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
-7. [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md)
-8. [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
-9. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
-10. [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md)
-11. [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
-12. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
-13. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
-14. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
-15. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
-16. [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md)
-17. [22-structural-depth-and-toolbar-execution-brief-2026-04-08.md](./22-structural-depth-and-toolbar-execution-brief-2026-04-08.md)
-18. [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md)
-19. [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md)
-20. [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md)
-
-### For operators and deployers
-
-Read in this order:
-
-1. [06-deployment-operations-and-configuration.md](./06-deployment-operations-and-configuration.md)
-2. [08-development-status-risks-and-roadmap.md](./08-development-status-risks-and-roadmap.md)
-3. [09-complex-skill-analysis-spec.md](./09-complex-skill-analysis-spec.md)
-4. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
-5. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
-6. [18-mvp-execution-plan-2026-03-28.md](./18-mvp-execution-plan-2026-03-28.md)
-7. [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
-8. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
-9. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
-10. [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md)
-11. [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md)
-12. [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md)
-13. [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md)
-
-Supplemental note:
-
-- [github-hosting-strategy-2026-03-23.md](./github-hosting-strategy-2026-03-23.md)
-
-## Shared Contract Documents
-
-The following files are mirrored from the canonical shared-doc source in `skill-0/docs/shared/`:
-
-- [shared/README.md](./shared/README.md)
-- [shared/01-parser-contract.md](./shared/01-parser-contract.md)
-- [shared/02-mode-and-equivalence-contract.md](./shared/02-mode-and-equivalence-contract.md)
-- [shared/03-shared-terminology.md](./shared/03-shared-terminology.md)
-- [shared/04-cross-repo-session-rules.md](./shared/04-cross-repo-session-rules.md)
-
-Refresh them by running:
+Do not edit these mirrors independently. Refresh or verify them with:
 
 ```bash
 npm run docs:sync
+npm run docs:check
 ```
 
-## Canonical File Map
+`docs:check` verifies the shared mirror contract. It does not prove that all
+other documentation is current or that translations are semantically equal.
 
-### Current runtime and source baseline
+## Current integration evidence
 
-- [../src/main.tsx](../src/main.tsx)
-- [../src/App.tsx](../src/App.tsx)
-- [../vite.config.ts](../vite.config.ts)
-- [../server.mjs](../server.mjs)
-- [../bridge/skill0Bridge.mjs](../bridge/skill0Bridge.mjs)
-- [../standalone/example-skill.md](../standalone/example-skill.md)
-- [../standalone/skill-decomposition.schema.json](../standalone/skill-decomposition.schema.json)
-- [../package.json](../package.json)
-- [../.env.example](../.env.example)
+| Report | Evidence boundary |
+|---|---|
+| [28. Task-first review hardening integration](28-task-first-review-hardening-integration-2026-07-29.md) | Point-in-time integration, CI, browser, and accessibility evidence |
+| [28. Traditional Chinese companion](28-task-first-review-hardening-integration-2026-07-29.zh-tw.md) | Human-readable Traditional Chinese companion |
+| [29. UI/UX v2 design contract](29-uiux-v2-design-contract-2026-07-31.md) | Implemented workbench shell, responsive behavior, and visual references |
+| [27. Review workspace polish alignment](27-review-workspace-polish-alignment-2026-04-09.md) | Bounded visual refinement brief |
 
-### Source model reference
+Reports record what was verified at their stated date and commit. They are not
+automatic proof of the current checkout; rerun the relevant checks.
 
-- `src/main.tsx`
-- `src/App.tsx`
-- `src/components/Dashboard.tsx`
-- `src/components/Flowchart.tsx`
-- `src/components/PhaseDetails.tsx`
-- `src/components/DecompositionBoard.tsx`
-- `src/components/SecurityMatrix.tsx`
-- `src/components/VectorSpace.tsx`
-- `src/components/SideEditor.tsx`
-- `src/services/parserBridgeService.ts`
-- `src/services/geminiService.ts`
-- `src/services/skillScanner.ts`
-- `src/services/staticAnalyzerService.ts`
-- `src/types/intake.ts`
-- `src/i18n.ts`
+## Dated design, planning, and review record
 
-## Relationship to Earlier Single-File Report
+These documents preserve product decisions and earlier review loops. Treat
+their status, screenshots, commands, and “next step” sections as historical
+until current source or execution confirms them.
 
-The earlier summary file [project-introduction-and-development-report-2026-03-23.md](./project-introduction-and-development-report-2026-03-23.md) is retained as a short-form entry note. This index and its chapter set are now the detailed review package.
+### UI and delivery planning
 
-## Analysis Extension Set
+- [12. UI design review](12-ui-design-review-2026-03-23.md)
+- [13. UI rebuild backlog](13-ui-rebuild-backlog.md)
+- [14. UI and remaining development plan](14-ui-and-remaining-development-plan-2026-03-24.md)
+- [15. Milestone issue list](15-milestone-issue-list-2026-03-24.md)
+- [16. Development execution brief](16-development-execution-brief-2026-03-28.md)
+- [17. Late-stage development plan](17-late-stage-development-plan-2026-03-28.md)
+- [18. MVP execution plan](18-mvp-execution-plan-2026-03-28.md)
+- [19. MVP consistency and next execution brief](19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
+- [20. Online demo plan](20-online-demo-plan-2026-04-03.md)
 
-The analysis-method extension set for complex skills is:
+### Browser and editor review loops
 
-1. [09-complex-skill-analysis-spec.md](./09-complex-skill-analysis-spec.md)
-2. [10-complex-skill-risk-schema.md](./10-complex-skill-risk-schema.md)
-3. [11-evidence-based-warning-template.md](./11-evidence-based-warning-template.md)
+- [21. Single-screen review workspace brief](21-single-screen-review-workspace-brief-2026-04-08.md)
+- [22. Structural depth and toolbar execution brief](22-structural-depth-and-toolbar-execution-brief-2026-04-08.md)
+- [23. Browser density review loop](23-browser-density-review-loop-2026-04-08.md)
+- [24. Browser density three-round report](24-browser-density-three-round-report-2026-04-08.md)
+- [25. Editor verification loop](25-editor-verification-loop-2026-04-08.md)
+- [26. Editor verification three-round report](26-editor-verification-three-round-report-2026-04-08.md)
 
-These chapters define how the project should analyze multi-skill graphs under constrained compute, how findings are ranked, and how warnings are rendered into review-ready language.
+### Supplemental history
 
-## UI Recovery Set
+- [Original project introduction and development report](project-introduction-and-development-report-2026-03-23.md)
+- [GitHub hosting strategy](github-hosting-strategy-2026-03-23.md)
+- `archive/local-planning/` for local planning records
+- `stitch/` for design exploration and source-screen references
 
-The UI recovery set for the tracked workbench model is:
+Stitch assets are design exploration, not proof of the shipped runtime. Use the
+screenshots under `assets/readme/` for the current documentation tour; they are
+generated from the real application.
 
-1. [12-ui-design-review-2026-03-23.md](./12-ui-design-review-2026-03-23.md)
-2. [13-ui-rebuild-backlog.md](./13-ui-rebuild-backlog.md)
-3. [14-ui-and-remaining-development-plan-2026-03-24.md](./14-ui-and-remaining-development-plan-2026-03-24.md)
-4. [15-milestone-issue-list-2026-03-24.md](./15-milestone-issue-list-2026-03-24.md)
-5. [16-development-execution-brief-2026-03-28.md](./16-development-execution-brief-2026-03-28.md)
-6. [17-late-stage-development-plan-2026-03-28.md](./17-late-stage-development-plan-2026-03-28.md)
-7. [19-mvp-consistency-and-next-execution-brief-2026-03-28.md](./19-mvp-consistency-and-next-execution-brief-2026-03-28.md)
-8. [20-online-demo-plan-2026-04-03.md](./20-online-demo-plan-2026-04-03.md)
-9. [21-single-screen-review-workspace-brief-2026-04-08.md](./21-single-screen-review-workspace-brief-2026-04-08.md)
-10. [22-structural-depth-and-toolbar-execution-brief-2026-04-08.md](./22-structural-depth-and-toolbar-execution-brief-2026-04-08.md)
-11. [23-browser-density-review-loop-2026-04-08.md](./23-browser-density-review-loop-2026-04-08.md)
-12. [24-browser-density-three-round-report-2026-04-08.md](./24-browser-density-three-round-report-2026-04-08.md)
-13. [25-editor-verification-loop-2026-04-08.md](./25-editor-verification-loop-2026-04-08.md)
-14. [26-editor-verification-three-round-report-2026-04-08.md](./26-editor-verification-three-round-report-2026-04-08.md)
-15. [27-review-workspace-polish-alignment-2026-04-09.md](./27-review-workspace-polish-alignment-2026-04-09.md)
+## Localized release documentation
 
-These chapters distinguish historical design-model planning from the current runtime status. Use Chapter 16 for the broad execution baseline, Chapter 17 for the reconciled late-stage roadmap, and Chapter 19 for the current MVP handoff state; treat Chapters 14 and 15 as archived planning context.
+The public release set is indexed at [i18n/README.md](i18n/README.md).
+English is the publishable authority for that set; Traditional Chinese is the
+maintained human-readable companion for this documentation refresh. Other
+translations may lag and must be revalidated before release.
+
+## Evidence language
+
+Use these labels in substantial reviews:
+
+- `VERIFIED`: supported by inspected source, authoritative documents, a test
+  result, or actual execution output.
+- `INFERRED`: a reasoned interpretation based on identified evidence.
+- `UNKNOWN`: missing, inaccessible, untested, or otherwise unverified.
+
+Do not promote an older report, a generated screenshot, or a passing narrow test
+to broader current verification.
+
+## Contributing and documentation rules
+
+Before merging:
+
+1. Keep the root README focused on value, quick start, product flow, trust
+   boundaries, and current entry points.
+2. Put detailed implementation and dated planning in this documentation set.
+3. Give important new public Markdown an English authority and a
+   `.zh-tw.md` Traditional Chinese companion.
+4. Preserve commands, paths, filenames, identifiers, mode names, and data
+   fields exactly across translations.
+5. Do not edit `docs/shared/` mirrors independently.
+6. Regenerate product screenshots with built-in demo-safe material:
+
+   ```bash
+   npm run docs:capture-screenshots
+   ```
+
+7. Run the repository gate:
+
+   ```bash
+   npm run lint
+   npm test
+   npm run docs:check
+   npm run verify:build-size
+   npm run verify:public-build
+   npm run test:e2e
+   ```
+
+8. Do not commit secrets, private paths, real customer material, or
+   unredacted local runtime evidence.

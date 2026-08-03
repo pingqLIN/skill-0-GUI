@@ -3,6 +3,7 @@ import { Archive, ArrowRight, FileUp, FolderOpen, FolderSearch } from 'lucide-re
 type BundleIntakePanelProps = {
   language: string;
   isBusy: boolean;
+  error: string | null;
   pendingFileCount: number;
   hasPrimaryFile: boolean;
   onUploadFiles: () => void;
@@ -14,6 +15,7 @@ type BundleIntakePanelProps = {
 export function BundleIntakePanel({
   language,
   isBusy,
+  error,
   pendingFileCount,
   hasPrimaryFile,
   onUploadFiles,
@@ -29,6 +31,7 @@ export function BundleIntakePanel({
         <h2 id="bundle-intake-title" className="display-serif">{isZh ? '匯入 skill bundle' : 'Import a skill bundle'}</h2>
         <p>{isZh ? '選擇原始檔案／資料夾，或直接匯入資料夾 ZIP。系統會要求指定主要 SKILL，其他項目會成為支援內容。' : 'Choose source files or a folder, or import a folder ZIP. The primary SKILL stays explicit and remaining items become supporting context.'}</p>
       </header>
+      {error && <div role="alert" className="guided-intake-warning">{error}</div>}
       <div className="bundle-intake-panel__choices">
         <article>
           <span className="bundle-intake-panel__icon"><FolderOpen size={34} aria-hidden="true" /></span>

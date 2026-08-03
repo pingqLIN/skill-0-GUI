@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
+    "docs:capture-screenshots": "node scripts/capture-readme-screenshots.mjs",
     "docs:sync": "node scripts/sync-shared-docs.mjs",
     "docs:check": "node scripts/sync-shared-docs.mjs --check",
     "project-loop:state": "node scripts/project-development-loop-state.mjs"
